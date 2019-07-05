@@ -1,0 +1,3 @@
+To deploy pgbouncer-operator:
+
+    $ ./hack/deploy/setup.sh --docker-registry=<docker-registry-name>
