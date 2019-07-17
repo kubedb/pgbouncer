@@ -3,7 +3,7 @@
 set -eoux pipefail
 
 ORG_NAME=kubedb
-REPO_NAME=postgres
+REPO_NAME=pgbouncer
 OPERATOR_NAME=pgbouncer-operator
 APP_LABEL=kubedb #required for `kubectl describe deploy -n kube-system -l app=$APP_LABEL`
 

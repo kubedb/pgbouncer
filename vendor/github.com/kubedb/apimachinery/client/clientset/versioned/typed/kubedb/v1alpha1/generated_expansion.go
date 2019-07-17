@@ -34,6 +34,8 @@ type MySQLExpansion interface{}
 
 type PerconaExpansion interface{}
 
+type PgBouncerExpansion interface{}
+
 type PostgresExpansion interface{}
 
 type RedisExpansion interface{}

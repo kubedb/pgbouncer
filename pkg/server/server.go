@@ -2,18 +2,10 @@ package server
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
-	"github.com/kubedb/apimachinery/pkg/admission/dormantdatabase"
-	"github.com/kubedb/apimachinery/pkg/admission/namespace"
-	"github.com/kubedb/apimachinery/pkg/admission/snapshot"
-	"github.com/kubedb/apimachinery/pkg/eventer"
-	mgAdmsn "github.com/kubedb/pgbouncer/pkg/admission"
 	"github.com/kubedb/pgbouncer/pkg/controller"
 	admission "k8s.io/api/admission/v1beta1"
-	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -21,9 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
-	"k8s.io/client-go/kubernetes"
-	reg_util "kmodules.xyz/client-go/admissionregistration/v1beta1"
-	dynamic_util "kmodules.xyz/client-go/dynamic"
 	hooks "kmodules.xyz/webhook-runtime/admission/v1beta1"
 	admissionreview "kmodules.xyz/webhook-runtime/registry/admissionreview/v1beta1"
 )
@@ -55,7 +44,7 @@ func init() {
 	)
 }
 
-type PostgresServerConfig struct {
+type PgBouncerServerConfig struct {
 	GenericConfig  *genericapiserver.RecommendedConfig
 	ExtraConfig    ExtraConfig
 	OperatorConfig *controller.OperatorConfig
@@ -65,13 +54,13 @@ type ExtraConfig struct {
 	AdmissionHooks []hooks.AdmissionHook
 }
 
-// PostgresServer contains state for a Kubernetes cluster master/api server.
-type PostgresServer struct {
+// PgBouncerServer contains state for a Kubernetes cluster master/api server.
+type PgBouncerServer struct {
 	GenericAPIServer *genericapiserver.GenericAPIServer
 	Operator         *controller.Controller
 }
 
-func (op *PostgresServer) Run(stopCh <-chan struct{}) error {
+func (op *PgBouncerServer) Run(stopCh <-chan struct{}) error {
 	go op.Operator.Run(stopCh)
 	return op.GenericAPIServer.PrepareRun().Run(stopCh)
 }
@@ -88,7 +77,7 @@ type CompletedConfig struct {
 }
 
 // Complete fills in any fields not set that are required to have valid data. It's mutating the receiver.
-func (c *PostgresServerConfig) Complete() CompletedConfig {
+func (c *PgBouncerServerConfig) Complete() CompletedConfig {
 	completedCfg := completedConfig{
 		c.GenericConfig.Complete(),
 		c.ExtraConfig,
@@ -103,34 +92,34 @@ func (c *PostgresServerConfig) Complete() CompletedConfig {
 	return CompletedConfig{&completedCfg}
 }
 
-// New returns a new instance of PostgresServer from the given config.
-func (c completedConfig) New() (*PostgresServer, error) {
+// New returns a new instance of PgBouncerServer from the given config.
+func (c completedConfig) New() (*PgBouncerServer, error) {
 	genericServer, err := c.GenericConfig.New("pack-server", genericapiserver.NewEmptyDelegate()) // completion is done in Complete, no need for a second time
 	if err != nil {
 		return nil, err
 	}
 
-	if c.OperatorConfig.EnableMutatingWebhook {
-		c.ExtraConfig.AdmissionHooks = []hooks.AdmissionHook{
-			&mgAdmsn.PostgresMutator{},
-		}
-	}
-	if c.OperatorConfig.EnableValidatingWebhook {
-		c.ExtraConfig.AdmissionHooks = append(c.ExtraConfig.AdmissionHooks,
-			&mgAdmsn.PostgresValidator{},
-			&snapshot.SnapshotValidator{},
-			&dormantdatabase.DormantDatabaseValidator{},
-			&namespace.NamespaceValidator{
-				Resources: []string{api.ResourcePluralPostgres},
-			})
-	}
+	//if c.OperatorConfig.EnableMutatingWebhook {
+	//	c.ExtraConfig.AdmissionHooks = []hooks.AdmissionHook{
+	//		&mgAdmsn.PgBouncerMutator{},
+	//	}
+	//}
+	//if c.OperatorConfig.EnableValidatingWebhook {
+	//	c.ExtraConfig.AdmissionHooks = append(c.ExtraConfig.AdmissionHooks,
+	//		&mgAdmsn.PgBouncerValidator{},
+	//		&snapshot.SnapshotValidator{},
+	//		&dormantdatabase.DormantDatabaseValidator{},
+	//		&namespace.NamespaceValidator{
+	//			Resources: []string{api.ResourcePluralPgBouncer},
+	//		})
+	//}
 
 	ctrl, err := c.OperatorConfig.New()
 	if err != nil {
 		return nil, err
 	}
 
-	s := &PostgresServer{
+	s := &PgBouncerServer{
 		GenericAPIServer: genericServer,
 		Operator:         ctrl,
 	}
@@ -185,43 +174,40 @@ func (c completedConfig) New() (*PostgresServer, error) {
 	}
 
 	if c.OperatorConfig.EnableValidatingWebhook {
-		s.GenericAPIServer.AddPostStartHookOrDie("validating-webhook-xray",
-			func(context genericapiserver.PostStartHookContext) error {
-				go func() {
-					xray := reg_util.NewCreateValidatingWebhookXray(c.OperatorConfig.ClientConfig, apiserviceName, &api.Postgres{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: api.SchemeGroupVersion.String(),
-							Kind:       api.ResourceKindPostgres,
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "test-postgres-for-webhook-xray",
-							Namespace: "default",
-						},
-						Spec: api.PostgresSpec{
-							StorageType: api.StorageType("Invalid"),
-						},
-					}, context.StopCh)
-					if err := xray.IsActive(); err != nil {
-						w, _, e2 := dynamic_util.DetectWorkload(
-							c.OperatorConfig.ClientConfig,
-							core.SchemeGroupVersion.WithResource("pods"),
-							os.Getenv("MY_POD_NAMESPACE"),
-							os.Getenv("MY_POD_NAME"))
-						if e2 == nil {
-							eventer.CreateEventWithLog(
-								kubernetes.NewForConfigOrDie(c.OperatorConfig.ClientConfig),
-								"pgbouncer-operator",
-								w,
-								core.EventTypeWarning,
-								eventer.EventReasonAdmissionWebhookNotActivated,
-								err.Error())
-						}
-						panic(err)
-					}
-				}()
-				return nil
-			},
-		)
+		//s.GenericAPIServer.AddPostStartHookOrDie("validating-webhook-xray",
+		//	func(context genericapiserver.PostStartHookContext) error {
+		//		go func() {
+		//			xray := reg_util.NewCreateValidatingWebhookXray(c.OperatorConfig.ClientConfig, apiserviceName, &api.PgBouncer{
+		//				TypeMeta: metav1.TypeMeta{
+		//					APIVersion: api.SchemeGroupVersion.String(),
+		//					Kind:       api.ResourceKindPgBouncer,
+		//				},
+		//				ObjectMeta: metav1.ObjectMeta{
+		//					Name:      "test-pgbouncer-for-webhook-xray",
+		//					Namespace: "default",
+		//				},
+		//			}, context.StopCh)
+		//			if err := xray.IsActive(); err != nil {
+		//				w, _, e2 := dynamic_util.DetectWorkload(
+		//					c.OperatorConfig.ClientConfig,
+		//					core.SchemeGroupVersion.WithResource("pods"),
+		//					os.Getenv("MY_POD_NAMESPACE"),
+		//					os.Getenv("MY_POD_NAME"))
+		//				if e2 == nil {
+		//					eventer.CreateEventWithLog(
+		//						kubernetes.NewForConfigOrDie(c.OperatorConfig.ClientConfig),
+		//						"pgbouncer-operator",
+		//						w,
+		//						core.EventTypeWarning,
+		//						eventer.EventReasonAdmissionWebhookNotActivated,
+		//						err.Error())
+		//				}
+		//				panic(err)
+		//			}
+		//		}()
+		//		return nil
+		//	},
+		//)
 	}
 	return s, nil
 }

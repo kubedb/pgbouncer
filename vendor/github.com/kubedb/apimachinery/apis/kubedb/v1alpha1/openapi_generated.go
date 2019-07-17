@@ -36,6 +36,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 	return map[string]common.OpenAPIDefinition{
 		"github.com/appscode/go/encoding/json/types.IntHash":                               schema_go_encoding_json_types_IntHash(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.BackupScheduleSpec":           schema_apimachinery_apis_kubedb_v1alpha1_BackupScheduleSpec(ref),
+		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.ConnectionPoolConfig":         schema_apimachinery_apis_kubedb_v1alpha1_ConnectionPoolConfig(ref),
+		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.Databases":                    schema_apimachinery_apis_kubedb_v1alpha1_Databases(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.DormantDatabase":              schema_apimachinery_apis_kubedb_v1alpha1_DormantDatabase(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.DormantDatabaseList":          schema_apimachinery_apis_kubedb_v1alpha1_DormantDatabaseList(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.DormantDatabaseSpec":          schema_apimachinery_apis_kubedb_v1alpha1_DormantDatabaseSpec(ref),
@@ -84,6 +86,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PerconaList":                  schema_apimachinery_apis_kubedb_v1alpha1_PerconaList(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PerconaSpec":                  schema_apimachinery_apis_kubedb_v1alpha1_PerconaSpec(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PerconaStatus":                schema_apimachinery_apis_kubedb_v1alpha1_PerconaStatus(ref),
+		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncer":                    schema_apimachinery_apis_kubedb_v1alpha1_PgBouncer(ref),
+		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncerList":                schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerList(ref),
+		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncerSchemaInfo":          schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerSchemaInfo(ref),
+		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncerSpec":                schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerSpec(ref),
+		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncerStatus":              schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerStatus(ref),
+		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncerSummary":             schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerSummary(ref),
+		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncerTableInfo":           schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerTableInfo(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.Postgres":                     schema_apimachinery_apis_kubedb_v1alpha1_Postgres(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PostgresArchiverSpec":         schema_apimachinery_apis_kubedb_v1alpha1_PostgresArchiverSpec(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PostgresList":                 schema_apimachinery_apis_kubedb_v1alpha1_PostgresList(ref),
@@ -103,6 +112,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.ReportStatus":                 schema_apimachinery_apis_kubedb_v1alpha1_ReportStatus(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.ReportSummary":                schema_apimachinery_apis_kubedb_v1alpha1_ReportSummary(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.ScriptSourceSpec":             schema_apimachinery_apis_kubedb_v1alpha1_ScriptSourceSpec(ref),
+		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.SecretList":                   schema_apimachinery_apis_kubedb_v1alpha1_SecretList(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.Snapshot":                     schema_apimachinery_apis_kubedb_v1alpha1_Snapshot(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.SnapshotList":                 schema_apimachinery_apis_kubedb_v1alpha1_SnapshotList(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.SnapshotSourceSpec":           schema_apimachinery_apis_kubedb_v1alpha1_SnapshotSourceSpec(ref),
@@ -123,6 +133,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.mysqlStatsService":            schema_apimachinery_apis_kubedb_v1alpha1_mysqlStatsService(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.perconaApp":                   schema_apimachinery_apis_kubedb_v1alpha1_perconaApp(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.perconaStatsService":          schema_apimachinery_apis_kubedb_v1alpha1_perconaStatsService(ref),
+		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.pgbouncerApp":                 schema_apimachinery_apis_kubedb_v1alpha1_pgbouncerApp(ref),
+		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.pgbouncerStatsService":        schema_apimachinery_apis_kubedb_v1alpha1_pgbouncerStatsService(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.postgresApp":                  schema_apimachinery_apis_kubedb_v1alpha1_postgresApp(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.postgresStatsService":         schema_apimachinery_apis_kubedb_v1alpha1_postgresStatsService(ref),
 		"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.redisApp":                     schema_apimachinery_apis_kubedb_v1alpha1_redisApp(ref),
@@ -537,6 +549,105 @@ func schema_apimachinery_apis_kubedb_v1alpha1_BackupScheduleSpec(ref common.Refe
 		},
 		Dependencies: []string{
 			"k8s.io/api/core/v1.PersistentVolumeClaimSpec", "kmodules.xyz/objectstore-api/api/v1.AzureSpec", "kmodules.xyz/objectstore-api/api/v1.B2Spec", "kmodules.xyz/objectstore-api/api/v1.GCSSpec", "kmodules.xyz/objectstore-api/api/v1.LocalSpec", "kmodules.xyz/objectstore-api/api/v1.RestServerSpec", "kmodules.xyz/objectstore-api/api/v1.S3Spec", "kmodules.xyz/objectstore-api/api/v1.SwiftSpec", "kmodules.xyz/offshoot-api/api/v1.PodTemplateSpec"},
+	}
+}
+
+func schema_apimachinery_apis_kubedb_v1alpha1_ConnectionPoolConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"listenPort": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"listenAddress": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"poolMode": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"adminUsers": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"observedGeneration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "observedGeneration is the most recent generation observed for this resource. It corresponds to the resource's generation, which is updated on mutation by the API Server.",
+							Ref:         ref("github.com/appscode/go/encoding/json/types.IntHash"),
+						},
+					},
+				},
+				Required: []string{"listenPort"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/appscode/go/encoding/json/types.IntHash"},
+	}
+}
+
+func schema_apimachinery_apis_kubedb_v1alpha1_Databases(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"dbAlias": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"dbName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "alias to identify target database",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"pgObjectName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the target database",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"pgObjectNamespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PgBouncer object where the target database is located",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"secretName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Namespace of PgBouncer object",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"dbAlias", "dbName", "pgObjectName"},
+			},
+		},
 	}
 }
 
@@ -2849,6 +2960,307 @@ func schema_apimachinery_apis_kubedb_v1alpha1_PerconaStatus(ref common.Reference
 	}
 }
 
+func schema_apimachinery_apis_kubedb_v1alpha1_PgBouncer(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PgBouncer defines a PgBouncer database.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncerSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncerStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncerSpec", "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncerStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is a list of PgBouncer CRD objects",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncer"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncer", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerSchemaInfo(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"table": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncerTableInfo"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"table"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncerTableInfo"},
+	}
+}
+
+func schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"replicas": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Number of instances to deploy for a PgBouncer instance.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"serviceTemplate": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("kmodules.xyz/offshoot-api/api/v1.ServiceTemplateSpec"),
+						},
+					},
+					"databases": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Databases to proxy",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.Databases"),
+									},
+								},
+							},
+						},
+					},
+					"connectionPoolConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Connection pool configuration",
+							Ref:         ref("github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.ConnectionPoolConfig"),
+						},
+					},
+					"secretList": {
+						SchemaProps: spec.SchemaProps{
+							Description: "list of secrets",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.SecretList"),
+									},
+								},
+							},
+						},
+					},
+					"image": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Image is used for local only machines",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"monitor": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Monitor is used monitor database instance",
+							Ref:         ref("kmodules.xyz/monitoring-agent-api/api/v1.AgentSpec"),
+						},
+					},
+					"configSource": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ConfigSource is an optional field to provide custom configuration file for database (i.e pgbouncerql.conf). If specified, this file will be used as configuration file otherwise default configuration file will be used.",
+							Ref:         ref("k8s.io/api/core/v1.VolumeSource"),
+						},
+					},
+					"updateStrategy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "updateStrategy indicates the StatefulSetUpdateStrategy that will be employed to update Pods in the StatefulSet when a revision is made to Template.",
+							Ref:         ref("k8s.io/api/apps/v1.StatefulSetUpdateStrategy"),
+						},
+					},
+					"terminationPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "TerminationPolicy controls the delete operation for database",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"databases", "connectionPoolConfig", "secretList"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.ConnectionPoolConfig", "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.Databases", "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.SecretList", "k8s.io/api/apps/v1.StatefulSetUpdateStrategy", "k8s.io/api/core/v1.VolumeSource", "kmodules.xyz/monitoring-agent-api/api/v1.AgentSpec", "kmodules.xyz/offshoot-api/api/v1.ServiceTemplateSpec"},
+	}
+}
+
+func schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"reason": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"observedGeneration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "observedGeneration is the most recent generation observed for this resource. It corresponds to the resource's generation, which is updated on mutation by the API Server.",
+							Ref:         ref("github.com/appscode/go/encoding/json/types.IntHash"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/appscode/go/encoding/json/types.IntHash"},
+	}
+}
+
+func schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerSummary(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"schema": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncerSchemaInfo"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"schema"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncerSchemaInfo"},
+	}
+}
+
+func schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerTableInfo(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Following structures are used for audit summary report",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"totalRow": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int64",
+						},
+					},
+					"maxId": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int64",
+						},
+					},
+					"nextId": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int64",
+						},
+					},
+				},
+				Required: []string{"totalRow", "maxId", "nextId"},
+			},
+		},
+	}
+}
+
 func schema_apimachinery_apis_kubedb_v1alpha1_Postgres(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3848,6 +4260,32 @@ func schema_apimachinery_apis_kubedb_v1alpha1_ScriptSourceSpec(ref common.Refere
 	}
 }
 
+func schema_apimachinery_apis_kubedb_v1alpha1_SecretList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"secretName": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"secretNamespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "contains a single username-password combo that exists in a target database",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"secretName"},
+			},
+		},
+	}
+}
+
 func schema_apimachinery_apis_kubedb_v1alpha1_Snapshot(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -4402,6 +4840,46 @@ func schema_apimachinery_apis_kubedb_v1alpha1_perconaStatsService(ref common.Ref
 		},
 		Dependencies: []string{
 			"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.Percona"},
+	}
+}
+
+func schema_apimachinery_apis_kubedb_v1alpha1_pgbouncerApp(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"PgBouncer": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncer"),
+						},
+					},
+				},
+				Required: []string{"PgBouncer"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncer"},
+	}
+}
+
+func schema_apimachinery_apis_kubedb_v1alpha1_pgbouncerStatsService(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"PgBouncer": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncer"),
+						},
+					},
+				},
+				Required: []string{"PgBouncer"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/kubedb/apimachinery/apis/kubedb/v1alpha1.PgBouncer"},
 	}
 }
 

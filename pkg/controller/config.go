@@ -4,12 +4,9 @@ import (
 	pcm "github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
 	cs "github.com/kubedb/apimachinery/client/clientset/versioned"
 	amc "github.com/kubedb/apimachinery/pkg/controller"
-	"github.com/kubedb/apimachinery/pkg/controller/dormantdatabase"
-	"github.com/kubedb/apimachinery/pkg/controller/restoresession"
 	snapc "github.com/kubedb/apimachinery/pkg/controller/snapshot"
 	"github.com/kubedb/apimachinery/pkg/eventer"
 	crd_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -48,7 +45,7 @@ func (c *OperatorConfig) New() (*Controller, error) {
 	if err := discovery.IsDefaultSupportedVersion(c.KubeClient); err != nil {
 		return nil, err
 	}
-	recorder := eventer.NewEventRecorder(c.KubeClient, "Postgres operator")
+	recorder := eventer.NewEventRecorder(c.KubeClient, "PgBouncer operator")
 	ctrl := New(
 		c.ClientConfig,
 		c.KubeClient,
@@ -63,14 +60,14 @@ func (c *OperatorConfig) New() (*Controller, error) {
 		recorder,
 	)
 
-	tweakListOptions := func(options *metav1.ListOptions) {
-		options.LabelSelector = ctrl.selector.String()
-	}
+	//tweakListOptions := func(options *metav1.ListOptions) {
+	//	options.LabelSelector = ctrl.selector.String()
+	//}
 
 	// Initialize Job and Snapshot Informer. Later EventHandler will be added to these informers.
-	ctrl.DrmnInformer = dormantdatabase.NewController(ctrl.Controller, ctrl, ctrl.Config, tweakListOptions, recorder).InitInformer()
-	ctrl.SnapInformer, ctrl.JobInformer = snapc.NewController(ctrl.Controller, ctrl, ctrl.Config, tweakListOptions, recorder).InitInformer()
-	ctrl.RSInformer = restoresession.NewController(ctrl.Controller, ctrl, ctrl.Config, tweakListOptions, recorder).InitInformer()
+	//ctrl.DrmnInformer = dormantdatabase.NewController(ctrl.Controller, ctrl, ctrl.Config, tweakListOptions, recorder).InitInformer()
+	//ctrl.SnapInformer, ctrl.JobInformer = snapc.NewController(ctrl.Controller, ctrl, ctrl.Config, tweakListOptions, recorder).InitInformer()
+	//ctrl.RSInformer = restoresession.NewController(ctrl.Controller, ctrl, ctrl.Config, tweakListOptions, recorder).InitInformer()
 
 	if err := ctrl.EnsureCustomResourceDefinitions(); err != nil {
 		return nil, err

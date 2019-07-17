@@ -11,17 +11,17 @@ import (
 )
 
 func NewCmdRun(version string, out, errOut io.Writer, stopCh <-chan struct{}) *cobra.Command {
-	o := server.NewPostgresServerOptions(out, errOut)
+	o := server.NewPgBouncerServerOptions(out, errOut)
 
 	cmd := &cobra.Command{
 		Use:               "run",
-		Short:             "Launch Postgres server",
+		Short:             "Launch PgBouncer server",
 		DisableAutoGenTag: true,
 		PreRun: func(c *cobra.Command, args []string) {
 			cli.SendPeriodicAnalytics(c, version)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Infoln("Starting postgres-server...")
+			log.Infoln("Starting pgbouncer-server...")
 
 			if err := o.Complete(); err != nil {
 				return err

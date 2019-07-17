@@ -142,15 +142,12 @@ env | sort | grep -e KUBEDB* -e APPSCODE*
 echo ""
 
 if [ "$SELF_HOSTED" -eq 1 ]; then
-  echo "${KUBEDB_SCRIPT}hack/deploy/kubedb.sh | bash -s -- --operator-name=pgbouncer-operator $ARGS"
-  ${KUBEDB_SCRIPT}hack/deploy/kubedb.sh | bash -s -- --operator-name=pgbouncer-operator ${ARGS}
+  echo "${KUBEDB_SCRIPT}/deploy/kubedb.sh | bash -s -- --operator-name=pgbouncer-operator $ARGS"
+  ${KUBEDB_SCRIPT}/deploy/kubedb.sh | bash -s -- --operator-name=pgbouncer-operator ${ARGS}
 fi
 
 if [ "$MINIKUBE" -eq 1 ]; then
-  cat $INSTALLER_ROOT/deploy/validating-webhook.yaml | $ONESSL envsubst | kubectl apply -f -
-  cat $INSTALLER_ROOT/deploy/mutating-webhook.yaml | $ONESSL envsubst | kubectl apply -f -
   cat $REPO_ROOT/hack/dev/apiregistration.yaml | $ONESSL envsubst | kubectl apply -f -
-  cat $INSTALLER_ROOT/deploy/psp/postgres.yaml | $ONESSL envsubst | kubectl apply -f -
   # Following line may give error if DBVersions CRD already not created
   cat $INSTALLER_ROOT/deploy/kubedb-catalog/postgres.yaml | $ONESSL envsubst | kubectl apply -f - || true
 
@@ -159,8 +156,8 @@ if [ "$MINIKUBE" -eq 1 ]; then
     pgbouncer-operator run --v=4 \
       --secure-port=8443 \
       --enable-status-subresource=true \
-      --enable-mutating-webhook=true \
-      --enable-validating-webhook=true \
+      --enable-mutating-webhook=false \
+      --enable-validating-webhook=false \
       --kubeconfig="$HOME/.kube/config" \
       --authorization-kubeconfig="$HOME/.kube/config" \
       --authentication-kubeconfig="$HOME/.kube/config"
