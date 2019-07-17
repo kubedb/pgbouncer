@@ -7,16 +7,14 @@ import (
 	core "k8s.io/api/core/v1"
 	policy_v1beta1 "k8s.io/api/policy/v1beta1"
 	rbac "k8s.io/api/rbac/v1beta1"
-	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/reference"
 	core_util "kmodules.xyz/client-go/core/v1"
-	meta_util "kmodules.xyz/client-go/meta"
 	rbac_util "kmodules.xyz/client-go/rbac/v1beta1"
 )
 
-func (c *Controller) ensureRole(db *api.Postgres, pspName string) error {
+func (c *Controller) ensureRole(db *api.PgBouncer, pspName string) error {
 	ref, rerr := reference.GetReference(clientsetscheme.Scheme, db)
 	if rerr != nil {
 		return rerr
@@ -71,7 +69,7 @@ func (c *Controller) ensureRole(db *api.Postgres, pspName string) error {
 	return err
 }
 
-func (c *Controller) ensureSnapshotRole(db *api.Postgres, pspName string) error {
+func (c *Controller) ensureSnapshotRole(db *api.PgBouncer, pspName string) error {
 	ref, rerr := reference.GetReference(clientsetscheme.Scheme, db)
 	if rerr != nil {
 		return rerr
@@ -102,7 +100,7 @@ func (c *Controller) ensureSnapshotRole(db *api.Postgres, pspName string) error 
 	return err
 }
 
-func (c *Controller) createServiceAccount(db *api.Postgres, saName string) error {
+func (c *Controller) createServiceAccount(db *api.PgBouncer, saName string) error {
 	ref, rerr := reference.GetReference(clientsetscheme.Scheme, db)
 	if rerr != nil {
 		return rerr
@@ -123,7 +121,7 @@ func (c *Controller) createServiceAccount(db *api.Postgres, saName string) error
 	return err
 }
 
-func (c *Controller) createRoleBinding(db *api.Postgres, saName string) error {
+func (c *Controller) createRoleBinding(db *api.PgBouncer, saName string) error {
 	ref, rerr := reference.GetReference(clientsetscheme.Scheme, db)
 	if rerr != nil {
 		return rerr
@@ -156,7 +154,7 @@ func (c *Controller) createRoleBinding(db *api.Postgres, saName string) error {
 	return err
 }
 
-func (c *Controller) createSnapshotRoleBinding(db *api.Postgres) error {
+func (c *Controller) createSnapshotRoleBinding(db *api.PgBouncer) error {
 	ref, rerr := reference.GetReference(clientsetscheme.Scheme, db)
 	if rerr != nil {
 		return rerr
@@ -189,78 +187,73 @@ func (c *Controller) createSnapshotRoleBinding(db *api.Postgres) error {
 	return err
 }
 
-func (c *Controller) getPolicyNames(db *api.Postgres) (string, string, error) {
-	dbVersion, err := c.ExtClient.CatalogV1alpha1().PostgresVersions().Get(string(db.Spec.Version), metav1.GetOptions{})
-	if err != nil {
-		return "", "", err
-	}
-	dbPolicyName := dbVersion.Spec.PodSecurityPolicies.DatabasePolicyName
-	snapshotPolicyName := dbVersion.Spec.PodSecurityPolicies.SnapshotterPolicyName
+func (c *Controller) getPolicyNames(db *api.PgBouncer) (string, string, error) {
+	dbPolicyName := "pgbouncer"
 
-	return dbPolicyName, snapshotPolicyName, nil
+	return dbPolicyName, "", nil
 }
 
-func (c *Controller) ensureDatabaseRBAC(postgres *api.Postgres) error {
-	saName := postgres.Spec.PodTemplate.Spec.ServiceAccountName
-	if saName == "" {
-		saName = postgres.OffshootName()
-		postgres.Spec.PodTemplate.Spec.ServiceAccountName = saName
-	}
-
-	sa, err := c.Client.CoreV1().ServiceAccounts(postgres.Namespace).Get(saName, metav1.GetOptions{})
-	if kerr.IsNotFound(err) {
-		// create service account, since it does not exist
-		if err = c.createServiceAccount(postgres, saName); err != nil {
-			if !kerr.IsAlreadyExists(err) {
-				return err
-			}
-		}
-	} else if err != nil {
-		return err
-	} else if sa.Labels[meta_util.ManagedByLabelKey] != api.GenericKey {
-		// user provided the service account, so do nothing.
-		return nil
-	}
-
-	// Create New Role
-	pspName, _, err := c.getPolicyNames(postgres)
-	if err != nil {
-		return err
-	}
-	if err := c.ensureRole(postgres, pspName); err != nil {
-		return err
-	}
-
-	// Create New RoleBinding
-	if err := c.createRoleBinding(postgres, saName); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *Controller) ensureSnapshotRBAC(postgres *api.Postgres) error {
-	_, snapshotPolicyName, err := c.getPolicyNames(postgres)
-	if err != nil {
-		return err
-	}
-
-	//Role for snapshot
-	if err := c.ensureSnapshotRole(postgres, snapshotPolicyName); err != nil {
-		return err
-	}
-
-	// ServiceAccount for snapshot
-	if err := c.createServiceAccount(postgres, postgres.SnapshotSAName()); err != nil {
-		if !kerr.IsAlreadyExists(err) {
-			return err
-		}
-	}
-
-	// Create New RoleBinding for snapshot
-	if err := c.createSnapshotRoleBinding(postgres); err != nil {
-		return err
-	}
-
-	return nil
-}
+//
+//func (c *Controller) ensureDatabaseRBAC(pgbouncer *api.PgBouncer) error {
+//
+//
+//		saName = pgbouncer.OffshootName()
+//
+//
+//	sa, err := c.Client.CoreV1().ServiceAccounts(pgbouncer.Namespace).Get(saName, metav1.GetOptions{})
+//	if kerr.IsNotFound(err) {
+//		// create service account, since it does not exist
+//		if err = c.createServiceAccount(pgbouncer, saName); err != nil {
+//			if !kerr.IsAlreadyExists(err) {
+//				return err
+//			}
+//		}
+//	} else if err != nil {
+//		return err
+//	} else if sa.Labels[meta_util.ManagedByLabelKey] != api.GenericKey {
+//		// user provided the service account, so do nothing.
+//		return nil
+//	}
+//
+//	// Create New Role
+//	pspName, _, err := c.getPolicyNames(pgbouncer)
+//	if err != nil {
+//		return err
+//	}
+//	if err := c.ensureRole(pgbouncer, pspName); err != nil {
+//		return err
+//	}
+//
+//	// Create New RoleBinding
+//	if err := c.createRoleBinding(pgbouncer, saName); err != nil {
+//		return err
+//	}
+//
+//	return nil
+//}
+//
+//func (c *Controller) ensureSnapshotRBAC(pgbouncer *api.PgBouncer) error {
+//	_, snapshotPolicyName, err := c.getPolicyNames(pgbouncer)
+//	if err != nil {
+//		return err
+//	}
+//
+//	//Role for snapshot
+//	if err := c.ensureSnapshotRole(pgbouncer, snapshotPolicyName); err != nil {
+//		return err
+//	}
+//
+//	// ServiceAccount for snapshot
+//	if err := c.createServiceAccount(pgbouncer, pgbouncer.SnapshotSAName()); err != nil {
+//		if !kerr.IsAlreadyExists(err) {
+//			return err
+//		}
+//	}
+//
+//	// Create New RoleBinding for snapshot
+//	if err := c.createSnapshotRoleBinding(pgbouncer); err != nil {
+//		return err
+//	}
+//
+//	return nil
+//}

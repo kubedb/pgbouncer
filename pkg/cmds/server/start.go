@@ -17,7 +17,7 @@ import (
 
 const defaultEtcdPathPrefix = "/registry/kubedb.com"
 
-type PostgresServerOptions struct {
+type PgBouncerServerOptions struct {
 	RecommendedOptions *genericoptions.RecommendedOptions
 	ExtraOptions       *ExtraOptions
 
@@ -25,8 +25,8 @@ type PostgresServerOptions struct {
 	StdErr io.Writer
 }
 
-func NewPostgresServerOptions(out, errOut io.Writer) *PostgresServerOptions {
-	o := &PostgresServerOptions{
+func NewPgBouncerServerOptions(out, errOut io.Writer) *PgBouncerServerOptions {
+	o := &PgBouncerServerOptions{
 		// TODO we will nil out the etcd storage options.  This requires a later level of k8s.io/apiserver
 		RecommendedOptions: genericoptions.NewRecommendedOptions(
 			defaultEtcdPathPrefix,
@@ -43,20 +43,20 @@ func NewPostgresServerOptions(out, errOut io.Writer) *PostgresServerOptions {
 	return o
 }
 
-func (o PostgresServerOptions) AddFlags(fs *pflag.FlagSet) {
+func (o PgBouncerServerOptions) AddFlags(fs *pflag.FlagSet) {
 	o.RecommendedOptions.AddFlags(fs)
 	o.ExtraOptions.AddFlags(fs)
 }
 
-func (o PostgresServerOptions) Validate(args []string) error {
+func (o PgBouncerServerOptions) Validate(args []string) error {
 	return nil
 }
 
-func (o *PostgresServerOptions) Complete() error {
+func (o *PgBouncerServerOptions) Complete() error {
 	return nil
 }
 
-func (o PostgresServerOptions) Config() (*server.PostgresServerConfig, error) {
+func (o PgBouncerServerOptions) Config() (*server.PgBouncerServerConfig, error) {
 	// TODO have a "real" external address
 	if err := o.RecommendedOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{net.ParseIP("127.0.0.1")}); err != nil {
 		return nil, fmt.Errorf("error creating self-signed certificates: %v", err)
@@ -73,7 +73,7 @@ func (o PostgresServerOptions) Config() (*server.PostgresServerConfig, error) {
 		return nil, err
 	}
 
-	config := &server.PostgresServerConfig{
+	config := &server.PgBouncerServerConfig{
 		GenericConfig:  serverConfig,
 		ExtraConfig:    server.ExtraConfig{},
 		OperatorConfig: controllerConfig,
@@ -81,7 +81,7 @@ func (o PostgresServerOptions) Config() (*server.PostgresServerConfig, error) {
 	return config, nil
 }
 
-func (o PostgresServerOptions) Run(stopCh <-chan struct{}) error {
+func (o PgBouncerServerOptions) Run(stopCh <-chan struct{}) error {
 	config, err := o.Config()
 	if err != nil {
 		return err

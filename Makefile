@@ -20,7 +20,7 @@ BIN      := pgbouncer-operator
 COMPRESS ?= no
 
 # Where to push the docker image.
-REGISTRY ?= kubedb
+REGISTRY ?= rezoan
 
 # This version-strategy uses git tags to set the version string
 git_branch       := $(shell git rev-parse --abbrev-ref HEAD)
@@ -61,7 +61,7 @@ BASEIMAGE_DBG    ?= debian:stretch
 IMAGE            := $(REGISTRY)/$(BIN)
 VERSION_PROD     := $(VERSION)
 VERSION_DBG      := $(VERSION)-dbg
-TAG              := $(VERSION)_$(OS)_$(ARCH)
+TAG              := 0.12.0
 TAG_PROD         := $(TAG)
 TAG_DBG          := $(VERSION)-dbg_$(OS)_$(ARCH)
 
@@ -272,7 +272,7 @@ $(BUILD_DIRS):
 .PHONY: install
 install:
 	@cd ../installer; \
-	APPSCODE_ENV=dev KUBEDB_DOCKER_REGISTRY=$(REGISTRY) KUBEDB_OPERATOR_TAG=$(TAG) KUBEDB_CATALOG=postgres ./deploy/kubedb.sh --operator-name=$(BIN)
+	APPSCODE_ENV=dev KUBEDB_DOCKER_REGISTRY=$(REGISTRY) KUBEDB_OPERATOR_TAG=$(TAG) KUBEDB_CATALOG=pgbouncer ./deploy/kubedb.sh --operator-name=$(BIN)
 
 .PHONY: uninstall
 uninstall:

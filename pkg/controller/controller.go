@@ -5,15 +5,11 @@ import (
 	"github.com/appscode/go/log"
 	pcm "github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
 	"github.com/kubedb/apimachinery/apis"
-	authorization "github.com/kubedb/apimachinery/apis/authorization/v1alpha1"
-	catalog "github.com/kubedb/apimachinery/apis/catalog/v1alpha1"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	cs "github.com/kubedb/apimachinery/client/clientset/versioned"
 	kutildb "github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 	api_listers "github.com/kubedb/apimachinery/client/listers/kubedb/v1alpha1"
 	amc "github.com/kubedb/apimachinery/pkg/controller"
-	drmnc "github.com/kubedb/apimachinery/pkg/controller/dormantdatabase"
-	"github.com/kubedb/apimachinery/pkg/controller/restoresession"
 	snapc "github.com/kubedb/apimachinery/pkg/controller/snapshot"
 	"github.com/kubedb/apimachinery/pkg/eventer"
 	core "k8s.io/api/core/v1"
@@ -30,7 +26,6 @@ import (
 	apiext_util "kmodules.xyz/client-go/apiextensions/v1beta1"
 	meta_util "kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/queue"
-	appcat "kmodules.xyz/custom-resources/apis/appcatalog/v1alpha1"
 	appcat_cs "kmodules.xyz/custom-resources/client/clientset/versioned/typed/appcatalog/v1alpha1"
 	scs "stash.appscode.dev/stash/client/clientset/versioned"
 )
@@ -48,13 +43,20 @@ type Controller struct {
 	// labelselector for event-handler of Snapshot, Dormant and Job
 	selector labels.Selector
 
-	// Postgres
+	// PgBouncer
 	pgQueue    *queue.Worker
 	pgInformer cache.SharedIndexInformer
-	pgLister   api_listers.PostgresLister
+	pbLister   api_listers.PgBouncerLister
 }
 
-var _ amc.Snapshotter = &Controller{}
+func (c *Controller) WaitUntilPaused(*api.DormantDatabase) error {
+	panic("implement me")
+}
+
+func (c *Controller) WipeOutDatabase(*api.DormantDatabase) error {
+	panic("implement me")
+}
+
 var _ amc.Deleter = &Controller{}
 
 func New(
@@ -85,7 +87,7 @@ func New(
 		cronController: cronController,
 		recorder:       recorder,
 		selector: labels.SelectorFromSet(map[string]string{
-			api.LabelDatabaseKind: api.ResourceKindPostgres,
+			api.LabelDatabaseKind: api.ResourceKindPgBouncer,
 		}),
 	}
 }
@@ -94,23 +96,21 @@ func New(
 func (c *Controller) EnsureCustomResourceDefinitions() error {
 	log.Infoln("Ensuring CustomResourceDefinition...")
 	crds := []*crd_api.CustomResourceDefinition{
-		api.Postgres{}.CustomResourceDefinition(),
-		catalog.PostgresVersion{}.CustomResourceDefinition(),
-		api.DormantDatabase{}.CustomResourceDefinition(),
-		api.Snapshot{}.CustomResourceDefinition(),
-		authorization.PostgresRole{}.CustomResourceDefinition(),
-		authorization.DatabaseAccessRequest{}.CustomResourceDefinition(),
-		appcat.AppBinding{}.CustomResourceDefinition(),
+		api.PgBouncer{}.CustomResourceDefinition(),
+		//api.DormantDatabase{}.CustomResourceDefinition(),
+		//api.Snapshot{}.CustomResourceDefinition(),
+		//authorization.DatabaseAccessRequest{}.CustomResourceDefinition(),
+		//appcat.AppBinding{}.CustomResourceDefinition(),
 	}
 	return apiext_util.RegisterCRDs(c.ApiExtKubeClient, crds)
 }
 
-// InitInformer initializes Postgres, DormantDB amd Snapshot watcher
+// InitInformer initializes PgBouncer, DormantDB amd Snapshot watcher
 func (c *Controller) Init() error {
 	c.initWatcher()
-	c.DrmnQueue = drmnc.NewController(c.Controller, c, c.Config, nil, c.recorder).AddEventHandlerFunc(c.selector)
-	c.SnapQueue, c.JobQueue = snapc.NewController(c.Controller, c, c.Config, nil, c.recorder).AddEventHandlerFunc(c.selector)
-	c.RSQueue = restoresession.NewController(c.Controller, c, c.Config, nil, c.recorder).AddEventHandlerFunc(c.selector)
+	//c.DrmnQueue = drmnc.NewController(c.Controller, c, c.Config, nil, c.recorder).AddEventHandlerFunc(c.selector)
+	//c.SnapQueue, c.JobQueue = snapc.NewController(c.Controller, c, c.Config, nil, c.recorder).AddEventHandlerFunc(c.selector)
+	//c.RSQueue = restoresession.NewController(c.Controller, c, c.Config, nil, c.recorder).AddEventHandlerFunc(c.selector)
 
 	return nil
 }
@@ -122,9 +122,9 @@ func (c *Controller) RunControllers(stopCh <-chan struct{}) {
 
 	// Watch x  TPR objects
 	c.pgQueue.Run(stopCh)
-	c.DrmnQueue.Run(stopCh)
-	c.SnapQueue.Run(stopCh)
-	c.JobQueue.Run(stopCh)
+	//c.DrmnQueue.Run(stopCh)
+	//c.SnapQueue.Run(stopCh)
+	//c.JobQueue.Run(stopCh)
 }
 
 // Blocks caller. Intended to be called as a Go routine.
@@ -152,24 +152,6 @@ func (c *Controller) StartAndRunControllers(stopCh <-chan struct{}) {
 	c.KubeInformerFactory.Start(stopCh)
 	c.KubedbInformerFactory.Start(stopCh)
 
-	go func() {
-		// start StashInformerFactory only if stash crds (ie, "restoreSession") are available.
-		if err := c.BlockOnStashOperator(stopCh); err != nil {
-			log.Errorln("error while waiting for restoreSession.", err)
-			return
-		}
-
-		// start informer factory
-		c.StashInformerFactory.Start(stopCh)
-		for t, v := range c.StashInformerFactory.WaitForCacheSync(stopCh) {
-			if !v {
-				log.Fatalf("%v timed out waiting for caches to sync", t)
-				return
-			}
-		}
-		c.RSQueue.Run(stopCh)
-	}()
-
 	// Wait for all involved caches to be synced, before processing items from the queue is started
 	for t, v := range c.KubeInformerFactory.WaitForCacheSync(stopCh) {
 		if !v {
@@ -190,29 +172,29 @@ func (c *Controller) StartAndRunControllers(stopCh <-chan struct{}) {
 	log.Infoln("Stopping KubeDB controller")
 }
 
-func (c *Controller) pushFailureEvent(postgres *api.Postgres, reason string) {
+func (c *Controller) pushFailureEvent(pgbouncer *api.PgBouncer, reason string) {
 	c.recorder.Eventf(
-		postgres,
+		pgbouncer,
 		core.EventTypeWarning,
 		eventer.EventReasonFailedToStart,
-		`Fail to be ready Postgres: "%v". Reason: %v`,
-		postgres.Name,
+		`Fail to be ready PgBouncer: "%v". Reason: %v`,
+		pgbouncer.Name,
 		reason,
 	)
 
-	pg, err := kutildb.UpdatePostgresStatus(c.ExtClient.KubedbV1alpha1(), postgres, func(in *api.PostgresStatus) *api.PostgresStatus {
+	pg, err := kutildb.UpdatePgBouncerStatus(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncerStatus) *api.PgBouncerStatus {
 		in.Phase = api.DatabasePhaseFailed
 		in.Reason = reason
-		in.ObservedGeneration = types.NewIntHash(postgres.Generation, meta_util.GenerationHash(postgres))
+		in.ObservedGeneration = types.NewIntHash(pgbouncer.Generation, meta_util.GenerationHash(pgbouncer))
 		return in
 	}, apis.EnableStatusSubresource)
 	if err != nil {
 		c.recorder.Eventf(
-			postgres,
+			pgbouncer,
 			core.EventTypeWarning,
 			eventer.EventReasonFailedToUpdate,
 			err.Error(),
 		)
 	}
-	postgres.Status = pg.Status
+	pgbouncer.Status = pg.Status
 }

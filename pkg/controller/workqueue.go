@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"fmt"
+
 	"github.com/appscode/go/log"
 	"github.com/kubedb/apimachinery/apis"
 	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
@@ -10,13 +12,18 @@ import (
 )
 
 func (c *Controller) initWatcher() {
-	c.pgInformer = c.KubedbInformerFactory.Kubedb().V1alpha1().Postgreses().Informer()
-	c.pgQueue = queue.New("Postgres", c.MaxNumRequeues, c.NumThreads, c.runPostgres)
-	c.pgLister = c.KubedbInformerFactory.Kubedb().V1alpha1().Postgreses().Lister()
+	fmt.Println(":001: =========>Informer")
+	c.pgInformer = c.KubedbInformerFactory.Kubedb().V1alpha1().PgBouncers().Informer()
+	fmt.Println(":002: =========>PgQueue")
+	c.pgQueue = queue.New("PgBouncer", c.MaxNumRequeues, c.NumThreads, c.runPgBouncer)
+	fmt.Println(":003: =========>PgLister")
+	c.pbLister = c.KubedbInformerFactory.Kubedb().V1alpha1().PgBouncers().Lister()
+	fmt.Println(":004: =========>EventHandler")
 	c.pgInformer.AddEventHandler(queue.NewObservableUpdateHandler(c.pgQueue.GetQueue(), apis.EnableStatusSubresource))
 }
 
-func (c *Controller) runPostgres(key string) error {
+func (c *Controller) runPgBouncer(key string) error {
+	fmt.Println(":002.1: =========>runPgBouncer")
 	log.Debugln("started processing, key:", key)
 	obj, exists, err := c.pgInformer.GetIndexer().GetByKey(key)
 	if err != nil {
@@ -25,34 +32,34 @@ func (c *Controller) runPostgres(key string) error {
 	}
 
 	if !exists {
-		log.Debugf("Postgres %s does not exist anymore", key)
+		log.Debugf("PgBouncer %s does not exist anymore", key)
 	} else {
 		// Note that you also have to check the uid if you have a local controlled resource, which
-		// is dependent on the actual instance, to detect that a Postgres was recreated with the same name
-		postgres := obj.(*api.Postgres).DeepCopy()
-		if postgres.DeletionTimestamp != nil {
-			if core_util.HasFinalizer(postgres.ObjectMeta, api.GenericKey) {
-				if err := c.terminate(postgres); err != nil {
+		// is dependent on the actual instance, to detect that a PgBouncer was recreated with the same name
+		pgbouncer := obj.(*api.PgBouncer).DeepCopy()
+		if pgbouncer.DeletionTimestamp != nil {
+			if core_util.HasFinalizer(pgbouncer.ObjectMeta, api.GenericKey) {
+				if err := c.terminate(pgbouncer); err != nil {
 					log.Errorln(err)
 					return err
 				}
-				postgres, _, err = util.PatchPostgres(c.ExtClient.KubedbV1alpha1(), postgres, func(in *api.Postgres) *api.Postgres {
+				pgbouncer, _, err = util.PatchPgBouncer(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncer) *api.PgBouncer {
 					in.ObjectMeta = core_util.RemoveFinalizer(in.ObjectMeta, api.GenericKey)
 					return in
 				})
 				return err
 			}
 		} else {
-			postgres, _, err = util.PatchPostgres(c.ExtClient.KubedbV1alpha1(), postgres, func(in *api.Postgres) *api.Postgres {
+			pgbouncer, _, err = util.PatchPgBouncer(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncer) *api.PgBouncer {
 				in.ObjectMeta = core_util.AddFinalizer(in.ObjectMeta, api.GenericKey)
 				return in
 			})
 			if err != nil {
 				return err
 			}
-			if err := c.create(postgres); err != nil {
+			if err := c.create(pgbouncer); err != nil {
 				log.Errorln(err)
-				c.pushFailureEvent(postgres, err.Error())
+				// c.pushFailureEvent(pgbouncer, err.Error())
 				return err
 			}
 		}
