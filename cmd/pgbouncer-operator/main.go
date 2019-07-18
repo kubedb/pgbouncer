@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"github.com/kubedb/pgbouncer/pkg/cmds"
 	"kmodules.xyz/client-go/logs"
+	"kubedb.dev/pgbouncer/pkg/cmds"
 )
 
 func main() {

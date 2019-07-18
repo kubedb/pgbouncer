@@ -1,8 +1,6 @@
 package controller
 
 import (
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
-	le "github.com/kubedb/pgbouncer/pkg/leader_election"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	policy_v1beta1 "k8s.io/api/policy/v1beta1"
@@ -12,6 +10,8 @@ import (
 	"k8s.io/client-go/tools/reference"
 	core_util "kmodules.xyz/client-go/core/v1"
 	rbac_util "kmodules.xyz/client-go/rbac/v1beta1"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	le "kubedb.dev/pgbouncer/pkg/leader_election"
 )
 
 func (c *Controller) ensureRole(db *api.PgBouncer, pspName string) error {
