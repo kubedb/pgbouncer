@@ -1,0 +1,31 @@
+apiVersion: kubedb.com/v1alpha1
+kind: PgBouncer
+metadata:
+  name: pgbouncer-8
+  namespace: demo
+spec:
+  replicas: 1
+  databases:
+  - dbAlias: "db" 
+    dbName: "postgres"
+    pgObjectName: "quick-postgress"
+    pgObjectNamespace: "demo"
+  connectionPoolConfig:
+    listenPort: 5432
+    poolMode: "session"
+    adminUsers:
+    - admin1
+    - admin
+    - admin2
+    - admin3
+  secretList:
+  - secretName: quick-postgress-auth
+    secretNamespace: demo
+  - secretName: admin1-secret
+    secretNamespace: demo
+  - secretName: admin-secret
+    secretNamespace: demo
+  - secretName: admin2-secret
+    secretNamespace: demo
+  - secretName: admin3-secret
+    secretNamespace: demo
