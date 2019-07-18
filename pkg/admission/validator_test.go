@@ -6,8 +6,8 @@ package admission
 //	"testing"
 //
 //	"github.com/appscode/go/types"
-//	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
-//	"github.com/kubedb/apimachinery/client/clientset/versioned/scheme"
+//	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+//	"kubedb.dev/apimachinery/client/clientset/versioned/scheme"
 //	admission "k8s.io/api/admission/v1beta1"
 //	apps "k8s.io/api/apps/v1"
 //	authenticationV1 "k8s.io/api/authentication/v1"
