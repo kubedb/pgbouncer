@@ -2,8 +2,8 @@ package server
 
 import (
 	"fmt"
-	"strings"
-
+	"kubedb.dev/apimachinery/pkg/admission/namespace"
+	mgAdmsn "kubedb.dev/pgbouncer/pkg/admission"
 	admission "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,7 +14,9 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	hooks "kmodules.xyz/webhook-runtime/admission/v1beta1"
 	admissionreview "kmodules.xyz/webhook-runtime/registry/admissionreview/v1beta1"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/pgbouncer/pkg/controller"
+	"strings"
 )
 
 const (
@@ -99,20 +101,19 @@ func (c completedConfig) New() (*PgBouncerServer, error) {
 		return nil, err
 	}
 
-	//if c.OperatorConfig.EnableMutatingWebhook {
-	//	c.ExtraConfig.AdmissionHooks = []hooks.AdmissionHook{
-	//		&mgAdmsn.PgBouncerMutator{},
-	//	}
-	//}
-	//if c.OperatorConfig.EnableValidatingWebhook {
-	//	c.ExtraConfig.AdmissionHooks = append(c.ExtraConfig.AdmissionHooks,
-	//		&mgAdmsn.PgBouncerValidator{},
-	//		&snapshot.SnapshotValidator{},
-	//		&dormantdatabase.DormantDatabaseValidator{},
-	//		&namespace.NamespaceValidator{
-	//			Resources: []string{api.ResourcePluralPgBouncer},
-	//		})
-	//}
+	if c.OperatorConfig.EnableMutatingWebhook {
+		println("======================>c.OperatorConfig.EnableMutatingWebhook")
+		c.ExtraConfig.AdmissionHooks = []hooks.AdmissionHook{
+			&mgAdmsn.PgBouncerMutator{},
+		}
+	}
+	if c.OperatorConfig.EnableValidatingWebhook {
+		c.ExtraConfig.AdmissionHooks = append(c.ExtraConfig.AdmissionHooks,
+			&mgAdmsn.PgBouncerValidator{},
+			&namespace.NamespaceValidator{
+				Resources: []string{api.ResourcePluralPgBouncer},
+			})
+	}
 
 	ctrl, err := c.OperatorConfig.New()
 	if err != nil {

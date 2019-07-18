@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	POSTGRES_PASSWORD = "POSTGRES_PASSWORD"
-	PGDATA            = "PGDATA"
-	POSTGRES_USER     = "POSTGRES_USER"
+	POSTGRES_PASSWORD  = "POSTGRES_PASSWORD"
+	POSTGRES_USER      = "POSTGRES_USER"
+	pgbouncerAdminName = "pgbouncer"
 )
 
 func (c *Controller) deleteLeaderLockConfigMap(meta metav1.ObjectMeta) error {
@@ -41,11 +41,10 @@ auth_file = /etc/config/userlist.txt
 logfile = /tmp/pgbouncer.log
 pidfile = /tmp/pgbouncer.pid
 `
-		var userListData = `"pbadmin" "md5f2c5c2f3c03ae0df89a2f2cb0f6b78d6" 
-`
+		var admins string
+		var userListData string
 		var listenAddress = "*"
 		var pool_mode = "session"
-		var admins = `pbadmin`
 
 		in.Labels = pgbouncer.OffshootLabels()
 		in.OwnerReferences = pgbouncer.OwnerReferences
@@ -76,7 +75,15 @@ pidfile = /tmp/pgbouncer.pid
 
 		if pgbouncer.Spec.SecretList != nil {
 			for _, secretListItem := range pgbouncer.Spec.SecretList {
-				username, password := c.getDbCredentials(secretListItem)
+				username, password, err := c.getDbCredentials(secretListItem)
+				if err != nil{
+					if kerr.IsNotFound(err){
+						println("This a TODO for not found errors")
+					} else {
+						log.Error(err)
+						return nil
+					}
+				}
 				//List of users
 				userListData = userListData + fmt.Sprintf(`"%s" "%s"
 `, string(username), password)
@@ -84,6 +91,7 @@ pidfile = /tmp/pgbouncer.pid
 		}
 
 		if pgbouncer.Spec.ConnectionPoolConfig != nil {
+			admins = fmt.Sprintf(`%s`, pgbouncerAdminName)
 			listenPort := *pgbouncer.Spec.ConnectionPoolConfig.ListenPort
 			pbinfo = pbinfo + fmt.Sprintf(`listen_port = %d
 `, listenPort)
@@ -102,7 +110,6 @@ pidfile = /tmp/pgbouncer.pid
 			for _, adminListItem := range adminList {
 				admins = fmt.Sprintf(`%s,%s`, admins, adminListItem)
 			}
-			//admins = strings.TrimPrefix(admins, ",")
 			pbinfo = pbinfo + fmt.Sprintf(`admin_users = %s
 `, admins)
 		}
@@ -110,6 +117,8 @@ pidfile = /tmp/pgbouncer.pid
 		pgbouncerData := fmt.Sprintf(`%s
 %s`, dbinfo, pbinfo)
 		//println(pgbouncerData)
+		userListData = userListData + fmt.Sprintf(`"%s" "%s"
+`, pgbouncerAdminName, "md59c7cb15d3dbd78fcbdfd1e46bcc6105e")
 		//println(userListData)
 
 		in.Data = map[string]string{
@@ -122,15 +131,16 @@ pidfile = /tmp/pgbouncer.pid
 	return err
 }
 
-func (c *Controller) getDbCredentials(secretListItem api.SecretList) (string, string) {
+func (c *Controller) getDbCredentials(secretListItem api.SecretList) (string, string, error) {
 	scrt, err := c.Client.CoreV1().Secrets(secretListItem.SecretNamespace).Get(secretListItem.SecretName, metav1.GetOptions{})
 	if err != nil {
-		log.Fatal(err)
+		println("================>Secret not found.",err)
+		return "","", err
 	}
 	username := scrt.Data[POSTGRES_USER]
 	password := scrt.Data[POSTGRES_PASSWORD]
 	md5key := md5.Sum([]byte(string(password) + string(username)))
 	pbPassword := fmt.Sprintf("md5%s", hex.EncodeToString(md5key[:]))
 
-	return string(username), pbPassword
+	return string(username), pbPassword, nil
 }

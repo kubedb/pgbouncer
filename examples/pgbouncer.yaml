@@ -21,11 +21,3 @@ spec:
   secretList:
   - secretName: quick-postgress-auth
     secretNamespace: demo
-  - secretName: admin1-secret
-    secretNamespace: demo
-  - secretName: admin-secret
-    secretNamespace: demo
-  - secretName: admin2-secret
-    secretNamespace: demo
-  - secretName: admin3-secret
-    secretNamespace: demo
