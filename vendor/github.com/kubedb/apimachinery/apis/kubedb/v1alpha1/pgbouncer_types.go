@@ -76,7 +76,7 @@ type Databases struct {
 }
 
 type ConnectionPoolConfig struct {
-	ListenPort    string   `json:"listenPort"`
+	ListenPort    *int32   `json:"listenPort"`
 	ListenAddress string   `json:"listenAddress,omitempty"`
 	PoolMode      string   `json:"poolMode,omitempty"`
 	AdminUsers    []string `json:"adminUsers,omitempty"`
