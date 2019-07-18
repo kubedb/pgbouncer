@@ -27,13 +27,7 @@ const (
 	PgBouncerPortName = "api"
 )
 
-var (
-	defaultDBPort = core.ServicePort{
-		Name:       PgBouncerPortName,
-		Port:       PgBouncerPort,
-		TargetPort: intstr.FromString(PgBouncerPortName),
-	}
-)
+var ()
 
 func (c *Controller) ensureService(pgbouncer *api.PgBouncer) (kutil.VerbType, error) {
 	// Check if service name exists
@@ -138,6 +132,18 @@ func (c *Controller) createService(pgbouncer *api.PgBouncer) (kutil.VerbType, er
 }
 
 func upsertServicePort(in *core.Service, pgbouncer *api.PgBouncer) []core.ServicePort {
+	var listenPort int32
+	if pgbouncer.Spec.ConnectionPoolConfig.ListenPort != nil {
+
+		listenPort = *pgbouncer.Spec.ConnectionPoolConfig.ListenPort
+	} else {
+		listenPort = PgBouncerPort
+	}
+
+	var defaultDBPort = core.ServicePort{
+		Name: PgBouncerPortName,
+		Port: listenPort,
+	}
 	return ofst.MergeServicePorts(
 		core_util.MergeServicePorts(in.Spec.Ports, []core.ServicePort{defaultDBPort}),
 		pgbouncer.Spec.ServiceTemplate.Spec.Ports,

@@ -560,8 +560,8 @@ func schema_apimachinery_apis_kubedb_v1alpha1_ConnectionPoolConfig(ref common.Re
 				Properties: map[string]spec.Schema{
 					"listenPort": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Type:   []string{"integer"},
+							Format: "int32",
 						},
 					},
 					"listenAddress": {

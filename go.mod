@@ -12,8 +12,7 @@ require (
 	github.com/go-openapi/spec v0.19.2 // indirect
 	github.com/go-openapi/swag v0.19.4 // indirect
 	github.com/graymeta/stow v0.1.0 // indirect
-	github.com/kubedb/apimachinery v0.0.0-20190716064116-ef4c5ae5dfbb
-	github.com/pkg/errors v0.8.1
+	github.com/kubedb/apimachinery v0.0.0-20190718041503-d10261a86c99
 	github.com/prometheus/client_golang v0.9.4 // indirect
 	github.com/prometheus/procfs v0.0.3 // indirect
 	github.com/spf13/cobra v0.0.5

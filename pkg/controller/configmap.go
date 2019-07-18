@@ -4,7 +4,6 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"strings"
 
 	"github.com/appscode/go/log"
 
@@ -43,10 +42,11 @@ auth_file = /etc/config/userlist.txt
 logfile = /tmp/pgbouncer.log
 pidfile = /tmp/pgbouncer.pid
 `
-		var userListData string
+		var userListData = `"pbadmin" "md5f2c5c2f3c03ae0df89a2f2cb0f6b78d6" 
+`
 		var listenAddress = "*"
 		var pool_mode = "session"
-		var admins string
+		var admins = `pbadmin`
 
 		in.Labels = pgbouncer.OffshootLabels()
 		in.OwnerReferences = pgbouncer.OwnerReferences
@@ -85,8 +85,8 @@ pidfile = /tmp/pgbouncer.pid
 		}
 
 		if pgbouncer.Spec.ConnectionPoolConfig != nil {
-			listenPort := pgbouncer.Spec.ConnectionPoolConfig.ListenPort
-			pbinfo = pbinfo + fmt.Sprintf(`listen_port = %s
+			listenPort := *pgbouncer.Spec.ConnectionPoolConfig.ListenPort
+			pbinfo = pbinfo + fmt.Sprintf(`listen_port = %d
 `, listenPort)
 			if pgbouncer.Spec.ConnectionPoolConfig.ListenAddress != "" {
 				listenAddress = pgbouncer.Spec.ConnectionPoolConfig.ListenAddress
@@ -103,7 +103,7 @@ pidfile = /tmp/pgbouncer.pid
 			for _, adminListItem := range adminList {
 				admins = fmt.Sprintf(`%s,%s`, admins, adminListItem)
 			}
-			admins = strings.TrimPrefix(admins, ",")
+			//admins = strings.TrimPrefix(admins, ",")
 			pbinfo = pbinfo + fmt.Sprintf(`admin_users = %s
 `, admins)
 		}
