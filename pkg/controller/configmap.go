@@ -9,6 +9,11 @@ import (
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
+	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/reference"
+	kutil "kmodules.xyz/client-go"
 	core_util "kmodules.xyz/client-go/core/v1"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	le "kubedb.dev/pgbouncer/pkg/leader_election"
@@ -27,13 +32,17 @@ func (c *Controller) deleteLeaderLockConfigMap(meta metav1.ObjectMeta) error {
 	return nil
 }
 
-func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) error {
+func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.VerbType, error) {
 	configMapMeta := metav1.ObjectMeta{
 		Name:      pgbouncer.OffshootName(),
 		Namespace: pgbouncer.Namespace,
 	}
+	ref, rerr := reference.GetReference(clientsetscheme.Scheme, pgbouncer)
+	if rerr != nil {
+		return kutil.VerbUnchanged, rerr
+	}
 
-	_, _, err := core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
+	_, vt, err := core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
 		var dbinfo = `[databases]
 `
 		var pbinfo = `[pgbouncer]
@@ -47,7 +56,7 @@ pidfile = /tmp/pgbouncer.pid
 		var pool_mode = "session"
 
 		in.Labels = pgbouncer.OffshootLabels()
-		in.OwnerReferences = pgbouncer.OwnerReferences
+		core_util.EnsureOwnerReference(&in.ObjectMeta, ref)
 		if pgbouncer.Spec.Databases != nil {
 			for _, db := range pgbouncer.Spec.Databases {
 				var namespace = pgbouncer.Namespace
@@ -76,8 +85,8 @@ pidfile = /tmp/pgbouncer.pid
 		if pgbouncer.Spec.SecretList != nil {
 			for _, secretListItem := range pgbouncer.Spec.SecretList {
 				username, password, err := c.getDbCredentials(secretListItem)
-				if err != nil{
-					if kerr.IsNotFound(err){
+				if err != nil {
+					if kerr.IsNotFound(err) {
 						println("This a TODO for not found errors")
 					} else {
 						log.Error(err)
@@ -127,15 +136,18 @@ pidfile = /tmp/pgbouncer.pid
 		}
 		return in
 	})
-
-	return err
+	err = c.WaitUntilConfigMapReady(c.Client, configMapMeta)
+	if err != nil {
+		return vt, err
+	}
+	return vt, err
 }
 
 func (c *Controller) getDbCredentials(secretListItem api.SecretList) (string, string, error) {
 	scrt, err := c.Client.CoreV1().Secrets(secretListItem.SecretNamespace).Get(secretListItem.SecretName, metav1.GetOptions{})
 	if err != nil {
-		println("================>Secret not found.",err)
-		return "","", err
+		println("================>Secret not found.", err)
+		return "", "", err
 	}
 	username := scrt.Data[POSTGRES_USER]
 	password := scrt.Data[POSTGRES_PASSWORD]
@@ -143,4 +155,12 @@ func (c *Controller) getDbCredentials(secretListItem api.SecretList) (string, st
 	pbPassword := fmt.Sprintf("md5%s", hex.EncodeToString(md5key[:]))
 
 	return string(username), pbPassword, nil
+}
+func (c *Controller) WaitUntilConfigMapReady(kubeClient kubernetes.Interface, meta metav1.ObjectMeta) error {
+	return wait.PollImmediate(kutil.RetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
+		if _, err := kubeClient.CoreV1().ConfigMaps(meta.Namespace).Get(meta.Name, metav1.GetOptions{}); err == nil {
+			return true, nil
+		}
+		return false, nil
+	})
 }

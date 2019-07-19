@@ -12,13 +12,9 @@ import (
 )
 
 func (c *Controller) initWatcher() {
-	fmt.Println(":001: =========>Informer")
 	c.pgInformer = c.KubedbInformerFactory.Kubedb().V1alpha1().PgBouncers().Informer()
-	fmt.Println(":002: =========>PgQueue")
 	c.pgQueue = queue.New("PgBouncer", c.MaxNumRequeues, c.NumThreads, c.runPgBouncer)
-	fmt.Println(":003: =========>PgLister")
 	c.pbLister = c.KubedbInformerFactory.Kubedb().V1alpha1().PgBouncers().Lister()
-	fmt.Println(":004: =========>EventHandler")
 	c.pgInformer.AddEventHandler(queue.NewObservableUpdateHandler(c.pgQueue.GetQueue(), apis.EnableStatusSubresource))
 }
 

@@ -19,8 +19,6 @@ import (
 	kubedbinformers "kubedb.dev/apimachinery/client/informers/externalversions"
 	snapc "kubedb.dev/apimachinery/pkg/controller/snapshot"
 	"kubedb.dev/pgbouncer/pkg/controller"
-	scs "stash.appscode.dev/stash/client/clientset/versioned"
-	stashInformers "stash.appscode.dev/stash/client/informers/externalversions"
 )
 
 type ExtraOptions struct {
@@ -120,12 +118,9 @@ func (s *ExtraOptions) ApplyTo(cfg *controller.OperatorConfig) error {
 	if cfg.AppCatalogClient, err = appcat_cs.NewForConfig(cfg.ClientConfig); err != nil {
 		return err
 	}
-	if cfg.StashClient, err = scs.NewForConfig(cfg.ClientConfig); err != nil {
-		return err
-	}
+
 	cfg.KubeInformerFactory = informers.NewSharedInformerFactory(cfg.KubeClient, cfg.ResyncPeriod)
 	cfg.KubedbInformerFactory = kubedbinformers.NewSharedInformerFactory(cfg.DBClient, cfg.ResyncPeriod)
-	cfg.StashInformerFactory = stashInformers.NewSharedInformerFactory(cfg.StashClient, cfg.ResyncPeriod)
 
 	cfg.CronController = snapc.NewCronController(cfg.KubeClient, cfg.DBClient, cfg.DynamicClient)
 

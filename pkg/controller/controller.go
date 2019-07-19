@@ -27,7 +27,6 @@ import (
 	amc "kubedb.dev/apimachinery/pkg/controller"
 	snapc "kubedb.dev/apimachinery/pkg/controller/snapshot"
 	"kubedb.dev/apimachinery/pkg/eventer"
-	scs "stash.appscode.dev/stash/client/clientset/versioned"
 )
 
 type Controller struct {
@@ -64,7 +63,6 @@ func New(
 	client kubernetes.Interface,
 	apiExtKubeClient crd_cs.ApiextensionsV1beta1Interface,
 	extClient cs.Interface,
-	stashClient scs.Interface,
 	dc dynamic.Interface,
 	appCatalogClient appcat_cs.AppcatalogV1alpha1Interface,
 	promClient pcm.MonitoringV1Interface,
@@ -77,7 +75,6 @@ func New(
 			ClientConfig:     clientConfig,
 			Client:           client,
 			ExtClient:        extClient,
-			StashClient:      stashClient,
 			ApiExtKubeClient: apiExtKubeClient,
 			DynamicClient:    dc,
 			AppCatalogClient: appCatalogClient,
