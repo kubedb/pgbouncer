@@ -2,8 +2,8 @@ package server
 
 import (
 	"fmt"
-	"kubedb.dev/apimachinery/pkg/admission/namespace"
-	mgAdmsn "kubedb.dev/pgbouncer/pkg/admission"
+	"strings"
+
 	admission "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,8 +15,9 @@ import (
 	hooks "kmodules.xyz/webhook-runtime/admission/v1beta1"
 	admissionreview "kmodules.xyz/webhook-runtime/registry/admissionreview/v1beta1"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	"kubedb.dev/apimachinery/pkg/admission/namespace"
+	mgAdmsn "kubedb.dev/pgbouncer/pkg/admission"
 	"kubedb.dev/pgbouncer/pkg/controller"
-	"strings"
 )
 
 const (

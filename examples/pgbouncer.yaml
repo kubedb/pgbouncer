@@ -1,10 +1,10 @@
 apiVersion: kubedb.com/v1alpha1
 kind: PgBouncer
 metadata:
-  name: pgbouncer-8
+  name: pgbouncer-server
   namespace: demo
 spec:
-  replicas: 1
+  replicas: 3
   databases:
   - dbAlias: "db" 
     dbName: "postgres"
@@ -16,8 +16,6 @@ spec:
     adminUsers:
     - admin1
     - admin
-    - admin2
-    - admin3
   secretList:
   - secretName: quick-postgress-auth
     secretNamespace: demo

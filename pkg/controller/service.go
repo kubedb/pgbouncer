@@ -48,10 +48,10 @@ func (c *Controller) ensureService(pgbouncer *api.PgBouncer) (kutil.VerbType, er
 	}
 
 	// Check if service name exists
-	err = c.checkService(pgbouncer, pgbouncer.ReplicasServiceName())
-	if err != nil {
-		return kutil.VerbUnchanged, err
-	}
+	//err = c.checkService(pgbouncer, pgbouncer.ReplicasServiceName())
+	//if err != nil {
+	//	return kutil.VerbUnchanged, err
+	//}
 	// create database Service
 	//vt2, err := c.createReplicasService(pgbouncer)
 	//if err != nil {

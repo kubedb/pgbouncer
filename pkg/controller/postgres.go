@@ -63,47 +63,63 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 	// ensure database Service
 	//_, err := c.Client.AppsV1().StatefulSets(pgbouncer.Namespace).Get(pgbouncer.OffshootName(), metav1.GetOptions{})
 
-	err := c.ensureConfigMapFromCRD(pgbouncer)
+	configMapVerb, err := c.ensureConfigMapFromCRD(pgbouncer)
 	if err != nil {
 		return err
 	}
 
-	println("==================================+++++>ConfigMap created ")
-	println("==================================+++++>Calling ensureStatefulSet")
-	vt, err := c.ensureStatefulSet(pgbouncer, []core.EnvVar{})
-	if err != nil {
-		return err
-	}
-	if vt == kutil.VerbCreated {
+	if configMapVerb == kutil.VerbCreated {
 		c.recorder.Event(
 			pgbouncer,
 			core.EventTypeNormal,
 			eventer.EventReasonSuccessful,
-			"Successfully created PgBouncer",
+			"Successfully created PgBouncer configMap",
 		)
-	} else if vt == kutil.VerbPatched {
+	} else if configMapVerb == kutil.VerbPatched {
 		c.recorder.Event(
 			pgbouncer,
 			core.EventTypeNormal,
 			eventer.EventReasonSuccessful,
-			"Successfully patched PgBouncer",
+			"Successfully patched PgBouncer configMap",
 		)
 	}
-	println("==================================+++++> ensureStatefulSet finished. verb = ", vt)
 
-	println("==================================+++++>Calling ensureService")
-	vt, err = c.ensureService(pgbouncer)
+	println("==================================+++++>ConfigMap ", configMapVerb)
+
+	statefulsetVerb, err := c.ensureStatefulSet(pgbouncer, []core.EnvVar{})
 	if err != nil {
 		return err
 	}
-	if vt == kutil.VerbCreated {
+	println("verb outside of func = ", statefulsetVerb)
+	if statefulsetVerb == kutil.VerbCreated {
+		c.recorder.Event(
+			pgbouncer,
+			core.EventTypeNormal,
+			eventer.EventReasonSuccessful,
+			"Successfully created PgBouncer statefulset",
+		)
+	} else if statefulsetVerb == kutil.VerbPatched {
+		c.recorder.Event(
+			pgbouncer,
+			core.EventTypeNormal,
+			eventer.EventReasonSuccessful,
+			"Successfully patched PgBouncer statefulset",
+		)
+	}
+	println("==================================+++++>Statefulset ", statefulsetVerb)
+
+	serviceVerb, err := c.ensureService(pgbouncer)
+	if err != nil {
+		return err
+	}
+	if serviceVerb == kutil.VerbCreated {
 		c.recorder.Event(
 			pgbouncer,
 			core.EventTypeNormal,
 			eventer.EventReasonSuccessful,
 			"Successfully created Service",
 		)
-	} else if vt == kutil.VerbPatched {
+	} else if serviceVerb == kutil.VerbPatched {
 		c.recorder.Event(
 			pgbouncer,
 			core.EventTypeNormal,
@@ -111,7 +127,7 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 			"Successfully patched Service",
 		)
 	}
-	println("==================================+++++> ensureService finished. verb = ", vt)
+	println("==================================+++++>Service ", statefulsetVerb)
 
 	return nil
 }

@@ -13,7 +13,6 @@ import (
 	amc "kubedb.dev/apimachinery/pkg/controller"
 	snapc "kubedb.dev/apimachinery/pkg/controller/snapshot"
 	"kubedb.dev/apimachinery/pkg/eventer"
-	scs "stash.appscode.dev/stash/client/clientset/versioned"
 )
 
 const (
@@ -28,7 +27,6 @@ type OperatorConfig struct {
 	KubeClient       kubernetes.Interface
 	APIExtKubeClient crd_cs.ApiextensionsV1beta1Interface
 	DBClient         cs.Interface
-	StashClient      scs.Interface
 	AppCatalogClient appcat_cs.AppcatalogV1alpha1Interface
 	DynamicClient    dynamic.Interface
 	PromClient       pcm.MonitoringV1Interface
@@ -51,7 +49,6 @@ func (c *OperatorConfig) New() (*Controller, error) {
 		c.KubeClient,
 		c.APIExtKubeClient,
 		c.DBClient,
-		c.StashClient,
 		c.DynamicClient,
 		c.AppCatalogClient,
 		c.PromClient,
