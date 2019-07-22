@@ -109,6 +109,9 @@ github.com/cpuguy83/go-md2man/md2man
 github.com/davecgh/go-spew/spew
 # github.com/dgrijalva/jwt-go v3.2.0+incompatible
 github.com/dgrijalva/jwt-go
+# github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c
+github.com/docker/spdystream
+github.com/docker/spdystream/spdy
 # github.com/emicklei/go-restful v2.9.6+incompatible
 github.com/emicklei/go-restful
 github.com/emicklei/go-restful/log
@@ -475,9 +478,13 @@ k8s.io/apimachinery/third_party/forked/golang/reflect
 k8s.io/apimachinery/third_party/forked/golang/json
 k8s.io/apimachinery/pkg/util/framer
 k8s.io/apimachinery/pkg/util/yaml
+k8s.io/apimachinery/pkg/util/httpstream
+k8s.io/apimachinery/pkg/util/remotecommand
 k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/util/rand
 k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme
+k8s.io/apimachinery/pkg/util/httpstream/spdy
+k8s.io/apimachinery/third_party/forked/golang/netutil
 # k8s.io/apiserver v0.0.0-20190516230822-f89599b3f645 => github.com/kmodules/apiserver v0.0.0-20190508082252-8397d761d4b5
 k8s.io/apiserver/pkg/server
 k8s.io/apiserver/pkg/server/options
@@ -669,6 +676,7 @@ k8s.io/client-go/tools/pager
 k8s.io/client-go/util/retry
 k8s.io/client-go/tools/record/util
 k8s.io/client-go/tools/watch
+k8s.io/client-go/tools/remotecommand
 k8s.io/client-go/util/workqueue
 k8s.io/client-go/pkg/apis/clientauthentication
 k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1
@@ -715,6 +723,8 @@ k8s.io/client-go/plugin/pkg/client/auth/gcp
 k8s.io/client-go/plugin/pkg/client/auth/oidc
 k8s.io/client-go/plugin/pkg/client/auth/openstack
 k8s.io/client-go/listers/batch/v1
+k8s.io/client-go/transport/spdy
+k8s.io/client-go/util/exec
 k8s.io/client-go/listers/admissionregistration/v1beta1
 k8s.io/client-go/listers/auditregistration/v1alpha1
 k8s.io/client-go/tools/clientcmd/api/v1
@@ -786,6 +796,7 @@ kmodules.xyz/client-go/core/v1
 kmodules.xyz/client-go/discovery
 kmodules.xyz/client-go/dynamic
 kmodules.xyz/client-go/rbac/v1beta1
+kmodules.xyz/client-go/tools/exec
 kmodules.xyz/client-go/tools/queue
 kmodules.xyz/client-go/tools/analytics
 kmodules.xyz/client-go/apiregistration/v1beta1

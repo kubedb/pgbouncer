@@ -76,6 +76,13 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 			"Successfully created PgBouncer configMap",
 		)
 	} else if configMapVerb == kutil.VerbPatched {
+		err := c.reloadPgBouncer(pgbouncer)
+		if err != nil {
+			//error is non blocking
+			log.Infoln(err)
+		} else {
+			log.Infoln("PgBouncer reloaded successfully")
+		}
 		c.recorder.Event(
 			pgbouncer,
 			core.EventTypeNormal,
@@ -84,7 +91,7 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 		)
 	}
 
-	println("==================================+++++>ConfigMap ", configMapVerb)
+	log.Infoln("ConfigMap ", configMapVerb)
 
 	statefulsetVerb, err := c.ensureStatefulSet(pgbouncer, []core.EnvVar{})
 	if err != nil {
@@ -106,7 +113,7 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 			"Successfully patched PgBouncer statefulset",
 		)
 	}
-	println("==================================+++++>Statefulset ", statefulsetVerb)
+	log.Infoln("Statefulset ", statefulsetVerb)
 
 	serviceVerb, err := c.ensureService(pgbouncer)
 	if err != nil {
@@ -127,7 +134,7 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 			"Successfully patched Service",
 		)
 	}
-	println("==================================+++++>Service ", statefulsetVerb)
+	log.Infoln("Service ", serviceVerb)
 
 	return nil
 }

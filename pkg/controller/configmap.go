@@ -4,8 +4,10 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/appscode/go/log"
+	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +17,7 @@ import (
 	"k8s.io/client-go/tools/reference"
 	kutil "kmodules.xyz/client-go"
 	core_util "kmodules.xyz/client-go/core/v1"
+	"kmodules.xyz/client-go/tools/exec"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	le "kubedb.dev/pgbouncer/pkg/leader_election"
 )
@@ -87,7 +90,7 @@ pidfile = /tmp/pgbouncer.pid
 				username, password, err := c.getDbCredentials(secretListItem)
 				if err != nil {
 					if kerr.IsNotFound(err) {
-						println("This a TODO for not found errors")
+						println("This a TODO for secret not found errors")
 					} else {
 						log.Error(err)
 						return nil
@@ -136,7 +139,7 @@ pidfile = /tmp/pgbouncer.pid
 		}
 		return in
 	})
-	err = c.WaitUntilConfigMapReady(c.Client, configMapMeta)
+	err = c.waitUntilConfigMapReady(c.Client, configMapMeta)
 	if err != nil {
 		return vt, err
 	}
@@ -156,11 +159,40 @@ func (c *Controller) getDbCredentials(secretListItem api.SecretList) (string, st
 
 	return string(username), pbPassword, nil
 }
-func (c *Controller) WaitUntilConfigMapReady(kubeClient kubernetes.Interface, meta metav1.ObjectMeta) error {
+
+func (c *Controller) waitUntilConfigMapReady(kubeClient kubernetes.Interface, meta metav1.ObjectMeta) error {
 	return wait.PollImmediate(kutil.RetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
 		if _, err := kubeClient.CoreV1().ConfigMaps(meta.Namespace).Get(meta.Name, metav1.GetOptions{}); err == nil {
 			return true, nil
 		}
 		return false, nil
 	})
+}
+
+func (c *Controller) reloadPgBouncer(bouncer *api.PgBouncer) error {
+	pbPodLabels := labels.FormatLabels(bouncer.OffshootSelectors())
+	var pod core.Pod
+	var localPort = int32(5432)
+	if bouncer.Spec.ConnectionPoolConfig.ListenPort !=  nil{
+		localPort = *bouncer.Spec.ConnectionPoolConfig.ListenPort
+	}
+	podlist,err := c.Client.CoreV1().Pods(bouncer.Namespace).List(metav1.ListOptions{LabelSelector: pbPodLabels})
+	if err != nil {
+		return err
+	}
+	if len(podlist.Items) > 0{
+		pod = podlist.Items[0]
+	}
+	options := []func(options *exec.Options){
+		exec.Command(c.reloadCmd(localPort)...),
+	}
+
+	if _, err := exec.ExecIntoPod(c.ClientConfig, &pod, options...); err != nil {
+		return errors.Wrapf(err, "Failed to execute RELOAD command")
+	}
+	return nil
+}
+
+func (c *Controller) reloadCmd(localPort int32) []string {
+	return []string{"env","PGPASSWORD=kubedb123","psql", "--host=127.0.0.1", fmt.Sprintf("--port=%d", localPort), "--username=pgbouncer", "pgbouncer", "--command=RELOAD"}
 }

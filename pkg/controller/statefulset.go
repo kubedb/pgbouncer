@@ -114,10 +114,8 @@ func (c *Controller) ensureStatefulSet(
 	}
 
 	if vt == kutil.VerbCreated || vt == kutil.VerbPatched {
-		println("Statefulset verb changed, ", vt)
 		// Check StatefulSet Pod status
 		if err := c.CheckStatefulSetPodStatus(statefulSet); err != nil {
-			println("CheckStatefulSetPodStatus err = , ", err)
 			return kutil.VerbUnchanged, err
 		}
 
@@ -130,14 +128,11 @@ func (c *Controller) ensureStatefulSet(
 		)
 	}
 
-	println("CheckStatefulSetPodStatus ok")
-	println("Statefulset verb = ", vt)
 	// ensure pdb
 	if err := c.CreateStatefulSetPodDisruptionBudget(statefulSet); err != nil {
-		println("CheckStatefulSetPodStatus err = ", err)
 		return vt, err
 	}
-	println("Return statement, Statefulset verb = ", vt)
+
 	return vt, nil
 }
 
