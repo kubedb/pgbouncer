@@ -11,6 +11,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	corev1_listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -46,6 +47,10 @@ type Controller struct {
 	pgQueue    *queue.Worker
 	pgInformer cache.SharedIndexInformer
 	pbLister   api_listers.PgBouncerLister
+	// Secret
+	secretQueue    *queue.Worker
+	secretInformer cache.SharedIndexInformer
+	secretLister   corev1_listers.SecretLister
 }
 
 func (c *Controller) WaitUntilPaused(*api.DormantDatabase) error {
@@ -105,6 +110,7 @@ func (c *Controller) EnsureCustomResourceDefinitions() error {
 // InitInformer initializes PgBouncer, DormantDB amd Snapshot watcher
 func (c *Controller) Init() error {
 	c.initWatcher()
+	c.initSecretWatcher()
 	//c.DrmnQueue = drmnc.NewController(c.Controller, c, c.Config, nil, c.recorder).AddEventHandlerFunc(c.selector)
 	//c.SnapQueue, c.JobQueue = snapc.NewController(c.Controller, c, c.Config, nil, c.recorder).AddEventHandlerFunc(c.selector)
 	//c.RSQueue = restoresession.NewController(c.Controller, c, c.Config, nil, c.recorder).AddEventHandlerFunc(c.selector)
@@ -115,10 +121,11 @@ func (c *Controller) Init() error {
 // RunControllers runs queue.worker
 func (c *Controller) RunControllers(stopCh <-chan struct{}) {
 	// Start Cron
-	c.cronController.StartCron()
+	//c.cronController.StartCron()
 
 	// Watch x  TPR objects
 	c.pgQueue.Run(stopCh)
+	c.secretQueue.Run(stopCh)
 	//c.DrmnQueue.Run(stopCh)
 	//c.SnapQueue.Run(stopCh)
 	//c.JobQueue.Run(stopCh)
@@ -138,7 +145,6 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 	}
 
 	<-stopCh
-	c.cronController.StopCron()
 }
 
 // StartAndRunControllers starts InformetFactory and runs queue.worker

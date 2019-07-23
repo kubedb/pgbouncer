@@ -4,13 +4,13 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/appscode/go/log"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
@@ -69,7 +69,12 @@ pidfile = /tmp/pgbouncer.pid
 				}
 				serv, err := c.Client.CoreV1().Services(namespace).Get(db.PgObjectName, metav1.GetOptions{})
 				if err != nil {
-					log.Fatal(err)
+					if kerr.IsNotFound(err) {
+						log.Warning(err)
+					} else {
+						log.Error(err)
+					}
+
 				}
 				hostname := serv.Name + "." + serv.Namespace + ".svc.cluster.local"
 
@@ -143,6 +148,16 @@ pidfile = /tmp/pgbouncer.pid
 	if err != nil {
 		return vt, err
 	}
+	if vt == kutil.VerbPatched {
+		err = c.reloadPgBouncer(pgbouncer)
+		if err != nil {
+			//error is non blocking
+			log.Infoln(err)
+		} else {
+			log.Infoln("PgBouncer reloaded successfully")
+		}
+	}
+
 	return vt, err
 }
 
@@ -173,14 +188,14 @@ func (c *Controller) reloadPgBouncer(bouncer *api.PgBouncer) error {
 	pbPodLabels := labels.FormatLabels(bouncer.OffshootSelectors())
 	var pod core.Pod
 	var localPort = int32(5432)
-	if bouncer.Spec.ConnectionPoolConfig.ListenPort !=  nil{
+	if bouncer.Spec.ConnectionPoolConfig.ListenPort != nil {
 		localPort = *bouncer.Spec.ConnectionPoolConfig.ListenPort
 	}
-	podlist,err := c.Client.CoreV1().Pods(bouncer.Namespace).List(metav1.ListOptions{LabelSelector: pbPodLabels})
+	podlist, err := c.Client.CoreV1().Pods(bouncer.Namespace).List(metav1.ListOptions{LabelSelector: pbPodLabels})
 	if err != nil {
 		return err
 	}
-	if len(podlist.Items) > 0{
+	if len(podlist.Items) > 0 {
 		pod = podlist.Items[0]
 	}
 	options := []func(options *exec.Options){
@@ -194,5 +209,5 @@ func (c *Controller) reloadPgBouncer(bouncer *api.PgBouncer) error {
 }
 
 func (c *Controller) reloadCmd(localPort int32) []string {
-	return []string{"env","PGPASSWORD=kubedb123","psql", "--host=127.0.0.1", fmt.Sprintf("--port=%d", localPort), "--username=pgbouncer", "pgbouncer", "--command=RELOAD"}
+	return []string{"env", "PGPASSWORD=kubedb123", "psql", "--host=127.0.0.1", fmt.Sprintf("--port=%d", localPort), "--username=pgbouncer", "pgbouncer", "--command=RELOAD"}
 }

@@ -37,11 +37,7 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 	//	return fmt.Errorf(`failed to delete dormant Database : "%v/%v". Reason: %v`, pgbouncer.Namespace, pgbouncer.Name, err)
 	//}
 
-	println("======================== ")
-	println("======================== ")
-	println("A create command has just been received")
-	println("======================== ")
-	println("======================== ")
+	println("=============create===========")
 
 	if pgbouncer.Status.Phase == "" {
 		pg, err := util.UpdatePgBouncerStatus(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncerStatus) *api.PgBouncerStatus {
@@ -62,7 +58,6 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 
 	// ensure database Service
 	//_, err := c.Client.AppsV1().StatefulSets(pgbouncer.Namespace).Get(pgbouncer.OffshootName(), metav1.GetOptions{})
-
 	configMapVerb, err := c.ensureConfigMapFromCRD(pgbouncer)
 	if err != nil {
 		return err
@@ -76,13 +71,6 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 			"Successfully created PgBouncer configMap",
 		)
 	} else if configMapVerb == kutil.VerbPatched {
-		err := c.reloadPgBouncer(pgbouncer)
-		if err != nil {
-			//error is non blocking
-			log.Infoln(err)
-		} else {
-			log.Infoln("PgBouncer reloaded successfully")
-		}
 		c.recorder.Event(
 			pgbouncer,
 			core.EventTypeNormal,
@@ -97,7 +85,6 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 	if err != nil {
 		return err
 	}
-	println("verb outside of func = ", statefulsetVerb)
 	if statefulsetVerb == kutil.VerbCreated {
 		c.recorder.Event(
 			pgbouncer,
