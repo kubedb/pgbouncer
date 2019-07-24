@@ -2,8 +2,11 @@ package controller
 
 import (
 	"errors"
+	"strings"
+
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core_util "kmodules.xyz/client-go/core/v1"
 	"kmodules.xyz/client-go/tools/queue"
 	"kubedb.dev/apimachinery/apis"
@@ -12,11 +15,8 @@ import (
 )
 
 const (
-	systemNamespace = "kube-system")
-
-var (
-	pbObjects []interface{}
-	length = 0
+	systemNamespace = "kube-system"
+	publicNamespace = "kube-public"
 )
 
 func (c *Controller) initWatcher() {
@@ -34,23 +34,15 @@ func (c *Controller) initSecretWatcher() {
 }
 
 func (c *Controller) runPgBouncer(key string) error {
-
 	log.Debugln("started processing, key:", key)
 	obj, exists, err := c.pgInformer.GetIndexer().GetByKey(key)
 	if err != nil {
 		log.Errorf("Fetching object with key %s from store failed with %v", key, err)
 		return err
 	}
-
 	if !exists {
 		log.Debugf("PgBouncer %s does not exist anymore", key)
 	} else {
-		if !c.isPbObjectExists(pbObjects,obj){
-			println("obj = ", obj, "is new.")
-			length= length+1
-			println("Total objects = ", length)
-			pbObjects = append(pbObjects, obj)
-		}
 		// Note that you also have to check the uid if you have a local controlled resource, which
 		// is dependent on the actual instance, to detect that a PgBouncer was recreated with the same name
 		pgbouncer := obj.(*api.PgBouncer).DeepCopy()
@@ -85,12 +77,34 @@ func (c *Controller) runPgBouncer(key string) error {
 }
 
 func (c *Controller) runPgSecret(key string) error {
-	println(":003.1: =========>runPgSecret")
+	println(":003.1: =========>runPgSecret:::::::::::: Key = ", key)
 	//log.Debugln("started processing, key:", key)
-	secretObj, exists, err := c.secretInformer.GetIndexer().GetByKey(key)
+	_, exists, err := c.secretInformer.GetIndexer().GetByKey(key)
 	if err != nil {
 		log.Errorf("Fetching secret with key %s from store failed with %v", key, err)
 		log.Infoln("Fetching secret with key %s from store failed with %v", key, err)
+		return err
+	}
+
+
+	splitKey := strings.Split(key, "/")
+	for i, s := range splitKey {
+		println(i, " = ", s)
+	}
+
+	if len(splitKey) != 2 || splitKey[0] == "" || splitKey[1] == "" {
+		println("len(splitKey) != 2")
+		return nil
+	}
+	//Now we are interested in this particular secret
+	secretInfo := make(map[string]string)
+	secretInfo["Namespace"] = splitKey[0]
+	secretInfo["Name"] = splitKey[1]
+	if secretInfo["Namespace"] == systemNamespace || secretInfo["Namespace"] == publicNamespace {
+		return nil
+	}
+	pgBouncerList, err := c.ExtClient.KubedbV1alpha1().PgBouncers(core.NamespaceAll).List(v1.ListOptions{})
+	if err != nil {
 		return err
 	}
 
@@ -101,60 +115,61 @@ func (c *Controller) runPgSecret(key string) error {
 	} else {
 		// Note that you also have to check the uid if you have a local controlled resource, which
 		// is dependent on the actual instance, to detect that a PgBouncer was recreated with the same name
-		deepSecret := secretObj.(*core.Secret).DeepCopy()
-		if deepSecret.Namespace == systemNamespace{
-			return nil
+		//deepSecret := secretObj.(*core.Secret).DeepCopy()
+		//if deepSecret.Namespace == systemNamespace{
+		//	return nil
+		//}
+		//pgBouncerList, err := c.ExtClient.KubedbV1alpha1().PgBouncers(core.NamespaceAll).List(v1.ListOptions{})
+		//if err != nil{
+		//	if kerr.IsNotFound(err){
+		//
+		//	}
+		//	return err
+		//}
+		//println("::::::: Look for ",secret.Namespace, "==>", secret.Name, "in all PgBouncers")
+		//for _, pgbouncer := range pgBouncerList.Items {
+		//	println(pgbouncer.Name)
+		//	err := c.syncSecretWithPgBouncer(secret, &pgbouncer)
+		//	if err != nil {
+		//		log.Warning(err)
+		//	}
+		//}
+		log.Infof("==========Create/Update event for secret %s ==========", key)
+	}
+	for _, pgbouncer := range pgBouncerList.Items {
+		println(pgbouncer.Name)
+		err := c.syncSecretWithPgBouncer(secretInfo, &pgbouncer)
+		if err != nil {
+			log.Warning(err)
 		}
-		log.Infof("==========Create or update event for secret %s ==========", key)
-		println("::::::: ",deepSecret.Namespace, "<==>", deepSecret.Name)
-		for _, pbobj := range pbObjects {
-			pgbouncer := pbobj.(*api.PgBouncer).DeepCopy()
-			println(pgbouncer.Name)
-			err := c.syncSecretWithPgBouncer(deepSecret, pgbouncer)
-			if err != nil {
-				println(err)
-				return err
-			}
-		}
-
 	}
 	println(":003.1: =========>runPgSecret Done")
 	return nil
 }
 
-func (c *Controller) syncSecretWithPgBouncer(secret *core.Secret, pgbouncer *api.PgBouncer) error {
+func (c *Controller) syncSecretWithPgBouncer(secretInfo map[string]string, pgbouncer *api.PgBouncer) error {
 	if pgbouncer == nil {
 		println("pgbouncer == nil")
 		return errors.New("pgbouncer == nil")
 	}
 	secretList := pgbouncer.Spec.SecretList
 	for _, singleSecret := range secretList {
-		if singleSecret.SecretNamespace == secret.Namespace && singleSecret.SecretName == secret.Name {
-			println(singleSecret.SecretNamespace, " ", singleSecret.SecretName, " == ", secret.Namespace, " ", secret.Name)
-			println("Match found for ", secret.Namespace, " ", secret.Name + "Ensure config:")
+		if singleSecret.SecretNamespace == secretInfo["Namespace"] && singleSecret.SecretName == secretInfo["Name"] {
+			println(singleSecret.SecretNamespace, " ", singleSecret.SecretName, " == ", secretInfo["Namespace"], " ", secretInfo["Name"])
+			println("Ensure config:")
 			vt, err := c.ensureConfigMapFromCRD(pgbouncer)
 			if err != nil {
-				println("ensureConfigMapFromCRD err= ",err)
+				println("ensureConfigMapFromCRD err= ", err)
 				return err
 			}
-			println("Verbtype = ",vt+" :::for secret.Name = ", secret.Name)
+			println("Verbtype = ", vt+" :::for secret.Name = ", secretInfo["Name"], "pb name = ", pgbouncer.Name)
 			break
-		}else{
-			println(singleSecret.SecretNamespace, " ", singleSecret.SecretName, " != ", secret.Namespace, " ", secret.Name)
+		} else {
+			println(singleSecret.SecretNamespace, " ", singleSecret.SecretName, " != ", secretInfo["Namespace"], " ", secretInfo["Name"])
 		}
 	}
 	return nil
 }
-
-func (c *Controller) isPbObjectExists(pbObjects []interface{}, pbObject interface{}) bool {
-	for _, object := range pbObjects{
-		if object == pbObject{
-			return true
-		}
-	}
-	return false
-}
-
 
 /*
 log.Debugln("started processing, key:", key)
