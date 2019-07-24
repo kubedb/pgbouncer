@@ -70,11 +70,12 @@ pidfile = /tmp/pgbouncer.pid
 				serv, err := c.Client.CoreV1().Services(namespace).Get(db.PgObjectName, metav1.GetOptions{})
 				if err != nil {
 					if kerr.IsNotFound(err) {
+						println("TODO: expect service ",db.PgObjectName," to be ready later (currently just skipping)")
 						log.Warning(err)
 					} else {
 						log.Error(err)
 					}
-
+					continue
 				}
 				hostname := serv.Name + "." + serv.Namespace + ".svc.cluster.local"
 

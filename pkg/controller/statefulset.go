@@ -30,7 +30,12 @@ func (c *Controller) ensureStatefulSet(
 	envList []core.EnvVar,
 ) (kutil.VerbType, error) {
 	if err := c.checkConfigMap(pgbouncer); err != nil {
-		return kutil.VerbUnchanged, err
+		if kerr.IsNotFound(err){
+			_, _ = c.ensureConfigMapFromCRD(pgbouncer)
+
+		}else {
+			return kutil.VerbUnchanged, err
+		}
 	}
 	if err := c.checkStatefulSet(pgbouncer); err != nil {
 		return kutil.VerbUnchanged, err
