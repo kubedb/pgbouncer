@@ -2,6 +2,7 @@ package admission
 
 import (
 	"fmt"
+	"github.com/appscode/go/log"
 	"strings"
 	"sync"
 
@@ -43,6 +44,7 @@ func (a *PgBouncerValidator) Resource() (plural schema.GroupVersionResource, sin
 }
 
 func (a *PgBouncerValidator) Initialize(config *rest.Config, stopCh <-chan struct{}) error {
+	log.Infoln("Validator.go :::::::::::::::::::  Initialize ====")
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -58,30 +60,36 @@ func (a *PgBouncerValidator) Initialize(config *rest.Config, stopCh <-chan struc
 	return err
 }
 
-func (a *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *admission.AdmissionResponse {
+func (pbValidator *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *admission.AdmissionResponse {
 	status := &admission.AdmissionResponse{}
-	println("Validator.go:=========>Admit starts")
+	log.Infoln("Validator.go :::::::::::::::::::  Initialize ====")
 
 	if (req.Operation != admission.Create && req.Operation != admission.Update && req.Operation != admission.Delete) ||
 		len(req.SubResource) != 0 ||
 		req.Kind.Group != api.SchemeGroupVersion.Group ||
 		req.Kind.Kind != api.ResourceKindPgBouncer {
+		println("::::::::::::::::> req.Operation != admission.Create && req.Operation != admission.Update && req.Operation != admission.Delete")
 		status.Allowed = true
 		return status
 	}
 
-	a.lock.RLock()
-	defer a.lock.RUnlock()
-	if !a.initialized {
+	pbValidator.lock.RLock()
+	defer pbValidator.lock.RUnlock()
+	if !pbValidator.initialized {
+		println(":::::::::::::::::>PgBouncer Validator is unInitialized")
 		return hookapi.StatusUninitialized()
 	}
 
+	println("::::::::::::::::Switch Operation")
 	switch req.Operation {
 	case admission.Delete:
 		println("Validator.go:=========>Case: Delete")
 		if req.Name != "" {
 			// req.Object.Raw = nil, so read from kubernetes
-			obj, err := a.extClient.KubedbV1alpha1().PgBouncers(req.Namespace).Get(req.Name, metav1.GetOptions{})
+			obj, err := pbValidator.extClient.KubedbV1alpha1().PgBouncers(req.Namespace).Get(req.Name, metav1.GetOptions{})
+			if kerr.IsNotFound(err){
+				println("obj ", obj.Name," already deleted")
+			}
 			if err != nil && !kerr.IsNotFound(err) {
 				return hookapi.StatusInternalServerError(err)
 			} else if err == nil && obj.Spec.TerminationPolicy == api.TerminationPolicyDoNotTerminate {
@@ -90,12 +98,16 @@ func (a *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *admission.A
 		}
 	default:
 		println("Validator.go:=========>Case: Default")
+		println("Validator.go:=========>Operation = ", string(req.Operation))
+		println("Validator.go:=========>Operation = ", req.Operation)
 		obj, err := meta_util.UnmarshalFromJSON(req.Object.Raw, api.SchemeGroupVersion)
 		if err != nil {
+			println(":::::::::::BAD REQUEST")
 			return hookapi.StatusBadRequest(err)
 		}
 		if req.Operation == admission.Update {
 			// validate changes made by user
+			println(":::::::::::::::::Validating update")
 			oldObject, err := meta_util.UnmarshalFromJSON(req.OldObject.Raw, api.SchemeGroupVersion)
 			if err != nil {
 				return hookapi.StatusBadRequest(err)
@@ -111,10 +123,11 @@ func (a *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *admission.A
 			}
 		}
 		// validate database specs
-		if err = ValidatePgBouncer(a.client, a.extClient, obj.(*api.PgBouncer), false); err != nil {
+		if err = ValidatePgBouncer(pbValidator.client, pbValidator.extClient, obj.(*api.PgBouncer), false); err != nil {
 			return hookapi.StatusForbidden(err)
 		}
 	}
+	println(":::::::::::::::::Validation successful")
 	status.Allowed = true
 	return status
 }
@@ -122,6 +135,7 @@ func (a *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *admission.A
 // ValidatePgBouncer checks if the object satisfies all the requirements.
 // It is not method of Interface, because it is referenced from controller package too.
 func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbouncer *api.PgBouncer, strictValidation bool) error {
+	log.Infoln("Validator.go :::::::::::::::::::  ValidatePgBouncer ====")
 	if pgbouncer.Spec.Replicas == nil || *pgbouncer.Spec.Replicas < 1 {
 		return fmt.Errorf(`spec.replicas "%v" invalid. Value must be greater than zero`, pgbouncer.Spec.Replicas)
 	}
@@ -187,9 +201,11 @@ func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbo
 //}
 
 func validateUpdate(obj, oldObj runtime.Object, kind string) error {
+	log.Infoln("Validator.go :::::::::::::::::::  ValidateUpdate ====")
 	preconditions := getPreconditionFunc()
 	_, err := meta_util.CreateStrategicPatch(oldObj, obj, preconditions...)
 	if err != nil {
+		println(":::::::::::PreConditions failed")
 		if mergepatch.IsPreconditionFailed(err) {
 			return fmt.Errorf("%v.%v", err, preconditionFailedError(kind))
 		}
@@ -199,6 +215,7 @@ func validateUpdate(obj, oldObj runtime.Object, kind string) error {
 }
 
 func getPreconditionFunc() []mergepatch.PreconditionFunc {
+	log.Infoln("Validator.go :::::::::::::::::::  getPreconditionFunc ====")
 	preconditions := []mergepatch.PreconditionFunc{
 		mergepatch.RequireKeyUnchanged("apiVersion"),
 		mergepatch.RequireKeyUnchanged("kind"),

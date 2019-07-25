@@ -55,8 +55,6 @@ pidfile = /tmp/pgbouncer.pid
 `
 		var admins string
 		var userListData string
-		var listenAddress = "*"
-		var pool_mode = "session"
 
 		in.Labels = pgbouncer.OffshootLabels()
 		core_util.EnsureOwnerReference(&in.ObjectMeta, ref)
@@ -96,11 +94,13 @@ pidfile = /tmp/pgbouncer.pid
 				username, password, err := c.getDbCredentials(secretListItem)
 				if err != nil {
 					if kerr.IsNotFound(err) {
-						println("This a TODO for secret not found errors")
+						log.Warningf("Secret %s not found in namespace %s.",secretListItem.SecretName, secretListItem.SecretNamespace )
+						log.Warningln("ConfigMap will be updated with this secret when its available", )
 					} else {
-						log.Error(err)
+						log.Warningln("Error extracting database credentials from secret ",secretListItem.SecretNamespace,"/",secretListItem.SecretName,". " ,err)
 						return nil
 					}
+					continue
 				}
 				//List of users
 				userListData = userListData + fmt.Sprintf(`"%s" "%s"
@@ -110,19 +110,12 @@ pidfile = /tmp/pgbouncer.pid
 
 		if pgbouncer.Spec.ConnectionPoolConfig != nil {
 			admins = fmt.Sprintf(`%s`, pgbouncerAdminName)
-			listenPort := *pgbouncer.Spec.ConnectionPoolConfig.ListenPort
 			pbinfo = pbinfo + fmt.Sprintf(`listen_port = %d
-`, listenPort)
-			if pgbouncer.Spec.ConnectionPoolConfig.ListenAddress != "" {
-				listenAddress = pgbouncer.Spec.ConnectionPoolConfig.ListenAddress
-			}
+`, *pgbouncer.Spec.ConnectionPoolConfig.ListenPort)
 			pbinfo = pbinfo + fmt.Sprintf(`listen_addr = %s
-`, listenAddress)
-			if pgbouncer.Spec.ConnectionPoolConfig.PoolMode != "" {
-				pool_mode = pgbouncer.Spec.ConnectionPoolConfig.PoolMode
-			}
+`,pgbouncer.Spec.ConnectionPoolConfig.ListenAddress)
 			pbinfo = pbinfo + fmt.Sprintf(`pool_mode = %s
-`, pool_mode)
+`, pgbouncer.Spec.ConnectionPoolConfig.PoolMode)
 
 			adminList := pgbouncer.Spec.ConnectionPoolConfig.AdminUsers
 			for _, adminListItem := range adminList {
@@ -165,7 +158,6 @@ pidfile = /tmp/pgbouncer.pid
 func (c *Controller) getDbCredentials(secretListItem api.SecretList) (string, string, error) {
 	scrt, err := c.Client.CoreV1().Secrets(secretListItem.SecretNamespace).Get(secretListItem.SecretName, metav1.GetOptions{})
 	if err != nil {
-		println("================>Secret not found.", err)
 		return "", "", err
 	}
 	username := scrt.Data[POSTGRES_USER]

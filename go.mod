@@ -27,7 +27,6 @@ require (
 	kmodules.xyz/client-go v0.0.0-20190715080709-7162a6c90b04
 	kmodules.xyz/custom-resources v0.0.0-20190508103408-464e8324c3ec
 	kmodules.xyz/monitoring-agent-api v0.0.0-20190513065523-186af167f817
-	kmodules.xyz/offshoot-api v0.0.0-20190715115723-36c8fce142c1
 	kmodules.xyz/webhook-runtime v0.0.0-20190715115250-a84fbf77dd30
 	kubedb.dev/apimachinery v0.0.0-20190718075019-9cc4fba2e0de
 	stash.appscode.dev/stash v0.0.0-20190718015558-6bc80ce219d9 // indirect
