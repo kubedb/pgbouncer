@@ -180,10 +180,8 @@ func (c *Controller) waitUntilConfigMapReady(kubeClient kubernetes.Interface, me
 func (c *Controller) reloadPgBouncer(bouncer *api.PgBouncer) error {
 	pbPodLabels := labels.FormatLabels(bouncer.OffshootSelectors())
 	var pod core.Pod
-	var localPort = int32(5432)
-	if bouncer.Spec.ConnectionPoolConfig.ListenPort != nil {
-		localPort = *bouncer.Spec.ConnectionPoolConfig.ListenPort
-	}
+	localPort := *bouncer.Spec.ConnectionPoolConfig.ListenPort
+
 	podlist, err := c.Client.CoreV1().Pods(bouncer.Namespace).List(metav1.ListOptions{LabelSelector: pbPodLabels})
 	if err != nil {
 		return err

@@ -19,7 +19,6 @@ var (
 )
 
 const (
-	PgBouncerPort     = 5432
 	PgBouncerPortName = "api"
 )
 
@@ -80,7 +79,7 @@ func (c *Controller) createService(pgbouncer *api.PgBouncer) (kutil.VerbType, er
 
 		in.Spec.Selector = pgbouncer.OffshootSelectors()
 		//in.Spec.Selector[NodeRole] = "primary"
-		in.Spec.Ports = upsertServicePort(in, pgbouncer)
+		in.Spec.Ports = upsertServicePort(pgbouncer)
 
 		if pgbouncer.Spec.ServiceTemplate.Spec.ClusterIP != "" {
 			in.Spec.ClusterIP = pgbouncer.Spec.ServiceTemplate.Spec.ClusterIP
@@ -100,20 +99,13 @@ func (c *Controller) createService(pgbouncer *api.PgBouncer) (kutil.VerbType, er
 	return ok, err
 }
 
-func upsertServicePort(in *core.Service, pgbouncer *api.PgBouncer) []core.ServicePort {
-	var listenPort int32
-	if pgbouncer.Spec.ConnectionPoolConfig.ListenPort != nil {
-		listenPort = *pgbouncer.Spec.ConnectionPoolConfig.ListenPort
-		//USING mutating webhook, port is set to 5432 by default. so it should be never nil
-	} else {
-		listenPort = PgBouncerPort
+func upsertServicePort(pgbouncer *api.PgBouncer) []core.ServicePort {
+	return []core.ServicePort{
+		{
+			Name: PgBouncerPortName,
+			Port: *pgbouncer.Spec.ConnectionPoolConfig.ListenPort,
+		},
 	}
-	println(listenPort, " , mut port = ", *pgbouncer.Spec.ConnectionPoolConfig.ListenPort)
-	var defaultDBPort = core.ServicePort{
-		Name: PgBouncerPortName,
-		Port: *pgbouncer.Spec.ConnectionPoolConfig.ListenPort,
-	}
-	return []core.ServicePort{defaultDBPort}
 }
 
 //

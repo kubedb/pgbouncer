@@ -21,8 +21,6 @@ import (
 const (
 	securityContextCode = int64(65535)
 	congigMountPath     = "/etc/config"
-	PostgresPort        = 5432
-	PostgresPortName    = "api"
 )
 
 func (c *Controller) ensureStatefulSet(
@@ -108,7 +106,7 @@ func (c *Controller) ensureStatefulSet(
 				},
 			},
 		}
-		in = upsertPort(in)
+		in = upsertPort(in,pgbouncer)
 		in.Spec.UpdateStrategy = pgbouncer.Spec.UpdateStrategy
 
 		return in
@@ -198,12 +196,12 @@ func (c *Controller) checkConfigMap(pgbouncer *api.PgBouncer) error {
 	return nil
 }
 
-func upsertPort(statefulSet *apps.StatefulSet) *apps.StatefulSet {
+func upsertPort(statefulSet *apps.StatefulSet, pgbouncer *api.PgBouncer) *apps.StatefulSet {
 	getPorts := func() []core.ContainerPort {
 		portList := []core.ContainerPort{
 			{
-				Name:          PostgresPortName,
-				ContainerPort: PostgresPort,
+				Name: PgBouncerPortName,
+				ContainerPort: *pgbouncer.Spec.ConnectionPoolConfig.ListenPort,
 				Protocol:      core.ProtocolTCP,
 			},
 		}

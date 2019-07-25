@@ -3,7 +3,6 @@ package controller
 import (
 	"fmt"
 	"github.com/appscode/go/encoding/json/types"
-	"k8s.io/apimachinery/pkg/api/meta"
 
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
