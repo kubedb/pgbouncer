@@ -12,6 +12,7 @@ import (
 	"kubedb.dev/apimachinery/apis"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
+	kutil "kmodules.xyz/client-go"
 )
 
 const (
@@ -68,7 +69,6 @@ func (c *Controller) runPgBouncer(key string) error {
 			}
 			if err := c.create(pgbouncer); err != nil {
 				log.Errorln(err)
-				// c.pushFailureEvent(pgbouncer, err.Error())
 				return err
 			}
 		}
@@ -77,23 +77,16 @@ func (c *Controller) runPgBouncer(key string) error {
 }
 
 func (c *Controller) runPgSecret(key string) error {
-	println(":003.1: =========>runPgSecret:::::::::::: Key = ", key)
-	//log.Debugln("started processing, key:", key)
+	//wait for pgboncer to ber ready
+	log.Debugln("started processing, key:", key)
 	_, exists, err := c.secretInformer.GetIndexer().GetByKey(key)
 	if err != nil {
 		log.Errorf("Fetching secret with key %s from store failed with %v", key, err)
-		log.Infoln("Fetching secret with key %s from store failed with %v", key, err)
 		return err
 	}
-
-
 	splitKey := strings.Split(key, "/")
-	for i, s := range splitKey {
-		println(i, " = ", s)
-	}
 
 	if len(splitKey) != 2 || splitKey[0] == "" || splitKey[1] == "" {
-		println("len(splitKey) != 2")
 		return nil
 	}
 	//Now we are interested in this particular secret
@@ -109,94 +102,38 @@ func (c *Controller) runPgSecret(key string) error {
 	}
 
 	if !exists {
-		log.Debugf("PgSecret %s does not exist anymore", key)
-		log.Infof("==========Delete event for secret %s ==========", key)
+		log.Debugf("PgBouncer Secret %s deleted.", key)
 
 	} else {
-		// Note that you also have to check the uid if you have a local controlled resource, which
-		// is dependent on the actual instance, to detect that a PgBouncer was recreated with the same name
-		//deepSecret := secretObj.(*core.Secret).DeepCopy()
-		//if deepSecret.Namespace == systemNamespace{
-		//	return nil
-		//}
-		//pgBouncerList, err := c.ExtClient.KubedbV1alpha1().PgBouncers(core.NamespaceAll).List(v1.ListOptions{})
-		//if err != nil{
-		//	if kerr.IsNotFound(err){
-		//
-		//	}
-		//	return err
-		//}
-		//println("::::::: Look for ",secret.Namespace, "==>", secret.Name, "in all PgBouncers")
-		//for _, pgbouncer := range pgBouncerList.Items {
-		//	println(pgbouncer.Name)
-		//	err := c.syncSecretWithPgBouncer(secret, &pgbouncer)
-		//	if err != nil {
-		//		log.Warning(err)
-		//	}
-		//}
-		log.Infof("==========Create/Update event for secret %s ==========", key)
+		log.Debugf("Updates for PgBouncer Secret %s received.", key)
 	}
 	for _, pgbouncer := range pgBouncerList.Items {
-		println(pgbouncer.Name)
 		err := c.syncSecretWithPgBouncer(secretInfo, &pgbouncer)
 		if err != nil {
 			log.Warning(err)
 		}
 	}
-	println(":003.1: =========>runPgSecret Done")
 	return nil
 }
 
 func (c *Controller) syncSecretWithPgBouncer(secretInfo map[string]string, pgbouncer *api.PgBouncer) error {
 	if pgbouncer == nil {
-		println("pgbouncer == nil")
-		return errors.New("pgbouncer == nil")
+		return errors.New("cant sync secret with pgbouncer == nil")
 	}
 	secretList := pgbouncer.Spec.SecretList
 	for _, singleSecret := range secretList {
 		if singleSecret.SecretNamespace == secretInfo["Namespace"] && singleSecret.SecretName == secretInfo["Name"] {
-			println(singleSecret.SecretNamespace, " ", singleSecret.SecretName, " == ", secretInfo["Namespace"], " ", secretInfo["Name"])
-			println("Ensure config:")
+			log.Infof("Secret %s update found for PgBouncer: %s",secretInfo["Name"], pgbouncer.Name)
+			//log.Infof(singleSecret.SecretNamespace, " ", singleSecret.SecretName, " == ", secretInfo["Namespace"], " ", secretInfo["Name"])
 			vt, err := c.ensureConfigMapFromCRD(pgbouncer)
 			if err != nil {
-				println("ensureConfigMapFromCRD err= ", err)
 				return err
 			}
-			println("Verbtype = ", vt+" :::for secret.Name = ", secretInfo["Name"], "pb name = ", pgbouncer.Name)
+			if vt != kutil.VerbUnchanged{
+				log.Infof("%s configMap for PgBouncer = m%s and PgBouncer Secret = %s' ", vt, pgbouncer.Name, secretInfo["Name"])
+			}
 			break
-		} else {
-			println(singleSecret.SecretNamespace, " ", singleSecret.SecretName, " != ", secretInfo["Namespace"], " ", secretInfo["Name"])
 		}
 	}
 	return nil
 }
-
-/*
-log.Debugln("started processing, key:", key)
-	secretObj, exists, err := c.secretInformer.GetIndexer().GetByKey(key)
-	if err != nil {
-		log.Errorf("Fetching secret with key %s from store failed with %v", key, err)
-		return err
-	}
-
-	if !exists {
-		log.Debugf("PgSecret %s does not exist anymore", key)
-	} else {
-		// Note that you also have to check the uid if you have a local controlled resource, which
-		// is dependent on the actual instance, to detect that a PgBouncer was recreated with the same name
-		deepSecret := secretObj.(*core.Secret).DeepCopy()
-		if deepSecret.DeletionTimestamp != nil {
-			if core_util.HasFinalizer(deepSecret.ObjectMeta, api.GenericKey) {
-				//secret is getting deleted.
-				log.Infoln("====================")
-				log.Infoln("==========Delete event for secrets==========")
-				log.Infoln("====================")
-			}
-		} else {
-			// it is a create or update event
-			log.Infoln("====================")
-			log.Infoln("==========Create or update event for secrets==========")
-			log.Infoln("====================")
-		}
-	}
-*/

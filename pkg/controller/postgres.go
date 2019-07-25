@@ -2,6 +2,8 @@ package controller
 
 import (
 	"fmt"
+	"github.com/appscode/go/encoding/json/types"
+	"k8s.io/apimachinery/pkg/api/meta"
 
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
@@ -13,31 +15,27 @@ import (
 	kutil "kmodules.xyz/client-go"
 	core_util "kmodules.xyz/client-go/core/v1"
 	dynamic_util "kmodules.xyz/client-go/dynamic"
+	meta_util "kmodules.xyz/client-go/meta"
 	"kubedb.dev/apimachinery/apis"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 	"kubedb.dev/apimachinery/pkg/eventer"
+	validator "kubedb.dev/pgbouncer/pkg/admission"
 )
 
 func (c *Controller) create(pgbouncer *api.PgBouncer) error {
-	//if err := validator.ValidatePgBouncer(c.Client, c.ExtClient, pgbouncer, true); err != nil {
-	//	c.recorder.Event(
-	//		pgbouncer,
-	//		core.EventTypeWarning,
-	//		eventer.EventReasonInvalid,
-	//		err.Error(),
-	//	)
-	//	log.Errorln(err)
-	//	// stop Scheduler in case there is any.
-	//	return nil // user error so just record error and don't retry.
-	//}
-
-	// Delete Matching DormantDatabase if exists any
-	//if err := c.deleteMatchingDormantDatabase(pgbouncer); err != nil {
-	//	return fmt.Errorf(`failed to delete dormant Database : "%v/%v". Reason: %v`, pgbouncer.Namespace, pgbouncer.Name, err)
-	//}
-
-	println("=============create===========")
+	if err := validator.ValidatePgBouncer(c.Client, c.ExtClient, pgbouncer, true); err != nil {
+		c.recorder.Event(
+			pgbouncer,
+			core.EventTypeWarning,
+			eventer.EventReasonInvalid,
+			err.Error(),
+		)
+		log.Errorln(err)
+		// stop Scheduler in case there is any.
+		return nil // user error so just record error and don't retry.
+	}
+	println(":::::::::::::::CREATE PGBOUNCER::::::::::::",pgbouncer.Name,"::::::::::::::::")
 
 	if pgbouncer.Status.Phase == "" {
 		pg, err := util.UpdatePgBouncerStatus(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncerStatus) *api.PgBouncerStatus {
@@ -123,6 +121,35 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 	}
 	log.Infoln("Service ", serviceVerb)
 
+	if _, err := meta_util.GetString(pgbouncer.Annotations, api.AnnotationInitialized); err == kutil.ErrNotFound {
+
+		println(":::::::::::::Not found err for phase")
+		if pgbouncer.Status.Phase == api.DatabasePhaseInitializing {
+			println(":::::::Current phase = ", pgbouncer.Status.Phase )
+			return nil
+		}
+		println("::::::::::::Adding phase: Initializing")
+		// add phase that database is being initialized
+		pg, err := util.UpdatePgBouncerStatus(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncerStatus) *api.PgBouncerStatus {
+			in.Phase = api.DatabasePhaseInitializing
+			return in
+		}, apis.EnableStatusSubresource)
+		if err != nil {
+			return err
+		}
+		pgbouncer.Status = pg.Status
+	}
+	println("::::::::::::Adding phase: Running")
+	pg, err := util.UpdatePgBouncerStatus(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncerStatus) *api.PgBouncerStatus {
+		in.Phase = api.DatabasePhaseRunning
+		in.ObservedGeneration = types.NewIntHash(pgbouncer.Generation, meta_util.GenerationHash(pgbouncer))
+		return in
+	}, apis.EnableStatusSubresource)
+	if err != nil {
+		return err
+	}
+	pgbouncer.Status = pg.Status
+
 	return nil
 }
 
@@ -131,9 +158,8 @@ func (c *Controller) terminate(pgbouncer *api.PgBouncer) error {
 	if rerr != nil {
 		return rerr
 	}
-
+	//FOR any termination policy, delete eveything
 	// If TerminationPolicy is "pause", keep everything (ie, PVCs,Secrets,Snapshots) intact.
-	// In operator, create dormantdatabase
 	if pgbouncer.Spec.TerminationPolicy == api.TerminationPolicyPause {
 		if err := c.removeOwnerReferenceFromOffshoots(pgbouncer, ref); err != nil {
 			return err
@@ -147,8 +173,6 @@ func (c *Controller) terminate(pgbouncer *api.PgBouncer) error {
 			return err
 		}
 	}
-
-	c.cronController.StopBackupScheduling(pgbouncer.ObjectMeta)
 
 	if pgbouncer.Spec.Monitor != nil {
 		if _, err := c.deleteMonitor(pgbouncer); err != nil {

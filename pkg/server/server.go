@@ -109,6 +109,7 @@ func (c completedConfig) New() (*PgBouncerServer, error) {
 		}
 	}
 	if c.OperatorConfig.EnableValidatingWebhook {
+		println("======================>c.OperatorConfig.EnableValidatingWebhook")
 		c.ExtraConfig.AdmissionHooks = append(c.ExtraConfig.AdmissionHooks,
 			&mgAdmsn.PgBouncerValidator{},
 			&namespace.NamespaceValidator{
@@ -176,6 +177,7 @@ func (c completedConfig) New() (*PgBouncerServer, error) {
 	}
 
 	if c.OperatorConfig.EnableValidatingWebhook {
+		println(";;;;;;;;;;;;Server.go => c.OperatorConfig.EnableValidatingWebhook==true")
 		//s.GenericAPIServer.AddPostStartHookOrDie("validating-webhook-xray",
 		//	func(context genericapiserver.PostStartHookContext) error {
 		//		go func() {

@@ -11,12 +11,10 @@ spec:
     pgObjectName: "quick-postgress"
     pgObjectNamespace: "demo"
   connectionPoolConfig:
-    listenPort: 5432
-    poolMode: "session"
+    listenPort: 5435
     adminUsers:
     - admin
-    - admin1
-    
+    - admin1 
   secretList:
   - secretName: quick-postgress-auth
     secretNamespace: demo

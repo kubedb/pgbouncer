@@ -1,6 +1,7 @@
 package admission
 
 import (
+	"github.com/appscode/go/log"
 	"sync"
 
 	"github.com/appscode/go/types"
@@ -14,6 +15,13 @@ import (
 	hookapi "kmodules.xyz/webhook-runtime/admission/v1beta1"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	cs "kubedb.dev/apimachinery/client/clientset/versioned"
+)
+
+const (
+	defaultListenPort = int32(5432)
+	defaultListenAddress = "*"
+	defaultPoolMode = "session"
+
 )
 
 type PgBouncerMutator struct {
@@ -35,6 +43,7 @@ func (a *PgBouncerMutator) Resource() (plural schema.GroupVersionResource, singu
 }
 
 func (a *PgBouncerMutator) Initialize(config *rest.Config, stopCh <-chan struct{}) error {
+	log.Infoln("Mutator.go :::::::::::::::::::  Initialize ====")
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -51,6 +60,7 @@ func (a *PgBouncerMutator) Initialize(config *rest.Config, stopCh <-chan struct{
 }
 
 func (a *PgBouncerMutator) Admit(req *admission.AdmissionRequest) *admission.AdmissionResponse {
+	log.Infoln("Mutator.go :::::::::::::::::::  Admit ====")
 	status := &admission.AdmissionResponse{}
 
 	// N.B.: No Mutating for delete
@@ -90,13 +100,22 @@ func (a *PgBouncerMutator) Admit(req *admission.AdmissionRequest) *admission.Adm
 
 // setDefaultValues provides the defaulting that is performed in mutating stage of creating/updating a PgBouncer database
 func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbouncer *api.PgBouncer) (runtime.Object, error) {
+	log.Infoln("Mutator.go :::::::::::::::::::  setDefaultValues ====")
 
 	if pgbouncer.Spec.Replicas == nil {
 		pgbouncer.Spec.Replicas = types.Int32P(1)
 	}
-	//if pgbouncer.Spec.ServiceTemplate {
-	//	return nil, errors.New(`'spec.port' is missing`)
-	//}
+	if pgbouncer.Spec.ConnectionPoolConfig != nil{
+		if pgbouncer.Spec.ConnectionPoolConfig.ListenPort == nil{
+			pgbouncer.Spec.ConnectionPoolConfig.ListenPort = types.Int32P(defaultListenPort)
+		}
+		if pgbouncer.Spec.ConnectionPoolConfig.ListenAddress == ""{
+			pgbouncer.Spec.ConnectionPoolConfig.ListenAddress = defaultListenAddress
+		}
+		if pgbouncer.Spec.ConnectionPoolConfig.PoolMode == ""{
+			pgbouncer.Spec.ConnectionPoolConfig.PoolMode = defaultPoolMode
+		}
+	}
 	pgbouncer.SetDefaults()
 
 	//if err := setDefaultsFromDormantDB(extClient, pgbouncer); err != nil {
@@ -105,7 +124,8 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbou
 
 	// If monitoring spec is given without port,
 	// set default Listening port
-	setMonitoringPort(pgbouncer)
+
+	//setMonitoringPort(pgbouncer)
 
 	return pgbouncer, nil
 }
@@ -189,6 +209,7 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbou
 // Assign Default Monitoring Port if MonitoringSpec Exists
 // and the AgentVendor is Prometheus.
 func setMonitoringPort(pgbouncer *api.PgBouncer) {
+	log.Infoln("Mutator.go :::::::::::::::::::  setMonitoringPort ====")
 	if pgbouncer.Spec.Monitor != nil &&
 		pgbouncer.GetMonitoringVendor() == mona.VendorPrometheus {
 		if pgbouncer.Spec.Monitor.Prometheus == nil {
