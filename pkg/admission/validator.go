@@ -62,13 +62,12 @@ func (a *PgBouncerValidator) Initialize(config *rest.Config, stopCh <-chan struc
 
 func (pbValidator *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *admission.AdmissionResponse {
 	status := &admission.AdmissionResponse{}
-	log.Infoln("Validator.go :::::::::::::::::::  Initialize ====")
+	log.Infoln("Validator.go :::::::::::::::::::  Admit ====")
 
 	if (req.Operation != admission.Create && req.Operation != admission.Update && req.Operation != admission.Delete) ||
 		len(req.SubResource) != 0 ||
 		req.Kind.Group != api.SchemeGroupVersion.Group ||
 		req.Kind.Kind != api.ResourceKindPgBouncer {
-		println("::::::::::::::::> req.Operation != admission.Create && req.Operation != admission.Update && req.Operation != admission.Delete")
 		status.Allowed = true
 		return status
 	}
@@ -76,14 +75,11 @@ func (pbValidator *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *a
 	pbValidator.lock.RLock()
 	defer pbValidator.lock.RUnlock()
 	if !pbValidator.initialized {
-		println(":::::::::::::::::>PgBouncer Validator is unInitialized")
 		return hookapi.StatusUninitialized()
 	}
 
-	println("::::::::::::::::Switch Operation")
 	switch req.Operation {
 	case admission.Delete:
-		println("Validator.go:=========>Case: Delete")
 		if req.Name != "" {
 			// req.Object.Raw = nil, so read from kubernetes
 			obj, err := pbValidator.extClient.KubedbV1alpha1().PgBouncers(req.Namespace).Get(req.Name, metav1.GetOptions{})
@@ -97,17 +93,12 @@ func (pbValidator *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *a
 			}
 		}
 	default:
-		println("Validator.go:=========>Case: Default")
-		println("Validator.go:=========>Operation = ", string(req.Operation))
-		println("Validator.go:=========>Operation = ", req.Operation)
 		obj, err := meta_util.UnmarshalFromJSON(req.Object.Raw, api.SchemeGroupVersion)
 		if err != nil {
-			println(":::::::::::BAD REQUEST")
 			return hookapi.StatusBadRequest(err)
 		}
 		if req.Operation == admission.Update {
 			// validate changes made by user
-			println(":::::::::::::::::Validating update")
 			oldObject, err := meta_util.UnmarshalFromJSON(req.OldObject.Raw, api.SchemeGroupVersion)
 			if err != nil {
 				return hookapi.StatusBadRequest(err)
@@ -116,7 +107,6 @@ func (pbValidator *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *a
 			pgbouncer := obj.(*api.PgBouncer).DeepCopy()
 			oldPgBouncer := oldObject.(*api.PgBouncer).DeepCopy()
 			oldPgBouncer.SetDefaults()
-			// Allow changing Database Secret only if there was no secret have set up yet.
 
 			if err := validateUpdate(pgbouncer, oldPgBouncer, req.Kind.Kind); err != nil {
 				return hookapi.StatusBadRequest(fmt.Errorf("%v", err))
@@ -142,14 +132,10 @@ func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbo
 	if pgbouncer.Spec.UpdateStrategy.Type == "" {
 		return fmt.Errorf(`'spec.updateStrategy.type' is missing`)
 	}
-
 	if pgbouncer.Spec.TerminationPolicy == "" {
 		return fmt.Errorf(`'spec.terminationPolicy' is missing`)
 	}
 
-	//if err := matchWithDormantDatabase(extClient, pgbouncer); err != nil {
-	//	return err
-	//}
 	return nil
 }
 

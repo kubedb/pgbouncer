@@ -11,7 +11,7 @@ spec:
     pgObjectName: "quick-postgress"
     pgObjectNamespace: "demo"
   connectionPoolConfig:
-    listenPort: 5435
+    listenPort: 5433
     adminUsers:
     - admin
     - admin1 
