@@ -76,33 +76,14 @@ pidfile = /tmp/pgbouncer.pid
 					}
 					continue //Dont add pgbouncer databse base for this non existent appbinding
 				}
-
-				var serviceName string
-				if appBinding.Spec.ClientConfig.Service != nil && appBinding.Spec.ClientConfig.Service.Name != "" {
-					serviceName = appBinding.Spec.ClientConfig.Service.Name
-				} else {
-					log.Warning("Service name not found in appbinding")
-					continue
+				if appBinding.Spec.ClientConfig.Service != nil{
+					name = appBinding.Spec.ClientConfig.Service.Name
+					namespace = appBinding.Namespace
+					hostPort = appBinding.Spec.ClientConfig.Service.Port
 				}
 
-				serv, err := c.Client.CoreV1().Services(namespace).Get(serviceName, metav1.GetOptions{})
-				if err != nil {
-					if kerr.IsNotFound(err) {
-						println("TODO: expect service ", serviceName, " to be ready later (currently just skipping)")
-						log.Warning(err)
-					} else {
-						log.Error(err)
-					}
-					continue
-				}
-				hostname := serv.Name + "." + serv.Namespace + ".svc.cluster.local"
+				hostname := name + "." + namespace + ".svc.cluster.local"
 
-				for _, port := range serv.Spec.Ports {
-					if port.Port != 0 {
-						hostPort = port.Port
-						break
-					}
-				}
 				//dbinfo
 				dbinfo = dbinfo + fmt.Sprintf(`%s = host=%s port=%d dbname=%s
 `, db.Alias, hostname, hostPort, db.DbName)
