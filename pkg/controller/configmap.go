@@ -27,6 +27,7 @@ const (
 	POSTGRES_USER      = "POSTGRES_USER"
 	pgbouncerAdminName = "pgbouncer"
 	pbRetryInterval    = time.Second * 5
+	DefaultHostPort    = 5432
 )
 
 func (c *Controller) deleteLeaderLockConfigMap(meta metav1.ObjectMeta) error {
@@ -61,15 +62,33 @@ pidfile = /tmp/pgbouncer.pid
 		core_util.EnsureOwnerReference(&in.ObjectMeta, ref)
 		if pgbouncer.Spec.Databases != nil {
 			for _, db := range pgbouncer.Spec.Databases {
-				var namespace = pgbouncer.Namespace
-				var hostPort = int32(5432)
-				if db.PgObjectNamespace != "" {
-					namespace = db.PgObjectNamespace
-				}
-				serv, err := c.Client.CoreV1().Services(namespace).Get(db.PgObjectName, metav1.GetOptions{})
+
+				var hostPort = int32(DefaultHostPort)
+				namespace := db.AppBindingName
+				name := db.AppBindingNamespace
+				appBinding, err := c.AppCatalogClient.AppBindings(namespace).Get(name, metav1.GetOptions{})
 				if err != nil {
 					if kerr.IsNotFound(err) {
-						println("TODO: expect service ", db.PgObjectName, " to be ready later (currently just skipping)")
+						println("TODO: expect appbinding ", name, " to be ready later (currently just skipping)")
+						log.Warning(err)
+					} else {
+						log.Error(err)
+					}
+					continue //Dont add pgbouncer databse base for this non existent appbinding
+				}
+
+				var serviceName string
+				if appBinding.Spec.ClientConfig.Service != nil && appBinding.Spec.ClientConfig.Service.Name != "" {
+					serviceName = appBinding.Spec.ClientConfig.Service.Name
+				} else {
+					log.Warning("Service name not found in appbinding")
+					continue
+				}
+
+				serv, err := c.Client.CoreV1().Services(namespace).Get(serviceName, metav1.GetOptions{})
+				if err != nil {
+					if kerr.IsNotFound(err) {
+						println("TODO: expect service ", serviceName, " to be ready later (currently just skipping)")
 						log.Warning(err)
 					} else {
 						log.Error(err)

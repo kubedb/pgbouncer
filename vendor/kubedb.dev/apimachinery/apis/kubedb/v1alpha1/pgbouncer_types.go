@@ -45,7 +45,7 @@ type PgBouncerSpec struct {
 	//Pointer?
 
 	//list of secrets
-	SecretList []SecretList `json:"secretList"`
+	SecretList []SecretList `json:"secretList, omitempty"`
 	// Image is used for local only machines
 	// +optional
 	Image string `json:"image,omitempty"`
@@ -68,10 +68,10 @@ type PgBouncerSpec struct {
 }
 
 type Databases struct {
-	Alias             string `json:"dbAlias"`                     //alias to identify target database
-	DbName            string `json:"dbName"`                      //Name of the target database
-	PgObjectName      string `json:"pgObjectName"`                //PgBouncer object where the target database is located
-	PgObjectNamespace string `json:"pgObjectNamespace,omitempty"` //Namespace of PgBouncer object
+	Alias             string `json:"Alias"`                     //alias to identify target database
+	DbName            string `json:"databaseName"`                      //Name of the target database
+	AppBindingName      string `json:"referenceObjectName"`                //Reference to PgBouncer object where the target database is located
+	AppBindingNamespace string `json:"referenceObjectNamespace,omitempty"` //Namespace of PgBouncer object
 	SecretName        string `json:"secretName,omitempty"`        //To bind a single user to a specific connection , Optional
 }
 
@@ -87,8 +87,8 @@ type ConnectionPoolConfig struct {
 }
 
 type SecretList struct {
-	SecretName      string `json:"secretName"`                //contains a single username-password combo that exists in a target database
-	SecretNamespace string `json:"secretNamespace,omitempty"` //Namespace of PgBouncer object
+	SecretName      string `json:"name"`                //contains a single username-password combo that exists in a target database
+	SecretNamespace string `json:"namespace,omitempty"` //Namespace of PgBouncer object
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

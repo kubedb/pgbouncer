@@ -6,13 +6,13 @@ metadata:
 spec:
   replicas: 3
   databases:
-  - dbAlias: "postgres"
-    dbName: "postgres"
-    pgObjectName: "quick-postgress"
-    pgObjectNamespace: "demo"
-  - dbAlias: "tmpdb"
-    dbName: "tmpdb"
-    pgObjectName: "quick-postgress"
+  - Alias: "postgress"
+    databaseName: "postgres"
+    referenceObjectName: "quick-postgress"
+    referenceObjectNamespace: "demo"
+  - Alias: "tmpdb"
+    databaseName: "tmpdb"
+    referenceObjectName: "quick-postgress"
   connectionPoolConfig:
     listenPort: 5433
     adminUsers:
