@@ -21,6 +21,7 @@ const (
 	defaultListenPort = int32(5432)
 	defaultListenAddress = "*"
 	defaultPoolMode = "session"
+	defaultPgBouncerImage = "rezoan/pb:latest"
 
 )
 
@@ -105,6 +106,9 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbou
 	if pgbouncer.Spec.Replicas == nil {
 		pgbouncer.Spec.Replicas = types.Int32P(1)
 	}
+	if pgbouncer.Spec.Image == ""{
+		pgbouncer.Spec.Image = defaultPgBouncerImage
+	}
 	if pgbouncer.Spec.ConnectionPoolConfig != nil{
 		if pgbouncer.Spec.ConnectionPoolConfig.ListenPort == nil{
 			pgbouncer.Spec.ConnectionPoolConfig.ListenPort = types.Int32P(defaultListenPort)
@@ -116,6 +120,22 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbou
 			pgbouncer.Spec.ConnectionPoolConfig.PoolMode = defaultPoolMode
 		}
 	}
+	//Set default namespace for unspecified namespaces
+	if pgbouncer.Spec.Databases != nil{
+		for i, db := range pgbouncer.Spec.Databases{
+			if db.PgObjectNamespace == ""{
+				pgbouncer.Spec.Databases[i].PgObjectNamespace = pgbouncer.Namespace
+			}
+		}
+	}
+	if pgbouncer.Spec.SecretList != nil {
+		for i, sec := range pgbouncer.Spec.SecretList{
+			if sec.SecretNamespace == ""{
+				pgbouncer.Spec.SecretList[i].SecretNamespace = pgbouncer.Namespace
+			}
+		}
+	}
+	//TODO: add all the secrets associated with each database in the database list to the list of secrets
 	pgbouncer.SetDefaults()
 
 	//if err := setDefaultsFromDormantDB(extClient, pgbouncer); err != nil {

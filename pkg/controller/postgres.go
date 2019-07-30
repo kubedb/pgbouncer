@@ -176,12 +176,12 @@ func (c *Controller) terminate(pgbouncer *api.PgBouncer) error {
 		}
 	}
 
-	if pgbouncer.Spec.Monitor != nil {
-		if _, err := c.deleteMonitor(pgbouncer); err != nil {
-			log.Errorln(err)
-			return nil
-		}
-	}
+	//if pgbouncer.Spec.Monitor != nil {
+	//	if _, err := c.deleteMonitor(pgbouncer); err != nil {
+	//		log.Errorln(err)
+	//		return nil
+	//	}
+	//}
 	return nil
 }
 

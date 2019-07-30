@@ -16283,29 +16283,29 @@ func schema_apimachinery_apis_kubedb_v1alpha1_Databases(ref common.ReferenceCall
 			SchemaProps: spec.SchemaProps{
 				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
-					"dbAlias": {
+					"Alias": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",
 						},
 					},
-					"dbName": {
+					"databaseName": {
 						SchemaProps: spec.SchemaProps{
 							Description: "alias to identify target database",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"pgObjectName": {
+					"referenceObjectName": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Name of the target database",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"pgObjectNamespace": {
+					"referenceObjectNamespace": {
 						SchemaProps: spec.SchemaProps{
-							Description: "PgBouncer object where the target database is located",
+							Description: "Reference to PgBouncer object where the target database is located",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -16318,7 +16318,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_Databases(ref common.ReferenceCall
 						},
 					},
 				},
-				Required: []string{"dbAlias", "dbName", "pgObjectName"},
+				Required: []string{"Alias", "databaseName", "referenceObjectName"},
 			},
 		},
 	}
@@ -18860,7 +18860,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerSpec(ref common.Reference
 						},
 					},
 				},
-				Required: []string{"databases", "connectionPoolConfig", "secretList"},
+				Required: []string{"databases", "connectionPoolConfig"},
 			},
 		},
 		Dependencies: []string{
@@ -19965,13 +19965,13 @@ func schema_apimachinery_apis_kubedb_v1alpha1_SecretList(ref common.ReferenceCal
 			SchemaProps: spec.SchemaProps{
 				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
-					"secretName": {
+					"name": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",
 						},
 					},
-					"secretNamespace": {
+					"namespace": {
 						SchemaProps: spec.SchemaProps{
 							Description: "contains a single username-password combo that exists in a target database",
 							Type:        []string{"string"},
@@ -19979,7 +19979,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_SecretList(ref common.ReferenceCal
 						},
 					},
 				},
-				Required: []string{"secretName"},
+				Required: []string{"name"},
 			},
 		},
 	}
