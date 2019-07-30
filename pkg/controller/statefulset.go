@@ -58,6 +58,7 @@ func (c *Controller) ensureStatefulSet(
 	}
 
 	statefulSet, vt, err := app_util.CreateOrPatchStatefulSet(c.Client, statefulSetMeta, func(in *apps.StatefulSet) *apps.StatefulSet {
+		in.Annotations = pgbouncer.Annotations//TODO: actual annotations
 		in.Labels = pgbouncer.OffshootLabels()
 		core_util.EnsureOwnerReference(&in.ObjectMeta, ref)
 

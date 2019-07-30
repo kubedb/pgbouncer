@@ -149,6 +149,9 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 	}
 	pgbouncer.Status = pg.Status
 
+	//println("Setting annotations")
+	//c.UpsertDatabaseAnnotation(pgbouncer.GetObjectMeta(),)
+
 	return nil
 }
 
