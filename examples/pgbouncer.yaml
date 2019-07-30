@@ -6,10 +6,13 @@ metadata:
 spec:
   replicas: 3
   databases:
-  - dbAlias: "db" 
+  - dbAlias: "postgres"
     dbName: "postgres"
     pgObjectName: "quick-postgress"
     pgObjectNamespace: "demo"
+  - dbAlias: "tmpdb"
+    dbName: "tmpdb"
+    pgObjectName: "quick-postgress"
   connectionPoolConfig:
     listenPort: 5433
     adminUsers:
@@ -21,4 +24,6 @@ spec:
   - secretName: admin-secret
     secretNamespace: demo
   - secretName: admin1-secret
+    secretNamespace: demo
+  - secretName: my-secret
     secretNamespace: demo

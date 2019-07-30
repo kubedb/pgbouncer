@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/appscode/go/log"
 	"github.com/pkg/errors"
@@ -12,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/reference"
 	kutil "kmodules.xyz/client-go"
@@ -26,6 +26,7 @@ const (
 	POSTGRES_PASSWORD  = "POSTGRES_PASSWORD"
 	POSTGRES_USER      = "POSTGRES_USER"
 	pgbouncerAdminName = "pgbouncer"
+	pbRetryInterval    = time.Second * 5
 )
 
 func (c *Controller) deleteLeaderLockConfigMap(meta metav1.ObjectMeta) error {
@@ -45,7 +46,7 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 		return kutil.VerbUnchanged, rerr
 	}
 
-	_, vt, err := core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
+	cfgMap, vt, err := core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
 		var dbinfo = `[databases]
 `
 		var pbinfo = `[pgbouncer]
@@ -68,7 +69,7 @@ pidfile = /tmp/pgbouncer.pid
 				serv, err := c.Client.CoreV1().Services(namespace).Get(db.PgObjectName, metav1.GetOptions{})
 				if err != nil {
 					if kerr.IsNotFound(err) {
-						println("TODO: expect service ",db.PgObjectName," to be ready later (currently just skipping)")
+						println("TODO: expect service ", db.PgObjectName, " to be ready later (currently just skipping)")
 						log.Warning(err)
 					} else {
 						log.Error(err)
@@ -94,10 +95,10 @@ pidfile = /tmp/pgbouncer.pid
 				username, password, err := c.getDbCredentials(secretListItem)
 				if err != nil {
 					if kerr.IsNotFound(err) {
-						log.Warningf("Secret %s not found in namespace %s.",secretListItem.SecretName, secretListItem.SecretNamespace )
-						log.Warningln("ConfigMap will be updated with this secret when its available", )
+						log.Warningf("Secret %s not found in namespace %s.", secretListItem.SecretName, secretListItem.SecretNamespace)
+						log.Warningln("ConfigMap will be updated with this secret when its available")
 					} else {
-						log.Warningln("Error extracting database credentials from secret ",secretListItem.SecretNamespace,"/",secretListItem.SecretName,". " ,err)
+						log.Warningln("Error extracting database credentials from secret ", secretListItem.SecretNamespace, "/", secretListItem.SecretName, ". ", err)
 						return nil
 					}
 					continue
@@ -113,7 +114,7 @@ pidfile = /tmp/pgbouncer.pid
 			pbinfo = pbinfo + fmt.Sprintf(`listen_port = %d
 `, *pgbouncer.Spec.ConnectionPoolConfig.ListenPort)
 			pbinfo = pbinfo + fmt.Sprintf(`listen_addr = %s
-`,pgbouncer.Spec.ConnectionPoolConfig.ListenAddress)
+`, pgbouncer.Spec.ConnectionPoolConfig.ListenAddress)
 			pbinfo = pbinfo + fmt.Sprintf(`pool_mode = %s
 `, pgbouncer.Spec.ConnectionPoolConfig.PoolMode)
 
@@ -138,7 +139,7 @@ pidfile = /tmp/pgbouncer.pid
 		}
 		return in
 	})
-	err = c.waitUntilConfigMapReady(c.Client, configMapMeta)
+	err = c.waitUntilConfigMapReady(pgbouncer, cfgMap)
 	if err != nil {
 		return vt, err
 	}
@@ -151,7 +152,6 @@ pidfile = /tmp/pgbouncer.pid
 			log.Infoln("PgBouncer reloaded successfully")
 		}
 	}
-
 	return vt, err
 }
 
@@ -168,26 +168,27 @@ func (c *Controller) getDbCredentials(secretListItem api.SecretList) (string, st
 	return string(username), pbPassword, nil
 }
 
-func (c *Controller) waitUntilConfigMapReady(kubeClient kubernetes.Interface, meta metav1.ObjectMeta) error {
-	return wait.PollImmediate(kutil.RetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
-		if _, err := kubeClient.CoreV1().ConfigMaps(meta.Namespace).Get(meta.Name, metav1.GetOptions{}); err == nil {
-			return true, nil
+func (c *Controller) waitUntilConfigMapReady(pgbouncer *api.PgBouncer, newCfgMap *core.ConfigMap) error {
+	return wait.PollImmediate(pbRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
+		if pgbouncerConfig, _, err := c.echoPgBouncerConfig(pgbouncer); err == nil {
+			println("::::::::::::>Comparing existing map with new map")
+			if newCfgMap.Data["pgbouncer.ini"] == pgbouncerConfig {
+				println("::::::::::::::::::::::::: EQUAL!!!!")
+				return true, nil
+			} else {
+				println("::::::::::::::::::::::::: UNEQUAL!!!!")
+			}
 		}
 		return false, nil
 	})
 }
 
 func (c *Controller) reloadPgBouncer(bouncer *api.PgBouncer) error {
-	pbPodLabels := labels.FormatLabels(bouncer.OffshootSelectors())
-	var pod core.Pod
 	localPort := *bouncer.Spec.ConnectionPoolConfig.ListenPort
 
-	podlist, err := c.Client.CoreV1().Pods(bouncer.Namespace).List(metav1.ListOptions{LabelSelector: pbPodLabels})
+	pod, err := c.getPgBouncerPod(bouncer)
 	if err != nil {
 		return err
-	}
-	if len(podlist.Items) > 0 {
-		pod = podlist.Items[0]
 	}
 	options := []func(options *exec.Options){
 		exec.Command(c.reloadCmd(localPort)...),
@@ -199,6 +200,51 @@ func (c *Controller) reloadPgBouncer(bouncer *api.PgBouncer) error {
 	return nil
 }
 
+func (c *Controller) echoPgBouncerConfig(bouncer *api.PgBouncer) (string, string, error) {
+	pod, err := c.getPgBouncerPod(bouncer)
+	if err != nil {
+		return "", "", err
+	}
+	options := []func(options *exec.Options){
+		exec.Command(c.getPgBouncerConfigCmd()...),
+	}
+
+	pgbouncerconfig, err := exec.ExecIntoPod(c.ClientConfig, &pod, options...)
+	if err != nil {
+		return "", "", errors.Wrapf(err, "Failed to execute get config command")
+	}
+	options = []func(options *exec.Options){
+		exec.Command(c.getUserListCmd()...),
+	}
+
+	userlist, err := exec.ExecIntoPod(c.ClientConfig, &pod, options...)
+	if err != nil {
+		return "", "", errors.Wrapf(err, "Failed to execute RELOAD command")
+	}
+	return pgbouncerconfig, userlist, nil
+}
+
+func (c *Controller) getPgBouncerPod(bouncer *api.PgBouncer) (core.Pod, error) {
+	pbPodLabels := labels.FormatLabels(bouncer.OffshootSelectors())
+	var pod core.Pod
+
+	podlist, err := c.Client.CoreV1().Pods(bouncer.Namespace).List(metav1.ListOptions{LabelSelector: pbPodLabels})
+	if err != nil {
+		return pod, err
+	}
+	if len(podlist.Items) > 0 {
+		pod = podlist.Items[0]
+	}
+	return pod, nil
+}
+
 func (c *Controller) reloadCmd(localPort int32) []string {
 	return []string{"env", "PGPASSWORD=kubedb123", "psql", "--host=127.0.0.1", fmt.Sprintf("--port=%d", localPort), "--username=pgbouncer", "pgbouncer", "--command=RELOAD"}
+}
+
+func (c *Controller) getPgBouncerConfigCmd() []string {
+	return []string{"cat", "/etc/config/pgbouncer.ini"}
+}
+func (c *Controller) getUserListCmd() []string {
+	return []string{"cat", "/etc/config/userlist.txt"}
 }
