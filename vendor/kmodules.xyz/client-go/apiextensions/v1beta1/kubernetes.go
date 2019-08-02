@@ -15,8 +15,11 @@ import (
 )
 
 func RegisterCRDs(client crd_cs.ApiextensionsV1beta1Interface, crds []*crd_api.CustomResourceDefinition) error {
+	println(":::::::::::::RegisterCRDs")
 	for _, crd := range crds {
+		println(":::::::::::::crd = ", crd.Name)
 		existing, err := client.CustomResourceDefinitions().Get(crd.Name, metav1.GetOptions{})
+		println("1. ::::::::::::err = ", err)
 		if kerr.IsNotFound(err) {
 			_, err = client.CustomResourceDefinitions().Create(crd)
 			if err != nil {
@@ -45,6 +48,7 @@ func RegisterCRDs(client crd_cs.ApiextensionsV1beta1Interface, crds []*crd_api.C
 			}
 			_, err = client.CustomResourceDefinitions().Update(existing)
 			if err != nil {
+				println("2. ::::::::::::err = ", err)
 				return err
 			}
 		}

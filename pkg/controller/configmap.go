@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	POSTGRES_PASSWORD  = "POSTGRES_PASSWORD"
-	POSTGRES_USER      = "POSTGRES_USER"
+	PostgresPassword   = "POSTGRES_PASSWORD"
+	PostgresUser       = "POSTGRES_USER"
 	pgbouncerAdminName = "pgbouncer"
 	pbRetryInterval    = time.Second * 5
 	DefaultHostPort    = 5432
@@ -76,7 +76,7 @@ pidfile = /tmp/pgbouncer.pid
 					}
 					continue //Dont add pgbouncer databse base for this non existent appbinding
 				}
-				if appBinding.Spec.ClientConfig.Service != nil{
+				if appBinding.Spec.ClientConfig.Service != nil {
 					name = appBinding.Spec.ClientConfig.Service.Name
 					namespace = appBinding.Namespace
 					hostPort = appBinding.Spec.ClientConfig.Service.Port
@@ -103,22 +103,24 @@ pidfile = /tmp/pgbouncer.pid
 					}
 					continue
 				}
+				println(":::::::::Username = ", username)
+				println(":::::::::Passsword = ", password)
 				//List of users
 				userListData = userListData + fmt.Sprintf(`"%s" "%s"
 `, string(username), password)
 			}
 		}
 
-		if pgbouncer.Spec.ConnectionPoolConfig != nil {
+		if pgbouncer.Spec.ConnectionPool != nil {
 			admins = fmt.Sprintf(`%s`, pgbouncerAdminName)
 			pbinfo = pbinfo + fmt.Sprintf(`listen_port = %d
-`, *pgbouncer.Spec.ConnectionPoolConfig.ListenPort)
+`, *pgbouncer.Spec.ConnectionPool.ListenPort)
 			pbinfo = pbinfo + fmt.Sprintf(`listen_addr = %s
-`, pgbouncer.Spec.ConnectionPoolConfig.ListenAddress)
+`, pgbouncer.Spec.ConnectionPool.ListenAddress)
 			pbinfo = pbinfo + fmt.Sprintf(`pool_mode = %s
-`, pgbouncer.Spec.ConnectionPoolConfig.PoolMode)
+`, pgbouncer.Spec.ConnectionPool.PoolMode)
 
-			adminList := pgbouncer.Spec.ConnectionPoolConfig.AdminUsers
+			adminList := pgbouncer.Spec.ConnectionPool.AdminUsers
 			for _, adminListItem := range adminList {
 				admins = fmt.Sprintf(`%s,%s`, admins, adminListItem)
 			}
@@ -139,11 +141,11 @@ pidfile = /tmp/pgbouncer.pid
 		}
 		return in
 	})
-	err = c.waitUntilConfigMapReady(pgbouncer, cfgMap)
-	if err != nil {
-		return vt, err
-	}
 	if vt == kutil.VerbPatched {
+		err = c.waitUntilPatchedConfigMapReady(pgbouncer, cfgMap)
+		if err != nil {
+			return vt, err
+		}
 		err = c.reloadPgBouncer(pgbouncer)
 		if err != nil {
 			//error is non blocking
@@ -160,15 +162,20 @@ func (c *Controller) getDbCredentials(secretListItem api.SecretList) (string, st
 	if err != nil {
 		return "", "", err
 	}
-	username := scrt.Data[POSTGRES_USER]
-	password := scrt.Data[POSTGRES_PASSWORD]
+	username := scrt.Data[PostgresUser]
+	password := scrt.Data[PostgresPassword]
+	println(">>>>>>>>>>>>>UserName  = ", username, ">>>>>>>>>>>> Password = ", password)
 	md5key := md5.Sum([]byte(string(password) + string(username)))
 	pbPassword := fmt.Sprintf("md5%s", hex.EncodeToString(md5key[:]))
 
 	return string(username), pbPassword, nil
 }
 
-func (c *Controller) waitUntilConfigMapReady(pgbouncer *api.PgBouncer, newCfgMap *core.ConfigMap) error {
+func (c *Controller) waitUntilPatchedConfigMapReady(pgbouncer *api.PgBouncer, newCfgMap *core.ConfigMap) error {
+	if _, err := c.getPgBouncerPod(pgbouncer); err != nil {
+		log.Warning("Pods not ready")
+		return nil
+	}
 	return wait.PollImmediate(pbRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
 		if pgbouncerConfig, _, err := c.echoPgBouncerConfig(pgbouncer); err == nil {
 			println("::::::::::::>Comparing existing map with new map")
@@ -184,7 +191,7 @@ func (c *Controller) waitUntilConfigMapReady(pgbouncer *api.PgBouncer, newCfgMap
 }
 
 func (c *Controller) reloadPgBouncer(bouncer *api.PgBouncer) error {
-	localPort := *bouncer.Spec.ConnectionPoolConfig.ListenPort
+	localPort := *bouncer.Spec.ConnectionPool.ListenPort
 
 	pod, err := c.getPgBouncerPod(bouncer)
 	if err != nil {
@@ -232,9 +239,10 @@ func (c *Controller) getPgBouncerPod(bouncer *api.PgBouncer) (core.Pod, error) {
 	if err != nil {
 		return pod, err
 	}
-	if len(podlist.Items) > 0 {
-		pod = podlist.Items[0]
+	if len(podlist.Items) == 0 {
+		return pod, errors.New("Pods not found")
 	}
+	pod = podlist.Items[0]
 	return pod, nil
 }
 

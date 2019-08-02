@@ -38,9 +38,13 @@ type MongoDBVersionListerExpansion interface{}
 // MySQLVersionLister.
 type MySQLVersionListerExpansion interface{}
 
-// PerconaVersionListerExpansion allows custom methods to be added to
-// PerconaVersionLister.
-type PerconaVersionListerExpansion interface{}
+// PerconaXtraDBVersionListerExpansion allows custom methods to be added to
+// PerconaXtraDBVersionLister.
+type PerconaXtraDBVersionListerExpansion interface{}
+
+// PgBouncerVersionListerExpansion allows custom methods to be added to
+// PgBouncerVersionLister.
+type PgBouncerVersionListerExpansion interface{}
 
 // PostgresVersionListerExpansion allows custom methods to be added to
 // PostgresVersionLister.

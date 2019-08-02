@@ -32,7 +32,8 @@ type CatalogV1alpha1Interface interface {
 	MemcachedVersionsGetter
 	MongoDBVersionsGetter
 	MySQLVersionsGetter
-	PerconaVersionsGetter
+	PerconaXtraDBVersionsGetter
+	PgBouncerVersionsGetter
 	PostgresVersionsGetter
 	RedisVersionsGetter
 }
@@ -62,8 +63,12 @@ func (c *CatalogV1alpha1Client) MySQLVersions() MySQLVersionInterface {
 	return newMySQLVersions(c)
 }
 
-func (c *CatalogV1alpha1Client) PerconaVersions() PerconaVersionInterface {
-	return newPerconaVersions(c)
+func (c *CatalogV1alpha1Client) PerconaXtraDBVersions() PerconaXtraDBVersionInterface {
+	return newPerconaXtraDBVersions(c)
+}
+
+func (c *CatalogV1alpha1Client) PgBouncerVersions() PgBouncerVersionInterface {
+	return newPgBouncerVersions(c)
 }
 
 func (c *CatalogV1alpha1Client) PostgresVersions() PostgresVersionInterface {
