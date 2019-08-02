@@ -10,7 +10,7 @@ export SELF_HOSTED=1
 export ARGS="" # Forward arguments to installer script
 
 REPO_ROOT="$GOPATH/src/kubedb.dev/pgbouncer"
-INSTALLER_ROOT="$GOPATH/src/github.com/kubedb/installer"
+INSTALLER_ROOT="$GOPATH/src/kubedb.dev/installer"
 
 pushd $REPO_ROOT
 
@@ -149,15 +149,14 @@ fi
 if [ "$MINIKUBE" -eq 1 ]; then
   cat $REPO_ROOT/hack/dev/apiregistration.yaml | $ONESSL envsubst | kubectl apply -f -
   # Following line may give error if DBVersions CRD already not created
-  cat $INSTALLER_ROOT/deploy/kubedb-catalog/postgres.yaml | $ONESSL envsubst | kubectl apply -f - || true
 
   if [ "$MINIKUBE_RUN" -eq 1 ]; then
     $REPO_ROOT/hack/make.py
     pgbouncer-operator run --v=4 \
       --secure-port=8443 \
       --enable-status-subresource=true \
-      --enable-mutating-webhook=false \
-      --enable-validating-webhook=false \
+      --enable-mutating-webhook=true \
+      --enable-validating-webhook=true \
       --kubeconfig="$HOME/.kube/config" \
       --authorization-kubeconfig="$HOME/.kube/config" \
       --authentication-kubeconfig="$HOME/.kube/config"

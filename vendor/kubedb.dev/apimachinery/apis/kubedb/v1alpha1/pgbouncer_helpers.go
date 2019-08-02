@@ -3,7 +3,6 @@ package v1alpha1
 import (
 	"fmt"
 
-	apps "k8s.io/api/apps/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	crdutils "kmodules.xyz/client-go/apiextensions/v1beta1"
 	meta_util "kmodules.xyz/client-go/meta"
@@ -31,6 +30,7 @@ func (p PgBouncer) OffshootLabels() map[string]string {
 	out[meta_util.NameLabelKey] = ResourceSingularPgBouncer
 	out[meta_util.InstanceLabelKey] = p.Name
 	out[meta_util.ComponentLabelKey] = "connection-pooler"
+	out[meta_util.VersionLabelKey] = string(p.Spec.Version)
 	out[meta_util.ManagedByLabelKey] = GenericKey
 	return meta_util.FilterKeys(GenericKey, out, p.Labels)
 }
@@ -174,13 +174,6 @@ func (p *PgBouncer) SetDefaults() {
 func (p *PgBouncerSpec) SetDefaults() {
 	if p == nil {
 		return
-	}
-
-	if p.UpdateStrategy.Type == "" {
-		p.UpdateStrategy.Type = apps.RollingUpdateStatefulSetStrategyType
-	}
-	if p.TerminationPolicy == "" {
-		p.TerminationPolicy = TerminationPolicyPause
 	}
 }
 

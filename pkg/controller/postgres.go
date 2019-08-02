@@ -2,17 +2,14 @@ package controller
 
 import (
 	"fmt"
+
 	"github.com/appscode/go/encoding/json/types"
 
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
-	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/reference"
 	kutil "kmodules.xyz/client-go"
-	core_util "kmodules.xyz/client-go/core/v1"
 	dynamic_util "kmodules.xyz/client-go/dynamic"
 	meta_util "kmodules.xyz/client-go/meta"
 	"kubedb.dev/apimachinery/apis"
@@ -34,7 +31,7 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 		// stop Scheduler in case there is any.
 		return nil // user error so just record error and don't retry.
 	}
-	println(":::::::::::::::CREATE PGBOUNCER::::::::::::",pgbouncer.Name,"::::::::::::::::")
+	println(":::::::::::::::CREATE PGBOUNCER::::::::::::", pgbouncer.Name, "::::::::::::::::")
 
 	if pgbouncer.Status.Phase == "" {
 		pg, err := util.UpdatePgBouncerStatus(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncerStatus) *api.PgBouncerStatus {
@@ -77,8 +74,17 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 	}
 
 	log.Infoln("ConfigMap ", configMapVerb)
+	println("string(pgbouncer.Spec.Version) = ", string(pgbouncer.Spec.Version))
 
-	statefulsetVerb, err := c.ensureStatefulSet(pgbouncer, []core.EnvVar{})
+	pgBouncerVersion, err := c.ExtClient.CatalogV1alpha1().PgBouncerVersions().Get(string(pgbouncer.Spec.Version), metav1.GetOptions{})
+	if err != nil {
+		println("PostgresVersion GET err = ", err)
+	}
+
+	println("Image string = ", pgBouncerVersion.Spec.DB.Image)
+	println("Image string = ", string(pgBouncerVersion.Spec.DB.Image))
+
+	statefulsetVerb, err := c.ensureStatefulSet(pgbouncer, pgBouncerVersion, []core.EnvVar{})
 	if err != nil {
 		return err
 	}
@@ -98,6 +104,13 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 		)
 	}
 	log.Infoln("Statefulset ", statefulsetVerb)
+
+	// ensure appbinding before ensuring Restic scheduler and restore
+	//_, err = c.ensureAppBinding(pgbouncer)
+	//if err != nil {
+	//	log.Errorln(err)
+	//	return err
+	//}
 
 	serviceVerb, err := c.ensureService(pgbouncer)
 	if err != nil {
@@ -124,7 +137,7 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 
 		println(":::::::::::::Not found err for phase")
 		if pgbouncer.Status.Phase == api.DatabasePhaseInitializing {
-			println(":::::::Current phase = ", pgbouncer.Status.Phase )
+			println(":::::::Current phase = ", pgbouncer.Status.Phase)
 			return nil
 		}
 		println("::::::::::::Adding phase: Initializing")
@@ -156,25 +169,19 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 }
 
 func (c *Controller) terminate(pgbouncer *api.PgBouncer) error {
-	ref, rerr := reference.GetReference(clientsetscheme.Scheme, pgbouncer)
-	if rerr != nil {
-		return rerr
-	}
-	//FOR any termination policy, delete eveything
-	// If TerminationPolicy is "pause", keep everything (ie, PVCs,Secrets,Snapshots) intact.
-	if pgbouncer.Spec.TerminationPolicy == api.TerminationPolicyPause {
-		if err := c.removeOwnerReferenceFromOffshoots(pgbouncer, ref); err != nil {
-			return err
-		}
-
-	} else {
-		// If TerminationPolicy is "wipeOut", delete everything (ie, PVCs,Secrets,Snapshots,WAL-data).
-		// If TerminationPolicy is "delete", delete PVCs and keep snapshots,secrets, wal-data intact.
-		// In both these cases, don't create dormantdatabase
-		if err := c.setOwnerReferenceToOffshoots(pgbouncer, ref); err != nil {
-			return err
-		}
-	}
+	//ref, rerr := reference.GetReference(clientsetscheme.Scheme, pgbouncer)
+	//if rerr != nil {
+	//	println("::::::::::Terminate rerr = ", rerr)
+	//	return rerr
+	//}
+	//if err := c.setOwnerReferenceToOffshoots(pgbouncer, ref); err != nil {
+	//	println("::::::::::setOwnerReferenceToOffshoots err = ", err)
+	//	//return err
+	//}
+	//if err := c.removeOwnerReferenceFromOffshoots(pgbouncer, ref); err != nil {
+	//	println("::::::::::removeOwnerReferenceFromOffshoots err = ", err)
+	//	//return err
+	//}
 
 	//if pgbouncer.Spec.Monitor != nil {
 	//	if _, err := c.deleteMonitor(pgbouncer); err != nil {
@@ -190,35 +197,17 @@ func (c *Controller) setOwnerReferenceToOffshoots(pgbouncer *api.PgBouncer, ref 
 
 	// If TerminationPolicy is "wipeOut", delete snapshots and secrets,
 	// else, keep it intact.
-	if pgbouncer.Spec.TerminationPolicy == api.TerminationPolicyWipeOut {
-		if err := dynamic_util.EnsureOwnerReferenceForSelector(
-			c.DynamicClient,
-			api.SchemeGroupVersion.WithResource(api.ResourcePluralSnapshot),
-			pgbouncer.Namespace,
-			selector,
-			ref); err != nil {
-			return err
-		}
-		// if wal archiver was configured, remove wal data from backend
-	} else {
-		// Make sure snapshot and secret's ownerreference is removed.
-		if err := dynamic_util.RemoveOwnerReferenceForSelector(
-			c.DynamicClient,
-			api.SchemeGroupVersion.WithResource(api.ResourcePluralSnapshot),
-			pgbouncer.Namespace,
-			selector,
-			ref); err != nil {
-			return err
-		}
-		if err := dynamic_util.RemoveOwnerReferenceForItems(
-			c.DynamicClient,
-			core.SchemeGroupVersion.WithResource("secrets"),
-			pgbouncer.Namespace,
-			nil,
-			ref); err != nil {
-			return err
-		}
+
+	if err := dynamic_util.EnsureOwnerReferenceForSelector(
+		c.DynamicClient,
+		api.SchemeGroupVersion.WithResource(api.ResourcePluralSnapshot),
+		pgbouncer.Namespace,
+		selector,
+		ref); err != nil {
+		return err
 	}
+	// if wal archiver was configured, remove wal data from backend
+
 	// delete PVC for both "wipeOut" and "delete" TerminationPolicy.
 	return dynamic_util.EnsureOwnerReferenceForSelector(
 		c.DynamicClient,
@@ -259,37 +248,28 @@ func (c *Controller) removeOwnerReferenceFromOffshoots(pgbouncer *api.PgBouncer,
 	return nil
 }
 
-func (c *Controller) GetDatabase(meta metav1.ObjectMeta) (runtime.Object, error) {
-	pgbouncer, err := c.ExtClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
+//func (c *Controller) SetDatabaseStatus(meta metav1.ObjectMeta, phase api.DatabasePhase, reason string) error {
+//	pgbouncer, err := c.ExtClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+//	if err != nil {
+//		return err
+//	}
+//	_, err = util.UpdatePgBouncerStatus(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncerStatus) *api.PgBouncerStatus {
+//		in.Phase = phase
+//		in.Reason = reason
+//		return in
+//	}, apis.EnableStatusSubresource)
+//	return err
+//}
 
-	return pgbouncer, nil
-}
-
-func (c *Controller) SetDatabaseStatus(meta metav1.ObjectMeta, phase api.DatabasePhase, reason string) error {
-	pgbouncer, err := c.ExtClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	_, err = util.UpdatePgBouncerStatus(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncerStatus) *api.PgBouncerStatus {
-		in.Phase = phase
-		in.Reason = reason
-		return in
-	}, apis.EnableStatusSubresource)
-	return err
-}
-
-func (c *Controller) UpsertDatabaseAnnotation(meta metav1.ObjectMeta, annotation map[string]string) error {
-	pgbouncer, err := c.ExtClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	_, _, err = util.PatchPgBouncer(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncer) *api.PgBouncer {
-		in.Annotations = core_util.UpsertMap(in.Annotations, annotation)
-		return in
-	})
-	return err
-}
+//func (c *Controller) UpsertDatabaseAnnotation(meta metav1.ObjectMeta, annotation map[string]string) error {
+//	pgbouncer, err := c.ExtClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+//	if err != nil {
+//		return err
+//	}
+//
+//	_, _, err = util.PatchPgBouncer(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncer) *api.PgBouncer {
+//		in.Annotations = core_util.UpsertMap(in.Annotations, annotation)
+//		return in
+//	})
+//	return err
+//}

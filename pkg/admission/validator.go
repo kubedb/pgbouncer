@@ -2,9 +2,10 @@ package admission
 
 import (
 	"fmt"
-	"github.com/appscode/go/log"
 	"strings"
 	"sync"
+
+	"github.com/appscode/go/log"
 
 	admission "k8s.io/api/admission/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
@@ -83,13 +84,11 @@ func (pbValidator *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *a
 		if req.Name != "" {
 			// req.Object.Raw = nil, so read from kubernetes
 			obj, err := pbValidator.extClient.KubedbV1alpha1().PgBouncers(req.Namespace).Get(req.Name, metav1.GetOptions{})
-			if kerr.IsNotFound(err){
-				println("obj ", obj.Name," already deleted")
+			if kerr.IsNotFound(err) {
+				println("obj ", obj.Name, " already deleted")
 			}
 			if err != nil && !kerr.IsNotFound(err) {
 				return hookapi.StatusInternalServerError(err)
-			} else if err == nil && obj.Spec.TerminationPolicy == api.TerminationPolicyDoNotTerminate {
-				return hookapi.StatusBadRequest(fmt.Errorf(`pgbouncer "%v/%v" can't be paused. To delete, change spec.terminationPolicy`, req.Namespace, req.Name))
 			}
 		}
 	default:
@@ -129,13 +128,9 @@ func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbo
 	if pgbouncer.Spec.Replicas == nil || *pgbouncer.Spec.Replicas < 1 {
 		return fmt.Errorf(`spec.replicas "%v" invalid. Value must be greater than zero`, pgbouncer.Spec.Replicas)
 	}
-	if pgbouncer.Spec.UpdateStrategy.Type == "" {
-		return fmt.Errorf(`'spec.updateStrategy.type' is missing`)
+	if string(pgbouncer.Spec.Version) == "" { //TODO: compare with actual versions
+		return fmt.Errorf(`spec.Version can't be empty`)
 	}
-	if pgbouncer.Spec.TerminationPolicy == "" {
-		return fmt.Errorf(`'spec.terminationPolicy' is missing`)
-	}
-
 	return nil
 }
 

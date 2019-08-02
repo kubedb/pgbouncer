@@ -67,22 +67,28 @@ func (c *OperatorConfig) New() (*Controller, error) {
 	//ctrl.RSInformer = restoresession.NewController(ctrl.Controller, ctrl, ctrl.Config, tweakListOptions, recorder).InitInformer()
 
 	if err := ctrl.EnsureCustomResourceDefinitions(); err != nil {
+		println(":::Err = ", err)
 		return nil, err
 	}
+	println(":::::::::::1")
 	if c.EnableMutatingWebhook {
+		println("EnableMutatingWebhook")
 		if err := reg_util.UpdateMutatingWebhookCABundle(c.ClientConfig, mutatingWebhookConfig); err != nil {
 			return nil, err
 		}
 	}
+	println(":::::::::::2")
 	if c.EnableValidatingWebhook {
+		println("EnableValidatingWebhook")
 		if err := reg_util.UpdateValidatingWebhookCABundle(c.ClientConfig, validatingWebhookConfig); err != nil {
 			return nil, err
 		}
 	}
+	println(":::::::::::3")
 
 	if err := ctrl.Init(); err != nil {
 		return nil, err
 	}
-
+	println(":::::::::::4")
 	return ctrl, nil
 }

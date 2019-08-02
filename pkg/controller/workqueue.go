@@ -7,12 +7,12 @@ import (
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kutil "kmodules.xyz/client-go"
 	core_util "kmodules.xyz/client-go/core/v1"
 	"kmodules.xyz/client-go/tools/queue"
 	"kubedb.dev/apimachinery/apis"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
-	kutil "kmodules.xyz/client-go"
 )
 
 const (
@@ -123,13 +123,13 @@ func (c *Controller) syncSecretWithPgBouncer(secretInfo map[string]string, pgbou
 	secretList := pgbouncer.Spec.SecretList
 	for _, singleSecret := range secretList {
 		if singleSecret.SecretNamespace == secretInfo["Namespace"] && singleSecret.SecretName == secretInfo["Name"] {
-			log.Infof("Secret %s update found for PgBouncer: %s",secretInfo["Name"], pgbouncer.Name)
+			log.Infof("Secret %s update found for PgBouncer: %s", secretInfo["Name"], pgbouncer.Name)
 			//log.Infof(singleSecret.SecretNamespace, " ", singleSecret.SecretName, " == ", secretInfo["Namespace"], " ", secretInfo["Name"])
 			vt, err := c.ensureConfigMapFromCRD(pgbouncer)
 			if err != nil {
 				return err
 			}
-			if vt != kutil.VerbUnchanged{
+			if vt != kutil.VerbUnchanged {
 				log.Infof("%s configMap for PgBouncer = m%s and PgBouncer Secret = %s' ", vt, pgbouncer.Name, secretInfo["Name"])
 			}
 			break

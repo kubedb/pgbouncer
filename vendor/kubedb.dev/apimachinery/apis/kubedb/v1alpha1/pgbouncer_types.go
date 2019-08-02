@@ -2,8 +2,6 @@ package v1alpha1
 
 import (
 	"github.com/appscode/go/encoding/json/types"
-	apps "k8s.io/api/apps/v1"
-	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	mona "kmodules.xyz/monitoring-agent-api/api/v1"
 	v1 "kmodules.xyz/offshoot-api/api/v1"
@@ -30,49 +28,31 @@ type PgBouncer struct {
 
 type PgBouncerSpec struct {
 	// Version of PgBouncer to be deployed.
-	//Version string `json:"version"`
-
+	Version types.StrYo `json:"version"`
 	// Number of instances to deploy for a PgBouncer instance.
 	Replicas *int32 `json:"replicas,omitempty"`
-
-	ServiceTemplate v1.ServiceTemplateSpec `json:"serviceTemplate,omitempty"`
-
-	// Databases to proxy
-	Databases []Databases `json:"databases"`
-
-	// Connection pool configuration
-	ConnectionPoolConfig *ConnectionPoolConfig `json:"connectionPoolConfig"`
-	//Pointer?
-
-	//list of secrets
-	SecretList []SecretList `json:"secretList, omitempty"`
-	// Image is used for local only machines
+	// ServiceTemplate is an optional configuration for service used to expose database
 	// +optional
-	Image string `json:"image,omitempty"`
+	ServiceTemplate v1.ServiceTemplateSpec `json:"serviceTemplate,omitempty"`
+	// Databases to proxy by connection pooling
+	// +optional
+	Databases []Databases `json:"databases, omitempty"`
+	// ConnectionPoolConfig defines Connection pool configuration
+	ConnectionPool *ConnectionPoolConfig `json:"connectionPool"`
+	// SecretList keeps a list of pgbouncer user's secrets
+	// +optional
+	SecretList []SecretList `json:"secretList, omitempty"`
 	// Monitor is used monitor database instance
 	// +optional
 	Monitor *mona.AgentSpec `json:"monitor,omitempty"`
-
-	// ConfigSource is an optional field to provide custom configuration file for database (i.e pgbouncerql.conf).
-	// If specified, this file will be used as configuration file otherwise default configuration file will be used.
-	ConfigSource *core.VolumeSource `json:"configSource,omitempty"`
-
-	// updateStrategy indicates the StatefulSetUpdateStrategy that will be
-	// employed to update Pods in the StatefulSet when a revision is made to
-	// Template.
-	UpdateStrategy apps.StatefulSetUpdateStrategy `json:"updateStrategy,omitempty"`
-
-	// TerminationPolicy controls the delete operation for database
-	// +optional
-	TerminationPolicy TerminationPolicy `json:"terminationPolicy,omitempty"`
 }
 
 type Databases struct {
 	Alias             string `json:"Alias"`                     //alias to identify target database
 	DbName            string `json:"databaseName"`                      //Name of the target database
-	AppBindingName      string `json:"referenceObjectName"`                //Reference to PgBouncer object where the target database is located
-	AppBindingNamespace string `json:"referenceObjectNamespace,omitempty"` //Namespace of PgBouncer object
-	SecretName        string `json:"secretName,omitempty"`        //To bind a single user to a specific connection , Optional
+	AppBindingName      string `json:"appBindingName"`                //Reference to PgBouncer object where the target database is located
+	AppBindingNamespace string `json:"appBindingNamespace,omitempty"` //Namespace of PgBouncer object
+	UserSecret        string `json:"userSecret,omitempty"`        //To bind a single user to a specific connection , Optional
 }
 
 type ConnectionPoolConfig struct {

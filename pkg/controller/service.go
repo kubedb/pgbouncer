@@ -3,6 +3,8 @@ package controller
 import (
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -10,6 +12,7 @@ import (
 	"k8s.io/client-go/tools/reference"
 	kutil "kmodules.xyz/client-go"
 	core_util "kmodules.xyz/client-go/core/v1"
+	ofst "kmodules.xyz/offshoot-api/api/v1"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/apimachinery/pkg/eventer"
 )
@@ -79,7 +82,7 @@ func (c *Controller) createService(pgbouncer *api.PgBouncer) (kutil.VerbType, er
 
 		in.Spec.Selector = pgbouncer.OffshootSelectors()
 		//in.Spec.Selector[NodeRole] = "primary"
-		in.Spec.Ports = upsertServicePort(pgbouncer)
+		in.Spec.Ports = upsertServicePort(in, pgbouncer)
 
 		if pgbouncer.Spec.ServiceTemplate.Spec.ClusterIP != "" {
 			in.Spec.ClusterIP = pgbouncer.Spec.ServiceTemplate.Spec.ClusterIP
@@ -99,13 +102,24 @@ func (c *Controller) createService(pgbouncer *api.PgBouncer) (kutil.VerbType, er
 	return ok, err
 }
 
-func upsertServicePort(pgbouncer *api.PgBouncer) []core.ServicePort {
-	return []core.ServicePort{
-		{
-			Name: PgBouncerPortName,
-			Port: *pgbouncer.Spec.ConnectionPoolConfig.ListenPort,
-		},
+//func upsertServicePort(pgbouncer *api.PgBouncer) []core.ServicePort {
+//	return []core.ServicePort{
+//		{
+//			Name: PgBouncerPortName,
+//			Port: *pgbouncer.Spec.ConnectionPool.ListenPort,
+//		},
+//	}
+//}
+func upsertServicePort(in *core.Service, pgbouncer *api.PgBouncer) []core.ServicePort {
+	defaultDBPort := core.ServicePort{
+		Name:       PgBouncerPortName,
+		Port:       *pgbouncer.Spec.ConnectionPool.ListenPort,
+		TargetPort: intstr.FromString(PgBouncerPortName),
 	}
+	return ofst.MergeServicePorts(
+		core_util.MergeServicePorts(in.Spec.Ports, []core.ServicePort{defaultDBPort}),
+		pgbouncer.Spec.ServiceTemplate.Spec.Ports,
+	)
 }
 
 //

@@ -3,6 +3,8 @@ package controller
 import (
 	"fmt"
 
+	catalog "kubedb.dev/apimachinery/apis/catalog/v1alpha1"
+
 	"github.com/appscode/go/types"
 	"github.com/aws/aws-sdk-go/aws"
 	apps "k8s.io/api/apps/v1"
@@ -25,13 +27,14 @@ const (
 
 func (c *Controller) ensureStatefulSet(
 	pgbouncer *api.PgBouncer,
+	pgbouncerVersion *catalog.PgBouncerVersion,
 	envList []core.EnvVar,
 ) (kutil.VerbType, error) {
 	if err := c.checkConfigMap(pgbouncer); err != nil {
-		if kerr.IsNotFound(err){
+		if kerr.IsNotFound(err) {
 			_, _ = c.ensureConfigMapFromCRD(pgbouncer)
 
-		}else {
+		} else {
 			return kutil.VerbUnchanged, err
 		}
 	}
@@ -52,13 +55,10 @@ func (c *Controller) ensureStatefulSet(
 	if pgbouncer.Spec.Replicas != nil {
 		replicas = types.Int32(pgbouncer.Spec.Replicas)
 	}
-	image := "rezoan/pb:latest"
-	if pgbouncer.Spec.Image != "" {
-		image = pgbouncer.Spec.Image
-	}
+	image := pgbouncerVersion.Spec.DB.Image
 
 	statefulSet, vt, err := app_util.CreateOrPatchStatefulSet(c.Client, statefulSetMeta, func(in *apps.StatefulSet) *apps.StatefulSet {
-		in.Annotations = pgbouncer.Annotations//TODO: actual annotations
+		in.Annotations = pgbouncer.Annotations //TODO: actual annotations
 		in.Labels = pgbouncer.OffshootLabels()
 		core_util.EnsureOwnerReference(&in.ObjectMeta, ref)
 
@@ -107,8 +107,7 @@ func (c *Controller) ensureStatefulSet(
 				},
 			},
 		}
-		in = upsertPort(in,pgbouncer)
-		in.Spec.UpdateStrategy = pgbouncer.Spec.UpdateStrategy
+		in = upsertPort(in, pgbouncer)
 
 		return in
 	})
@@ -201,8 +200,8 @@ func upsertPort(statefulSet *apps.StatefulSet, pgbouncer *api.PgBouncer) *apps.S
 	getPorts := func() []core.ContainerPort {
 		portList := []core.ContainerPort{
 			{
-				Name: PgBouncerPortName,
-				ContainerPort: *pgbouncer.Spec.ConnectionPoolConfig.ListenPort,
+				Name:          PgBouncerPortName,
+				ContainerPort: *pgbouncer.Spec.ConnectionPool.ListenPort,
 				Protocol:      core.ProtocolTCP,
 			},
 		}

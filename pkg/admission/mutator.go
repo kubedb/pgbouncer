@@ -1,8 +1,9 @@
 package admission
 
 import (
-	"github.com/appscode/go/log"
 	"sync"
+
+	"github.com/appscode/go/log"
 
 	"github.com/appscode/go/types"
 	admission "k8s.io/api/admission/v1beta1"
@@ -18,11 +19,10 @@ import (
 )
 
 const (
-	defaultListenPort = int32(5432)
-	defaultListenAddress = "*"
-	defaultPoolMode = "session"
+	defaultListenPort     = int32(5432)
+	defaultListenAddress  = "*"
+	defaultPoolMode       = "session"
 	defaultPgBouncerImage = "rezoan/pb:latest"
-
 )
 
 type PgBouncerMutator struct {
@@ -106,31 +106,31 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbou
 	if pgbouncer.Spec.Replicas == nil {
 		pgbouncer.Spec.Replicas = types.Int32P(1)
 	}
-	if pgbouncer.Spec.Image == ""{
-		pgbouncer.Spec.Image = defaultPgBouncerImage
-	}
-	if pgbouncer.Spec.ConnectionPoolConfig != nil{
-		if pgbouncer.Spec.ConnectionPoolConfig.ListenPort == nil{
-			pgbouncer.Spec.ConnectionPoolConfig.ListenPort = types.Int32P(defaultListenPort)
+
+	//TODO: Make sure image an image path is set
+
+	if pgbouncer.Spec.ConnectionPool != nil {
+		if pgbouncer.Spec.ConnectionPool.ListenPort == nil {
+			pgbouncer.Spec.ConnectionPool.ListenPort = types.Int32P(defaultListenPort)
 		}
-		if pgbouncer.Spec.ConnectionPoolConfig.ListenAddress == ""{
-			pgbouncer.Spec.ConnectionPoolConfig.ListenAddress = defaultListenAddress
+		if pgbouncer.Spec.ConnectionPool.ListenAddress == "" {
+			pgbouncer.Spec.ConnectionPool.ListenAddress = defaultListenAddress
 		}
-		if pgbouncer.Spec.ConnectionPoolConfig.PoolMode == ""{
-			pgbouncer.Spec.ConnectionPoolConfig.PoolMode = defaultPoolMode
+		if pgbouncer.Spec.ConnectionPool.PoolMode == "" {
+			pgbouncer.Spec.ConnectionPool.PoolMode = defaultPoolMode
 		}
 	}
 	//Set default namespace for unspecified namespaces
-	if pgbouncer.Spec.Databases != nil{
-		for i, db := range pgbouncer.Spec.Databases{
-			if db.PgObjectNamespace == ""{
-				pgbouncer.Spec.Databases[i].PgObjectNamespace = pgbouncer.Namespace
+	if pgbouncer.Spec.Databases != nil {
+		for i, db := range pgbouncer.Spec.Databases {
+			if db.AppBindingNamespace == "" {
+				pgbouncer.Spec.Databases[i].AppBindingNamespace = pgbouncer.Namespace
 			}
 		}
 	}
 	if pgbouncer.Spec.SecretList != nil {
-		for i, sec := range pgbouncer.Spec.SecretList{
-			if sec.SecretNamespace == ""{
+		for i, sec := range pgbouncer.Spec.SecretList {
+			if sec.SecretNamespace == "" {
 				pgbouncer.Spec.SecretList[i].SecretNamespace = pgbouncer.Namespace
 			}
 		}

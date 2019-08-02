@@ -21,6 +21,7 @@ import (
 	"kmodules.xyz/client-go/tools/queue"
 	appcat_cs "kmodules.xyz/custom-resources/client/clientset/versioned/typed/appcatalog/v1alpha1"
 	"kubedb.dev/apimachinery/apis"
+	catalog "kubedb.dev/apimachinery/apis/catalog/v1alpha1"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	cs "kubedb.dev/apimachinery/client/clientset/versioned"
 	kutildb "kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
@@ -99,16 +100,21 @@ func (c *Controller) EnsureCustomResourceDefinitions() error {
 	log.Infoln("Ensuring CustomResourceDefinition...")
 	crds := []*crd_api.CustomResourceDefinition{
 		api.PgBouncer{}.CustomResourceDefinition(),
+		catalog.PgBouncerVersion{}.CustomResourceDefinition(),
 		//api.DormantDatabase{}.CustomResourceDefinition(),
 		//api.Snapshot{}.CustomResourceDefinition(),
 		//authorization.DatabaseAccessRequest{}.CustomResourceDefinition(),
 		//appcat.AppBinding{}.CustomResourceDefinition(),
 	}
-	return apiext_util.RegisterCRDs(c.ApiExtKubeClient, crds)
+	log.Infoln("EnsureCustomResourceDefinitions ok")
+	err := apiext_util.RegisterCRDs(c.ApiExtKubeClient, crds)
+	println(" err  = ", err)
+	return err
 }
 
 // InitInformer initializes PgBouncer, DormantDB amd Snapshot watcher
 func (c *Controller) Init() error {
+	println("Initwatchers")
 	c.initWatcher()
 	c.initSecretWatcher()
 	//c.DrmnQueue = drmnc.NewController(c.Controller, c, c.Config, nil, c.recorder).AddEventHandlerFunc(c.selector)
