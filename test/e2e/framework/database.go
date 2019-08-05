@@ -6,15 +6,18 @@ import (
 	"strings"
 	"time"
 
+	shell "github.com/codeskyblue/go-sh"
 	"github.com/go-xorm/xorm"
 	_ "github.com/lib/pq"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	kutil "kmodules.xyz/client-go"
 	"kmodules.xyz/client-go/tools/portforward"
 	"kubedb.dev/pgbouncer/pkg/controller"
 )
 
-func (f *Framework) ForwardPort(meta metav1.ObjectMeta) (*portforward.Tunnel, error) {
+func (f *Framework) ForwardPgBouncerPort(meta metav1.ObjectMeta) (*portforward.Tunnel, error) {
 	pgbouncer, err := f.GetPgBouncer(meta)
 	if err != nil {
 		return nil, err
@@ -34,9 +37,34 @@ func (f *Framework) ForwardPort(meta metav1.ObjectMeta) (*portforward.Tunnel, er
 	return tunnel, nil
 }
 
+func (f *Framework) ForwardPort(meta metav1.ObjectMeta) (*portforward.Tunnel, error) {
+	postgres, err := f.GetPostgres(meta)
+	if err != nil {
+		return nil, err
+	}
+
+	clientPodName := fmt.Sprintf("%v-0", postgres.Name)
+	tunnel := portforward.NewTunnel(
+		f.kubeClient.CoreV1().RESTClient(),
+		f.restConfig,
+		postgres.Namespace,
+		clientPodName,
+		controller.DefaultHostPort,
+	)
+	if err := tunnel.ForwardPort(); err != nil {
+		return nil, err
+	}
+	return tunnel, nil
+}
+
 func (f *Framework) GetPgBouncerClient(tunnel *portforward.Tunnel, dbName string, userName string) (*xorm.Engine, error) {
 	cnnstr := fmt.Sprintf("user=%s host=127.0.0.1 port=%v dbname=%s sslmode=disable", userName, tunnel.Local, dbName)
 	return xorm.NewEngine("pgbouncer", cnnstr)
+}
+
+func (f *Framework) GetPostgresClient(tunnel *portforward.Tunnel, dbName string, userName string) (*xorm.Engine, error) {
+	cnnstr := fmt.Sprintf("user=%s host=127.0.0.1 port=%v dbname=%s sslmode=disable", userName, tunnel.Local, dbName)
+	return xorm.NewEngine("postgres", cnnstr)
 }
 
 func (f *Framework) EventuallyCreateSchema(meta metav1.ObjectMeta, dbName string, userName string) GomegaAsyncAssertion {
@@ -86,6 +114,7 @@ func characters(len int) string {
 }
 
 func (f *Framework) EventuallyPingDatabase(meta metav1.ObjectMeta, dbName string, userName string) GomegaAsyncAssertion {
+	println(dbName, "::::::::::::", userName)
 	return Eventually(
 		func() bool {
 			tunnel, err := f.ForwardPort(meta)
@@ -94,21 +123,70 @@ func (f *Framework) EventuallyPingDatabase(meta metav1.ObjectMeta, dbName string
 			}
 			defer tunnel.Close()
 
-			db, err := f.GetPgBouncerClient(tunnel, dbName, userName)
+			db, err := f.GetPostgresClient(tunnel, dbName, userName)
 			if err != nil {
 				return false
 			}
 			defer db.Close()
 
-			if err := f.CheckPgBouncer(db); err != nil {
+			if err := f.CheckPostgres(db); err != nil {
 				return false
 			}
-
 			return true
 		},
 		time.Minute*10,
 		time.Second*5,
 	)
+}
+
+func (f *Framework) EventuallyPingPgBouncer(meta metav1.ObjectMeta) error {
+	return wait.PollImmediate(operatorGetRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
+		println("Printing ping function")
+		tunnel, err := f.ForwardPgBouncerPort(meta)
+		if err != nil {
+			println("Err = ", err)
+			return false, nil
+		}
+		defer tunnel.Close()
+		println("Local tunnel = ", tunnel.Local)
+		pingResult := f.PingPgBouncer(tunnel.Local)
+		println("::::Ping result = ", pingResult)
+		return pingResult, nil
+	})
+}
+
+func (f *Framework) WaitToPingPgBouncer(meta metav1.ObjectMeta) GomegaAsyncAssertion {
+	return Eventually(
+		func() bool {
+			println("Printing ping function")
+			tunnel, err := f.ForwardPgBouncerPort(meta)
+			if err != nil {
+				return false
+			}
+			defer tunnel.Close()
+			println("LOcal tunnel = ", tunnel.Local)
+			pingResult := f.PingPgBouncer(tunnel.Local)
+			println("::::Ping result = ", pingResult)
+			return pingResult
+		},
+		time.Minute*10,
+		time.Second*5,
+	)
+}
+
+func (f *Framework) PingPgBouncer(port int) bool {
+	println("PING PING")
+	sh := shell.NewSession()
+	cmd := sh.Command("env","PGPASSWORD=kubedb123", "psql",
+		"--host=localhost", fmt.Sprintf("--port=%d", port),
+		fmt.Sprintf("--username=%s", PgBouncerAdmin), PgBouncerAdmin, "--command=RELOAD")
+	err := cmd.Run()
+	//out := cmd.Stdout
+	if err != nil {
+		println("Ping SH err = ", err)
+		return false
+	}
+	return true
 }
 
 func (f *Framework) EventuallyCreateTable(meta metav1.ObjectMeta, dbName string, userName string, total int) GomegaAsyncAssertion {
@@ -180,6 +258,14 @@ func (f *Framework) EventuallyCountTable(meta metav1.ObjectMeta, dbName string, 
 }
 
 func (f *Framework) CheckPgBouncer(db *xorm.Engine) error {
+	err := db.Ping()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (f *Framework) CheckPostgres(db *xorm.Engine) error {
 	err := db.Ping()
 	if err != nil {
 		return err

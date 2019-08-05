@@ -64,8 +64,8 @@ pidfile = /tmp/pgbouncer.pid
 			for _, db := range pgbouncer.Spec.Databases {
 
 				var hostPort = int32(DefaultHostPort)
-				namespace := db.AppBindingName
-				name := db.AppBindingNamespace
+				namespace := db.AppBindingNamespace
+				name := db.AppBindingName
 				appBinding, err := c.AppCatalogClient.AppBindings(namespace).Get(name, metav1.GetOptions{})
 				if err != nil {
 					if kerr.IsNotFound(err) {

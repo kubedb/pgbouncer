@@ -1,8 +1,6 @@
 package e2e_test
 
 import (
-	"time"
-
 	"github.com/appscode/go/log"
 	"github.com/appscode/go/types"
 	. "github.com/onsi/ginkgo"
@@ -66,35 +64,34 @@ var _ = Describe("PgBouncer", func() {
 		garbagePgBouncer = new(api.PgBouncerList)
 		secret = nil
 		skipMessage = ""
+		dbName = "postgres"
+		dbUser = "postgres"
 	})
 
-	var createAndWaitForRunning = func() {
-		By("Creating Postgres: " + postgres.Name)
-		err = f.CreatePostgres(postgres)
-		Expect(err).NotTo(HaveOccurred())
-
-		By("Wait for Running Postgres")
-		f.EventuallyPostgresRunning(postgres.ObjectMeta).Should(BeTrue())
-
+	var createRunningPgBouncer = func() {
 		By("Creating PgBouncer: " + pgbouncer.Name)
 		err = f.CreatePgBouncer(pgbouncer)
 		Expect(err).NotTo(HaveOccurred())
 
-		By("Wait for Running pgbouncer")
+		By("Wait for Running PgBouncer")
 		f.EventuallyPgBouncerRunning(pgbouncer.ObjectMeta).Should(BeTrue())
 
 		By("Waiting for database to be ready")
-		f.EventuallyPingDatabase(pgbouncer.ObjectMeta, dbName, dbUser).Should(BeTrue())
+		f.EventuallyPingDatabase(postgres.ObjectMeta, dbName, dbUser).Should(BeTrue())
 
-		By("Wait for AppBinding to create")
+		By("Wait for AppBindings to create")
 		f.EventuallyAppBinding(postgres.ObjectMeta).Should(BeTrue())
-		f.EventuallyAppBinding(pgbouncer.ObjectMeta).Should(BeTrue())
+		//f.EventuallyAppBinding(pgbouncer.ObjectMeta).Should(BeTrue())
 
 		By("Check valid AppBinding Specs")
 		err := f.CheckPostgresAppBindingSpec(postgres.ObjectMeta)
 		Expect(err).NotTo(HaveOccurred())
-		err = f.CheckPgBouncerAppBindingSpec(pgbouncer.ObjectMeta)
+		//err = f.CheckPgBouncerAppBindingSpec(pgbouncer.ObjectMeta)
+		//Expect(err).NotTo(HaveOccurred())
+		By("Ping PgBouncer")
+		err = f.EventuallyPingPgBouncer(pgbouncer.ObjectMeta)
 		Expect(err).NotTo(HaveOccurred())
+		By("Done")
 	}
 
 	var testGeneralBehaviour = func() {
@@ -102,7 +99,7 @@ var _ = Describe("PgBouncer", func() {
 			Skip(skipMessage)
 		}
 		// Create PgBouncer
-		createAndWaitForRunning()
+		createRunningPgBouncer()
 
 		By("Creating Schema")
 		f.EventuallyCreateSchema(pgbouncer.ObjectMeta, dbName, dbUser).Should(BeTrue())
@@ -180,21 +177,8 @@ var _ = Describe("PgBouncer", func() {
 		Context("General", func() {
 
 			FContext("Test Operator", func() {
-				PrintSomething := func() {
 
-					pg, err := f.GetPostgres(postgres.ObjectMeta)
-					if err != nil {
-
-						println("err =", err)
-					}
-					println("+++++++++", pg.Namespace+" "+pg.Name, pg.Status.Phase)
-					time.Sleep(time.Second * 30)
-					println("===========", pg.Namespace+" "+pg.Name, pg.Status.Phase)
-					println("::::::::Done:::::::")
-
-				}
-
-				It("Should ping postgres", PrintSomething)
+				It("Should ping postgres", createRunningPgBouncer)
 			})
 			Context("With PVC", func() {
 
@@ -206,7 +190,7 @@ var _ = Describe("PgBouncer", func() {
 				It("should run evictions successfully", func() {
 					// Create PgBouncer
 					pgbouncer.Spec.Replicas = types.Int32P(3)
-					createAndWaitForRunning()
+					createRunningPgBouncer()
 					//Evict a PgBouncer pod
 					By("Try to evict Pods")
 					err := f.EvictPodsFromStatefulSet(pgbouncer.ObjectMeta)
