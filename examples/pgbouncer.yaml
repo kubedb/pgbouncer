@@ -7,7 +7,7 @@ spec:
   version: "1.9.0-r"
   replicas: 3
   databases:
-  - Alias: "postgress"
+  - Alias: "postgres"
     databaseName: "postgres"
     appBindingName: "quick-postgress"
     appBindingNamespace: "demo"

@@ -37,7 +37,7 @@ require (
 	kmodules.xyz/objectstore-api v0.0.0-20190718002052-da668b440b0b
 	kmodules.xyz/offshoot-api v0.0.0-20190715115723-36c8fce142c1
 	kmodules.xyz/webhook-runtime v0.0.0-20190715115250-a84fbf77dd30
-	kubedb.dev/apimachinery v0.0.0-20190801055413-646c3a247dad
+	kubedb.dev/apimachinery v0.0.0-20190805062608-1227c91d7b04
 	stash.appscode.dev/stash v0.0.0-20190718015558-6bc80ce219d9
 )
 

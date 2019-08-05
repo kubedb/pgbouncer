@@ -28,38 +28,37 @@ func (f *Framework) RunKubeDBOperators(kubeconfigPath string) {
 	sh := shell.NewSession()
 	sh.ShowCMD = true
 
-	//By("Creating Posgtres Operator")
-	//sh.SetDir("../../../postgres")
-	////cmd := sh.Command("bash", "kubedb.sh")
-	//cmd = sh.Command("env", "REGISTRY=rezoan", "make", "install")
+	By("Creating Posgtres Operator")
+	sh.SetDir("../../../postgres")
 	//By("Starting Server and Operator")
-	//err = cmd.Run()
-	//Expect(err).ShouldNot(HaveOccurred())
-	//By("::::::::::: Postgres Operator created")
-	//
-	//By(">>>>>>>>>>>Create postgres")
-	//f.setupPostgres()
-	//postgres := f.Invoke().Postgres()
-	//println(":::::::::::::::::Postgres Name = ", postgres.Name)
-	//err = f.CreatePostgres(postgres)
-	//Expect(err).ShouldNot(HaveOccurred())
-	//By("Waiting for running Postgres")
-	//err = f.WaitUntilPostgresReady(postgres.Name)
-	//Expect(err).ShouldNot(HaveOccurred())
-	//println("Postgres is Ready. Uninstall Posgtres Operator")
-	//By("Postgres is Ready. Uninstall Posgtres Operator")
-	////err = sh.Command("bash", "kubedb.sh", "--uninstall", "--purge", "--kubeconfig="+kubeconfigPath).Run()
-	//err = sh.Command("env", "REGISTRY=rezoan", "make", "uninstall").Run()
-	//Expect(err).NotTo(HaveOccurred())
+	//cmd := sh.Command("bash", "kubedb.sh")
+	err := sh.Command("env", "REGISTRY=rezoan", "make", "install").Run()
+	Expect(err).ShouldNot(HaveOccurred())
+	By("::::::::::: Postgres Operator created")
+
+	By(">>>>>>>>>>>Create postgres")
+	f.setupPostgres()
+	postgres := f.Invoke().Postgres()
+	println(":::::::::::::::::Postgres Name = ", postgres.Name)
+	err = f.CreatePostgres(postgres)
+	Expect(err).ShouldNot(HaveOccurred())
+	By("Waiting for running Postgres")
+	err = f.WaitUntilPostgresReady(postgres.Name)
+	Expect(err).ShouldNot(HaveOccurred())
+	println("Postgres is Ready.")
+	By("Uninstall Postgres Operator")
+	//err = sh.Command("bash", "kubedb.sh", "--uninstall", "--purge", "--kubeconfig="+kubeconfigPath).Run()
+	err = sh.Command("env", "REGISTRY=rezoan", "make", "uninstall").Run()
+	Expect(err).NotTo(HaveOccurred())
 
 	By("Installing PgBouncer operator")
+	sh = shell.NewSession()
 	sh.SetDir("../../")
 	cmd := sh.Command("env", "REGISTRY=rezoan", "make", "install")
 	By("Starting Server and Operator")
-	err := cmd.Run()
+	err = cmd.Run()
 	Expect(err).ShouldNot(HaveOccurred())
 	By("PgBouncer operator installed")
-
 }
 func (f *Framework) WaitUntilPostgresReady(name string) error {
 	return wait.PollImmediate(operatorGetRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
@@ -68,7 +67,7 @@ func (f *Framework) WaitUntilPostgresReady(name string) error {
 				println("____________Postgres is running._________")
 				return true, nil
 			}
-			println("____________Postgres is not running._________")
+			println("____________waiting for Postgres_________")
 		}
 		return false, nil
 	})

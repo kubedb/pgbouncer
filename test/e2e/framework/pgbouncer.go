@@ -19,6 +19,8 @@ const (
 	PostgresName = "postgres-for-pgbouncer-test"
 	DbAlias      = "postgres"
 	DbName       = "postgres"
+	pbVersion ="1.9.0-r"
+	PgBouncerAdmin = "pgbouncer"
 )
 
 func (i *Invocation) PgBouncer() *api.PgBouncer {
@@ -31,6 +33,7 @@ func (i *Invocation) PgBouncer() *api.PgBouncer {
 			},
 		},
 		Spec: api.PgBouncerSpec{
+			Version: pbVersion,
 			Replicas: types.Int32P(1),
 			Databases: []api.Databases{
 				{
