@@ -170,7 +170,17 @@ func (f *Framework) EventuallyDBSecretCount(meta metav1.ObjectMeta) GomegaAsyncA
 	)
 }
 
-func (f *Framework) CheckSecret(secret *core.Secret) error {
-	_, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(secret.Name, metav1.GetOptions{})
+func (f *Framework) CheckSecret() error {
+	_, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(PostgresName+"-auth", metav1.GetOptions{})
 	return err
+}
+
+func (f *Framework) GetPostgresCredentials() (string, string, error) {
+	scrt, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(PostgresName+"-auth", metav1.GetOptions{})
+	if err != nil {
+		return "", "", err
+	}
+	username := string(scrt.Data[controller.PostgresUser])
+	password := string(scrt.Data[controller.PostgresPassword])
+	return username, password, nil
 }

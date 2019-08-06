@@ -17,11 +17,10 @@ import (
 const (
 	kindEviction = "Eviction"
 	PostgresName = "postgres-for-pgbouncer-test"
-	DbAlias      = "postgres"
-	DbName       = "postgres"
-	pbVersion ="1.9.0-r"
-	PgBouncerAdmin = "pgbouncer"
-	CmdReload = "RELOAD"
+	pbVersion    = "1.9.0-r"
+	CmdReload    = "RELOAD"
+	cityName     = "Dhaka"
+	cityLocation = "random Co-ordinates"
 )
 
 func (i *Invocation) PgBouncer() *api.PgBouncer {
@@ -34,12 +33,12 @@ func (i *Invocation) PgBouncer() *api.PgBouncer {
 			},
 		},
 		Spec: api.PgBouncerSpec{
-			Version: pbVersion,
+			Version:  pbVersion,
 			Replicas: types.Int32P(1),
 			Databases: []api.Databases{
 				{
-					Alias:               DbAlias,
-					DbName:              DbName,
+					Alias:               api.ResourceSingularPostgres,
+					DbName:              api.ResourceSingularPostgres,
 					AppBindingNamespace: i.namespace,
 					AppBindingName:      PostgresName,
 				},
@@ -57,8 +56,6 @@ func (i *Invocation) PgBouncer() *api.PgBouncer {
 					SecretNamespace: i.namespace,
 				},
 			},
-
-			//TODO: Create a full spec
 		},
 	}
 }
