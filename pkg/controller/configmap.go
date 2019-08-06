@@ -26,7 +26,7 @@ const (
 	PostgresPassword   = "POSTGRES_PASSWORD"
 	PostgresUser       = "POSTGRES_USER"
 	pgbouncerAdminName = "pgbouncer"
-	pbRetryInterval    = time.Second * 5
+	PbRetryInterval    = time.Second * 5
 	DefaultHostPort    = 5432
 )
 
@@ -41,6 +41,9 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 	configMapMeta := metav1.ObjectMeta{
 		Name:      pgbouncer.OffshootName(),
 		Namespace: pgbouncer.Namespace,
+		Annotations: map[string]string{
+			"podSync":"waiting",
+		},
 	}
 	ref, rerr := reference.GetReference(clientsetscheme.Scheme, pgbouncer)
 	if rerr != nil {
@@ -103,8 +106,6 @@ pidfile = /tmp/pgbouncer.pid
 					}
 					continue
 				}
-				println(":::::::::Username = ", username)
-				println(":::::::::Passsword = ", password)
 				//List of users
 				userListData = userListData + fmt.Sprintf(`"%s" "%s"
 `, string(username), password)
@@ -154,6 +155,14 @@ pidfile = /tmp/pgbouncer.pid
 			log.Infoln("PgBouncer reloaded successfully")
 		}
 	}
+	if vt == kutil.VerbCreated || vt == kutil.VerbPatched{
+		_, _, err = core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
+			in.ObjectMeta.Annotations = map[string]string{
+				"podSync":"synchronized",
+			}
+			return in
+		})
+	}
 	return vt, err
 }
 
@@ -164,7 +173,6 @@ func (c *Controller) getDbCredentials(secretListItem api.SecretList) (string, st
 	}
 	username := scrt.Data[PostgresUser]
 	password := scrt.Data[PostgresPassword]
-	println(">>>>>>>>>>>>>UserName  = ", username, ">>>>>>>>>>>> Password = ", password)
 	md5key := md5.Sum([]byte(string(password) + string(username)))
 	pbPassword := fmt.Sprintf("md5%s", hex.EncodeToString(md5key[:]))
 
@@ -176,14 +184,11 @@ func (c *Controller) waitUntilPatchedConfigMapReady(pgbouncer *api.PgBouncer, ne
 		log.Warning("Pods not ready")
 		return nil
 	}
-	return wait.PollImmediate(pbRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
+	return wait.PollImmediate(PbRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
 		if pgbouncerConfig, _, err := c.echoPgBouncerConfig(pgbouncer); err == nil {
 			println("::::::::::::>Comparing existing map with new map")
 			if newCfgMap.Data["pgbouncer.ini"] == pgbouncerConfig {
-				println("::::::::::::::::::::::::: EQUAL!!!!")
 				return true, nil
-			} else {
-				println("::::::::::::::::::::::::: UNEQUAL!!!!")
 			}
 		}
 		return false, nil

@@ -15,8 +15,6 @@ import (
 )
 
 const (
-	kubeDbOperator           = "kubedb-pg-operator"
-	pgbouncerOperator        = "kubedb-pgbouncer-operator"
 	operatorGetRetryInterval = time.Second * 5
 )
 
@@ -34,18 +32,14 @@ func (f *Framework) RunKubeDBOperators(kubeconfigPath string) {
 	//cmd := sh.Command("bash", "kubedb.sh")
 	err := sh.Command("env", "REGISTRY=rezoan", "make", "install").Run()
 	Expect(err).ShouldNot(HaveOccurred())
-	By("::::::::::: Postgres Operator created")
 
-	By(">>>>>>>>>>>Create postgres")
-	f.setupPostgres()
+	By("Setup postgres")
 	postgres := f.Invoke().Postgres()
-	println(":::::::::::::::::Postgres Name = ", postgres.Name)
 	err = f.CreatePostgres(postgres)
 	Expect(err).ShouldNot(HaveOccurred())
 	By("Waiting for running Postgres")
 	err = f.WaitUntilPostgresReady(postgres.Name)
 	Expect(err).ShouldNot(HaveOccurred())
-	println("Postgres is Ready.")
 	By("Uninstall Postgres Operator")
 	//err = sh.Command("bash", "kubedb.sh", "--uninstall", "--purge", "--kubeconfig="+kubeconfigPath).Run()
 	err = sh.Command("env", "REGISTRY=rezoan", "make", "uninstall").Run()
@@ -55,7 +49,6 @@ func (f *Framework) RunKubeDBOperators(kubeconfigPath string) {
 	sh = shell.NewSession()
 	sh.SetDir("../../")
 	cmd := sh.Command("env", "REGISTRY=rezoan", "make", "install")
-	By("Starting Server and Operator")
 	err = cmd.Run()
 	Expect(err).ShouldNot(HaveOccurred())
 	By("PgBouncer operator installed")
@@ -64,10 +57,8 @@ func (f *Framework) WaitUntilPostgresReady(name string) error {
 	return wait.PollImmediate(operatorGetRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
 		if pg, err := f.dbClient.KubedbV1alpha1().Postgreses(f.Namespace()).Get(name, metav1.GetOptions{}); err == nil {
 			if pg.Status.Phase == api.DatabasePhaseRunning {
-				println("____________Postgres is running._________")
 				return true, nil
 			}
-			println("____________waiting for Postgres_________")
 		}
 		return false, nil
 	})

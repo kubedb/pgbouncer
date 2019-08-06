@@ -23,7 +23,7 @@ const (
 	POSTGRES_INITDB_ARGS    = "POSTGRES_INITDB_ARGS"
 	POSTGRES_INITDB_WALDIR  = "POSTGRES_INITDB_WALDIR"
 	POSTGRES_INITDB_XLOGDIR = "POSTGRES_INITDB_XLOGDIR"
-	PostgresName            = "postgres-for-pgbouncer-test"
+	POSTGRES_NAME            = "postgres-for-pgbouncer-test"
 )
 
 var _ = Describe("PgBouncer", func() {
@@ -73,7 +73,9 @@ var _ = Describe("PgBouncer", func() {
 
 		By("Wait for Running PgBouncer")
 		f.EventuallyPgBouncerRunning(pgbouncer.ObjectMeta).Should(BeTrue())
+	}
 
+	var checkPostgres = func() {
 		By("Waiting for database to be ready")
 		f.EventuallyPingDatabase(postgres.ObjectMeta, dbName, dbUser).Should(BeTrue())
 
@@ -135,132 +137,49 @@ var _ = Describe("PgBouncer", func() {
 	Describe("Test", func() {
 
 		Context("General", func() {
-
-			FContext("General", func() {
-				It("Should ping postgres", func() {
-					createAndRunPgBouncer()
-					By("Ping PgBouncer")
-					err = f.EventuallyPingPgBouncer(pgbouncer.ObjectMeta)
-					Expect(err).NotTo(HaveOccurred())
-				})
-			})
-
-			Context("PDB", func() {
-
-				It("should run evictions successfully", func() {
-					// Create PgBouncer
-					pgbouncer.Spec.Replicas = types.Int32P(3)
-					createAndRunPgBouncer()
-					//Evict a PgBouncer pod
-					By("Evict Pods")
-					err := f.EvictPgBouncerPods(pgbouncer.ObjectMeta)
-					Expect(err).NotTo(HaveOccurred())
-				})
+			It("Should have a running postgres", checkPostgres)
+			It("Should ping pgbouncer server", func() {
+				createAndRunPgBouncer()
+				By("Ping PgBouncer")
+				err = f.EventuallyPingPgBouncerServer(pgbouncer.ObjectMeta)
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
-		//Context("EnvVars", func() {
-		//
-		//	Context("With all supported EnvVars", func() {
-		//
-		//		It("should create DB with provided EnvVars", func() {
-		//			if skipMessage != "" {
-		//				Skip(skipMessage)
-		//			}
-		//
-		//			const (
-		//				dataDir = "/var/pv/pgdata"
-		//				walDir  = "/var/pv/wal"
-		//			)
-		//			dbName = f.App()
-		//			pgbouncer.Spec.PodTemplate.Spec.Env = []core.EnvVar{
-		//				{
-		//					Name:  PGDATA,
-		//					Value: dataDir,
-		//				},
-		//				{
-		//					Name:  POSTGRES_DB,
-		//					Value: dbName,
-		//				},
-		//				{
-		//					Name:  POSTGRES_INITDB_ARGS,
-		//					Value: "--data-checksums",
-		//				},
-		//			}
-		//
-		//			walEnv := []core.EnvVar{
-		//				{
-		//					Name:  POSTGRES_INITDB_WALDIR,
-		//					Value: walDir,
-		//				},
-		//			}
-		//
-		//			if strings.HasPrefix(framework.DBCatalogName, "9") {
-		//				walEnv = []core.EnvVar{
-		//					{
-		//						Name:  POSTGRES_INITDB_XLOGDIR,
-		//						Value: walDir,
-		//					},
-		//				}
-		//			}
-		//			pgbouncer.Spec.PodTemplate.Spec.Env = core_util.UpsertEnvVars(pgbouncer.Spec.PodTemplate.Spec.Env, walEnv...)
-		//
-		//			// Run PgBouncer with provided Environment Variables
-		//			testGeneralBehaviour()
-		//		})
-		//	})
-		//
-		//	Context("Root Password as EnvVar", func() {
-		//
-		//		It("should reject to create PgBouncer CRD", func() {
-		//			if skipMessage != "" {
-		//				Skip(skipMessage)
-		//			}
-		//
-		//			dbName = f.App()
-		//			pgbouncer.Spec.PodTemplate.Spec.Env = []core.EnvVar{
-		//				{
-		//					Name:  POSTGRES_PASSWORD,
-		//					Value: "not@secret",
-		//				},
-		//			}
-		//
-		//			By("Creating Posgres: " + pgbouncer.Name)
-		//			err = f.CreatePgBouncer(pgbouncer)
-		//			Expect(err).To(HaveOccurred())
-		//		})
-		//	})
-		//
-		//	Context("Update EnvVar", func() {
-		//
-		//		It("should not reject to update EnvVar", func() {
-		//			if skipMessage != "" {
-		//				Skip(skipMessage)
-		//			}
-		//
-		//			dbName = f.App()
-		//			pgbouncer.Spec.PodTemplate.Spec.Env = []core.EnvVar{
-		//				{
-		//					Name:  POSTGRES_DB,
-		//					Value: dbName,
-		//				},
-		//			}
-		//
-		//			// Run PgBouncer with provided Environment Variables
-		//			testGeneralBehaviour()
-		//
-		//			By("Patching EnvVar")
-		//			_, _, err = util.PatchPgBouncer(f.ExtClient().KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncer) *api.PgBouncer {
-		//				in.Spec.PodTemplate.Spec.Env = []core.EnvVar{
-		//					{
-		//						Name:  POSTGRES_DB,
-		//						Value: "patched-db",
-		//					},
-		//				}
-		//				return in
-		//			})
-		//			Expect(err).NotTo(HaveOccurred())
-		//		})
-		//	})
-		//})
+
+		Context("Connection Pool", func() {
+			It("Should write to, and read from database", func() {
+				By("Create and Run PgBouncer")
+				createAndRunPgBouncer()
+				By("Check for existing postgres")
+				checkPostgres()
+				By("Check Pooling via PgBouncer")
+				err := f.PoolViaPgBouncer(pgbouncer.ObjectMeta)
+				Expect(err).NotTo(HaveOccurred())
+			})
+			It("Should add new user and database", func() {
+				By("Create and Run PgBouncer")
+				createAndRunPgBouncer()
+				By("Check for existing postgres")
+				checkPostgres()
+				By("Check Pooling via PgBouncer")
+				err := f.CreateUserAndDatabaseViaPgBouncer(pgbouncer.ObjectMeta)
+				Expect(err).NotTo(HaveOccurred())
+
+			})
+
+		})
+
+		Context("PDB", func() {
+
+			It("should run evictions successfully", func() {
+				// Create PgBouncer
+				pgbouncer.Spec.Replicas = types.Int32P(3)
+				createAndRunPgBouncer()
+				//Evict a PgBouncer pod
+				By("Evict Pods")
+				err := f.EvictPgBouncerPods(pgbouncer.ObjectMeta)
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
 	})
 })
