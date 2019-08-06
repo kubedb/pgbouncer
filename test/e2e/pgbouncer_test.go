@@ -34,7 +34,6 @@ var _ = Describe("PgBouncer", func() {
 		postgres         *api.Postgres
 		garbagePgBouncer *api.PgBouncerList
 		secret           *core.Secret
-		skipMessage      string
 
 		dbName string
 		dbUser string
@@ -63,12 +62,11 @@ var _ = Describe("PgBouncer", func() {
 		postgres = f.Postgres()
 		garbagePgBouncer = new(api.PgBouncerList)
 		secret = nil
-		skipMessage = ""
 		dbName = "postgres"
 		dbUser = "postgres"
 	})
 
-	var createRunningPgBouncer = func() {
+	var createAndRunPgBouncer = func() {
 		By("Creating PgBouncer: " + pgbouncer.Name)
 		err = f.CreatePgBouncer(pgbouncer)
 		Expect(err).NotTo(HaveOccurred())
@@ -83,47 +81,9 @@ var _ = Describe("PgBouncer", func() {
 		f.EventuallyAppBinding(postgres.ObjectMeta).Should(BeTrue())
 		//f.EventuallyAppBinding(pgbouncer.ObjectMeta).Should(BeTrue())
 
-		By("Check valid AppBinding Specs")
+		By("Check valid AppBinding Spec")
 		err := f.CheckPostgresAppBindingSpec(postgres.ObjectMeta)
 		Expect(err).NotTo(HaveOccurred())
-		//err = f.CheckPgBouncerAppBindingSpec(pgbouncer.ObjectMeta)
-		//Expect(err).NotTo(HaveOccurred())
-		By("Ping PgBouncer")
-		err = f.EventuallyPingPgBouncer(pgbouncer.ObjectMeta)
-		Expect(err).NotTo(HaveOccurred())
-		By("Done")
-	}
-
-	var testGeneralBehaviour = func() {
-		if skipMessage != "" {
-			Skip(skipMessage)
-		}
-		// Create PgBouncer
-		createRunningPgBouncer()
-
-		By("Creating Schema")
-		f.EventuallyCreateSchema(pgbouncer.ObjectMeta, dbName, dbUser).Should(BeTrue())
-
-		By("Creating Table")
-		f.EventuallyCreateTable(pgbouncer.ObjectMeta, dbName, dbUser, 3).Should(BeTrue())
-
-		By("Checking Table")
-		f.EventuallyCountTable(pgbouncer.ObjectMeta, dbName, dbUser).Should(Equal(3))
-
-		By("Delete pgbouncer")
-		err = f.DeletePgBouncer(pgbouncer.ObjectMeta)
-		Expect(err).NotTo(HaveOccurred())
-
-		// Create PgBouncer object again to resume it
-		By("Create PgBouncer: " + pgbouncer.Name)
-		err = f.CreatePgBouncer(pgbouncer)
-		Expect(err).NotTo(HaveOccurred())
-
-		By("Wait for Running pgbouncer")
-		f.EventuallyPgBouncerRunning(pgbouncer.ObjectMeta).Should(BeTrue())
-
-		By("Checking Table")
-		f.EventuallyCountTable(pgbouncer.ObjectMeta, dbName, dbUser).Should(Equal(3))
 	}
 
 	var deleteTestResource = func() {
@@ -176,13 +136,13 @@ var _ = Describe("PgBouncer", func() {
 
 		Context("General", func() {
 
-			FContext("Test Operator", func() {
-
-				It("Should ping postgres", createRunningPgBouncer)
-			})
-			Context("With PVC", func() {
-
-				It("should run successfully", testGeneralBehaviour)
+			FContext("General", func() {
+				It("Should ping postgres", func() {
+					createAndRunPgBouncer()
+					By("Ping PgBouncer")
+					err = f.EventuallyPingPgBouncer(pgbouncer.ObjectMeta)
+					Expect(err).NotTo(HaveOccurred())
+				})
 			})
 
 			Context("PDB", func() {
@@ -190,10 +150,10 @@ var _ = Describe("PgBouncer", func() {
 				It("should run evictions successfully", func() {
 					// Create PgBouncer
 					pgbouncer.Spec.Replicas = types.Int32P(3)
-					createRunningPgBouncer()
+					createAndRunPgBouncer()
 					//Evict a PgBouncer pod
-					By("Try to evict Pods")
-					err := f.EvictPodsFromStatefulSet(pgbouncer.ObjectMeta)
+					By("Evict Pods")
+					err := f.EvictPgBouncerPods(pgbouncer.ObjectMeta)
 					Expect(err).NotTo(HaveOccurred())
 				})
 			})

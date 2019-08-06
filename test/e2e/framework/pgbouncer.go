@@ -21,6 +21,7 @@ const (
 	DbName       = "postgres"
 	pbVersion ="1.9.0-r"
 	PgBouncerAdmin = "pgbouncer"
+	CmdReload = "RELOAD"
 )
 
 func (i *Invocation) PgBouncer() *api.PgBouncer {

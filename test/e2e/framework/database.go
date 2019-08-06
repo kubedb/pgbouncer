@@ -3,6 +3,7 @@ package framework
 import (
 	"crypto/rand"
 	"fmt"
+	"github.com/appscode/go/log"
 	"strings"
 	"time"
 
@@ -180,10 +181,13 @@ func (f *Framework) PingPgBouncer(port int) bool {
 	cmd := sh.Command("env","PGPASSWORD=kubedb123", "psql",
 		"--host=localhost", fmt.Sprintf("--port=%d", port),
 		fmt.Sprintf("--username=%s", PgBouncerAdmin), PgBouncerAdmin, "--command=RELOAD")
-	err := cmd.Run()
-	//out := cmd.Stdout
+	out, err := cmd.Output()
 	if err != nil {
-		println("Ping SH err = ", err)
+		log.Infoln("CMD out err = ", err)
+		return false
+	}
+	outText := strings.TrimSpace(string(out))
+	if outText != CmdReload{
 		return false
 	}
 	return true
