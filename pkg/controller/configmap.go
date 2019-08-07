@@ -41,9 +41,6 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 	configMapMeta := metav1.ObjectMeta{
 		Name:      pgbouncer.OffshootName(),
 		Namespace: pgbouncer.Namespace,
-		Annotations: map[string]string{
-			"podSync":"waiting",
-		},
 	}
 	ref, rerr := reference.GetReference(clientsetscheme.Scheme, pgbouncer)
 	if rerr != nil {
@@ -60,6 +57,10 @@ pidfile = /tmp/pgbouncer.pid
 `
 		var admins string
 		var userListData string
+
+		in.ObjectMeta.Annotations = map[string]string{
+				"podConfigMap":"waiting",
+		}
 
 		in.Labels = pgbouncer.OffshootLabels()
 		core_util.EnsureOwnerReference(&in.ObjectMeta, ref)
@@ -154,11 +155,17 @@ pidfile = /tmp/pgbouncer.pid
 		} else {
 			log.Infoln("PgBouncer reloaded successfully")
 		}
+		_, _, err = core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
+			in.ObjectMeta.Annotations = map[string]string{
+				"podConfigMap":"patched",
+			}
+			return in
+		})
 	}
 	if vt == kutil.VerbCreated || vt == kutil.VerbPatched{
 		_, _, err = core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
 			in.ObjectMeta.Annotations = map[string]string{
-				"podSync":"synchronized",
+				"podConfigMap":"created",
 			}
 			return in
 		})

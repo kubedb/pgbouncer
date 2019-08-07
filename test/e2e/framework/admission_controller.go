@@ -24,12 +24,9 @@ func (f *Framework) RunPgBouncerOperatorAndServer() {
 
 func (f *Framework) RunKubeDBOperators(kubeconfigPath string) {
 	sh := shell.NewSession()
-	sh.ShowCMD = true
 
-	By("Creating Posgtres Operator")
+	By("Installing Posgtres Operator")
 	sh.SetDir("../../../postgres")
-	//By("Starting Server and Operator")
-	//cmd := sh.Command("bash", "kubedb.sh")
 	err := sh.Command("env", "REGISTRY=rezoan", "make", "install").Run()
 	Expect(err).ShouldNot(HaveOccurred())
 
@@ -41,7 +38,6 @@ func (f *Framework) RunKubeDBOperators(kubeconfigPath string) {
 	err = f.WaitUntilPostgresReady(postgres.Name)
 	Expect(err).ShouldNot(HaveOccurred())
 	By("Uninstall Postgres Operator")
-	//err = sh.Command("bash", "kubedb.sh", "--uninstall", "--purge", "--kubeconfig="+kubeconfigPath).Run()
 	err = sh.Command("env", "REGISTRY=rezoan", "make", "uninstall").Run()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -62,10 +58,6 @@ func (f *Framework) WaitUntilPostgresReady(name string) error {
 		}
 		return false, nil
 	})
-}
-func (f *Framework) setupPostgres() {
-
-	//time.Sleep(time.Minute*3)
 }
 
 func (f *Framework) CleanAdmissionConfigs() {

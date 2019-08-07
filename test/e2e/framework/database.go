@@ -20,7 +20,6 @@ import (
 )
 
 func (f *Framework) ForwardPgBouncerPort(meta metav1.ObjectMeta) (*portforward.Tunnel, error) {
-	println("Name = ", meta.Name)
 	pgbouncer, err := f.GetPgBouncer(meta)
 	if err != nil {
 		return nil, err
@@ -60,61 +59,10 @@ func (f *Framework) ForwardPort(meta metav1.ObjectMeta) (*portforward.Tunnel, er
 	return tunnel, nil
 }
 
-//func (f *Framework) GetPgBouncerClient(tunnel *portforward.Tunnel, dbName string, userName string) (*xorm.Engine, error) {
-//	cnnstr := fmt.Sprintf("user=%s host=127.0.0.1 port=%v dbname=%s sslmode=disable", userName, tunnel.Local, dbName)
-//	return xorm.NewEngine("pgbouncer", cnnstr)
-//}
-
 func (f *Framework) GetPostgresClient(tunnel *portforward.Tunnel, dbName string, userName string) (*xorm.Engine, error) {
 	cnnstr := fmt.Sprintf("user=%s host=127.0.0.1 port=%v dbname=%s sslmode=disable", userName, tunnel.Local, dbName)
 	return xorm.NewEngine("postgres", cnnstr)
 }
-
-//func (f *Framework) EventuallyCreateSchema(meta metav1.ObjectMeta, dbName string, userName string) GomegaAsyncAssertion {
-//	sql := fmt.Sprintf(`
-//DROP SCHEMA IF EXISTS "data" CASCADE;
-//CREATE SCHEMA "data" AUTHORIZATION "%s";`, userName)
-//	return Eventually(
-//		func() bool {
-//			tunnel, err := f.ForwardPort(meta)
-//			if err != nil {
-//				return false
-//			}
-//			defer tunnel.Close()
-//
-//			db, err := f.GetPgBouncerClient(tunnel, dbName, userName)
-//			if err != nil {
-//				return false
-//			}
-//			defer db.Close()
-//
-//			if err := f.CheckPgBouncer(db); err != nil {
-//				return false
-//			}
-//
-//			_, err = db.Exec(sql)
-//			if err != nil {
-//				return false
-//			}
-//			return true
-//		},
-//		time.Minute*5,
-//		time.Second*5,
-//	)
-//}
-//
-//var randChars = []rune("abcdefghijklmnopqrstuvwxyzabcdef")
-//
-//// Use this for generating random pat of a ID. Do not use this for generating short passwords or secrets.
-//func characters(len int) string {
-//	bytes := make([]byte, len)
-//	rand.Read(bytes)
-//	r := make([]rune, len)
-//	for i, b := range bytes {
-//		r[i] = randChars[b>>3]
-//	}
-//	return string(r)
-//}
 
 func (f *Framework) EventuallyPingDatabase(meta metav1.ObjectMeta, dbName string, userName string) GomegaAsyncAssertion {
 	return Eventually(
@@ -140,25 +88,6 @@ func (f *Framework) EventuallyPingDatabase(meta metav1.ObjectMeta, dbName string
 		time.Second*5,
 	)
 }
-
-//func (f *Framework) WaitToPingPgBouncer(meta metav1.ObjectMeta) GomegaAsyncAssertion {
-//	return Eventually(
-//		func() bool {
-//			println("Printing ping function")
-//			tunnel, err := f.ForwardPgBouncerPort(meta)
-//			if err != nil {
-//				return false
-//			}
-//			defer tunnel.Close()
-//			println("LOcal tunnel = ", tunnel.Local)
-//			pingResult := f.PingPgBouncerServer(tunnel.Local)
-//			println("::::Ping result = ", pingResult)
-//			return pingResult
-//		},
-//		time.Minute*10,
-//		time.Second*5,
-//	)
-//}
 
 func (f *Framework) EventuallyPingPgBouncerServer(meta metav1.ObjectMeta) error {
 	return wait.PollImmediate(operatorGetRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
@@ -193,74 +122,6 @@ func (f *Framework) PingPgBouncerServer(port int) bool {
 	}
 	return true
 }
-//
-//func (f *Framework) EventuallyCreateTable(meta metav1.ObjectMeta, dbName string, userName string, total int) GomegaAsyncAssertion {
-//	count := 0
-//	return Eventually(
-//		func() bool {
-//			tunnel, err := f.ForwardPort(meta)
-//			if err != nil {
-//				return false
-//			}
-//			defer tunnel.Close()
-//
-//			db, err := f.GetPgBouncerClient(tunnel, dbName, userName)
-//			if err != nil {
-//				return false
-//			}
-//			defer db.Close()
-//
-//			if err := f.CheckPgBouncer(db); err != nil {
-//				return false
-//			}
-//
-//			for i := count; i < total; i++ {
-//				table := fmt.Sprintf("SET search_path TO \"data\"; CREATE TABLE %v ( id bigserial )", characters(5))
-//				_, err := db.Exec(table)
-//				if err != nil {
-//					return false
-//				}
-//				count++
-//			}
-//			return true
-//		},
-//		time.Minute*5,
-//		time.Second*5,
-//	)
-//
-//	return nil
-//}
-
-//func (f *Framework) EventuallyCountTable(meta metav1.ObjectMeta, dbName string, userName string) GomegaAsyncAssertion {
-//	return Eventually(
-//		func() int {
-//			tunnel, err := f.ForwardPort(meta)
-//			if err != nil {
-//				return -1
-//			}
-//			defer tunnel.Close()
-//
-//			db, err := f.GetPgBouncerClient(tunnel, dbName, userName)
-//			if err != nil {
-//				return -1
-//			}
-//			defer db.Close()
-//
-//			if err := f.CheckPgBouncer(db); err != nil {
-//				return -1
-//			}
-//
-//			res, err := db.Query("SELECT table_name FROM information_schema.tables WHERE table_schema='data'")
-//			if err != nil {
-//				return -1
-//			}
-//
-//			return len(res)
-//		},
-//		time.Minute*10,
-//		time.Second*5,
-//	)
-//}
 
 func (f *Framework) CheckPgBouncer(db *xorm.Engine) error {
 	err := db.Ping()
@@ -322,7 +183,6 @@ func (f *Framework) CreateTableViaPgBouncer(username, password, dbName string, p
 	if err != nil {
 		return err
 	}
-	println("CreateTableViaPgBouncer = ", outText)
 	if outText != "CREATE TABLE" {
 		return errors.New("can't create table")
 	}
@@ -373,17 +233,17 @@ func (f *Framework) CreateUserAndDatabaseViaPgBouncer(meta metav1.ObjectMeta) er
 	}
 	defer tunnel.Close()
 
-	//Create Database tmpdb
+	//Create Database tmpdb in postgres
 	err = f.CreateDatabaseViaPgBouncer(username, password,api.ResourceSingularPostgres ,tunnel.Local)
 	if err != nil {
 		return err
 	}
-	//create user myuser
+	//create user myuser in postgres
 	err = f.CreateUserViaPgBouncer(username, password, api.ResourceSingularPostgres, tunnel.Local)
 	if err != nil {
 		return err
 	}
-
+	// create a secret containing the users's credentials
 	myUserSecret := v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:"myuser",
@@ -399,7 +259,7 @@ func (f *Framework) CreateUserAndDatabaseViaPgBouncer(meta metav1.ObjectMeta) er
 		return err
 	}
 
-
+	//Add new user and database info to pgbouncer
 	_, err = f.PatchPgBouncer(meta, func(bouncer *api.PgBouncer) *api.PgBouncer {
 		tmpDB := api.Databases{
 			Alias:"tmpdb",
@@ -418,13 +278,11 @@ func (f *Framework) CreateUserAndDatabaseViaPgBouncer(meta metav1.ObjectMeta) er
 	if err != nil {
 		return err
 	}
-	time.Sleep(time.Second*30)
-	//TODO: add annotaion in pgbouncer when configmap is ready and synched with pod.
+
 	err = f.waitUntilPatchedConfigMapReady(meta)
 	if err != nil {
 		return err
 	}
-	println(":::::::Wait done:::::")
 	err = f.CreateTableViaPgBouncer("myuser", "mypass", "tmpdb", tunnel.Local)
 	if err != nil {
 		return err
@@ -447,10 +305,9 @@ func (f *Framework) CreateDatabaseViaPgBouncer(username, password, dbName string
 	if err != nil {
 		return err
 	}
-	println("CREATE DATABASE = ", outText)
-	//if outText != "CREATE DATABASE" {
-	//	return errors.New("can't drop table")
-	//}
+	if outText != "CREATE DATABASE" {
+		return errors.New("can't create database")
+	}
 	return nil
 }
 func (f *Framework) CreateUserViaPgBouncer(username, password, dbName string, port int) error {
@@ -459,10 +316,9 @@ func (f *Framework) CreateUserViaPgBouncer(username, password, dbName string, po
 	if err != nil {
 		return err
 	}
-	println("create user myuser = ", outText)
-	//if outText != "CREATE DATABASE" {
-	//	return errors.New("can't drop table")
-	//}
+	if outText != "CREATE ROLE" {
+		return errors.New("can't create user")
+	}
 	return nil
 }
 
@@ -476,7 +332,6 @@ func (f *Framework) ApplyCMD(username, password, sqlCommand, dbName string, port
 		fmt.Sprintf("--username=%s", username), dbName, fmt.Sprintf("--command=%s", sqlCommand))
 	out, err := cmd.Output()
 	if err != nil {
-		log.Infoln("CMD out err = ", err)
 		return "", err
 	}
 	outText := strings.TrimSpace(string(out))
@@ -484,17 +339,153 @@ func (f *Framework) ApplyCMD(username, password, sqlCommand, dbName string, port
 }
 
 func (f *Framework) waitUntilPatchedConfigMapReady( meta metav1.ObjectMeta) error {
-	println(meta.Namespace,"..........", meta.Name)
-	return wait.PollImmediate(controller.PbRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
+	return wait.PollImmediate(kutil.RetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
 		cfg, err := f.kubeClient.CoreV1().ConfigMaps(meta.Namespace).Get(meta.Name,metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
 		antn := cfg.GetObjectMeta().GetAnnotations()
-		println("::::::: antn[podSync] = ",  antn["podSync"])
-		if  antn["podSync"] =="synchronized"{
+		if  antn["podConfigMap"] =="patched"{
 			return true, nil
 		}
 		return false, nil
 	})
 }
+
+//func (f *Framework) GetPgBouncerClient(tunnel *portforward.Tunnel, dbName string, userName string) (*xorm.Engine, error) {
+//	cnnstr := fmt.Sprintf("user=%s host=127.0.0.1 port=%v dbname=%s sslmode=disable", userName, tunnel.Local, dbName)
+//	return xorm.NewEngine("pgbouncer", cnnstr)
+//}
+
+//func (f *Framework) EventuallyCreateSchema(meta metav1.ObjectMeta, dbName string, userName string) GomegaAsyncAssertion {
+//	sql := fmt.Sprintf(`
+//DROP SCHEMA IF EXISTS "data" CASCADE;
+//CREATE SCHEMA "data" AUTHORIZATION "%s";`, userName)
+//	return Eventually(
+//		func() bool {
+//			tunnel, err := f.ForwardPort(meta)
+//			if err != nil {
+//				return false
+//			}
+//			defer tunnel.Close()
+//
+//			db, err := f.GetPgBouncerClient(tunnel, dbName, userName)
+//			if err != nil {
+//				return false
+//			}
+//			defer db.Close()
+//
+//			if err := f.CheckPgBouncer(db); err != nil {
+//				return false
+//			}
+//
+//			_, err = db.Exec(sql)
+//			if err != nil {
+//				return false
+//			}
+//			return true
+//		},
+//		time.Minute*5,
+//		time.Second*5,
+//	)
+//}
+//
+//var randChars = []rune("abcdefghijklmnopqrstuvwxyzabcdef")
+//
+//// Use this for generating random pat of a ID. Do not use this for generating short passwords or secrets.
+//func characters(len int) string {
+//	bytes := make([]byte, len)
+//	rand.Read(bytes)
+//	r := make([]rune, len)
+//	for i, b := range bytes {
+//		r[i] = randChars[b>>3]
+//	}
+//	return string(r)
+//}
+
+//func (f *Framework) WaitToPingPgBouncer(meta metav1.ObjectMeta) GomegaAsyncAssertion {
+//	return Eventually(
+//		func() bool {
+//			println("Printing ping function")
+//			tunnel, err := f.ForwardPgBouncerPort(meta)
+//			if err != nil {
+//				return false
+//			}
+//			defer tunnel.Close()
+//			println("LOcal tunnel = ", tunnel.Local)
+//			pingResult := f.PingPgBouncerServer(tunnel.Local)
+//			println("::::Ping result = ", pingResult)
+//			return pingResult
+//		},
+//		time.Minute*10,
+//		time.Second*5,
+//	)
+//}
+//
+//func (f *Framework) EventuallyCreateTable(meta metav1.ObjectMeta, dbName string, userName string, total int) GomegaAsyncAssertion {
+//	count := 0
+//	return Eventually(
+//		func() bool {
+//			tunnel, err := f.ForwardPort(meta)
+//			if err != nil {
+//				return false
+//			}
+//			defer tunnel.Close()
+//
+//			db, err := f.GetPgBouncerClient(tunnel, dbName, userName)
+//			if err != nil {
+//				return false
+//			}
+//			defer db.Close()
+//
+//			if err := f.CheckPgBouncer(db); err != nil {
+//				return false
+//			}
+//
+//			for i := count; i < total; i++ {
+//				table := fmt.Sprintf("SET search_path TO \"data\"; CREATE TABLE %v ( id bigserial )", characters(5))
+//				_, err := db.Exec(table)
+//				if err != nil {
+//					return false
+//				}
+//				count++
+//			}
+//			return true
+//		},
+//		time.Minute*5,
+//		time.Second*5,
+//	)
+//
+//	return nil
+//}
+//
+//func (f *Framework) EventuallyCountTable(meta metav1.ObjectMeta, dbName string, userName string) GomegaAsyncAssertion {
+//	return Eventually(
+//		func() int {
+//			tunnel, err := f.ForwardPort(meta)
+//			if err != nil {
+//				return -1
+//			}
+//			defer tunnel.Close()
+//
+//			db, err := f.GetPgBouncerClient(tunnel, dbName, userName)
+//			if err != nil {
+//				return -1
+//			}
+//			defer db.Close()
+//
+//			if err := f.CheckPgBouncer(db); err != nil {
+//				return -1
+//			}
+//
+//			res, err := db.Query("SELECT table_name FROM information_schema.tables WHERE table_schema='data'")
+//			if err != nil {
+//				return -1
+//			}
+//
+//			return len(res)
+//		},
+//		time.Minute*10,
+//		time.Second*5,
+//	)
+//}
