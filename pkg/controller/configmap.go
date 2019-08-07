@@ -59,7 +59,7 @@ pidfile = /tmp/pgbouncer.pid
 		var userListData string
 
 		in.ObjectMeta.Annotations = map[string]string{
-				"podConfigMap":"waiting",
+				"podConfigMap":"ready",
 		}
 
 		in.Labels = pgbouncer.OffshootLabels()
@@ -161,11 +161,10 @@ pidfile = /tmp/pgbouncer.pid
 			}
 			return in
 		})
-	}
-	if vt == kutil.VerbCreated {
+		//revert to ready state so that it doesnt create a patched-ready loop
 		_, _, err = core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
 			in.ObjectMeta.Annotations = map[string]string{
-				"podConfigMap":"created",
+				"podConfigMap":"ready",
 			}
 			return in
 		})
