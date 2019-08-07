@@ -89,7 +89,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Setup Operators")
-	root.RunKubeDBOperators(kubeconfigPath)
+	root.InstallKubeDBOperators(kubeconfigPath)
 
 	//if !framework.SelfHostedOperator {
 	//	stopCh := genericapiserver.SetupSignalHandler()
