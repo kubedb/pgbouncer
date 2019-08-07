@@ -162,7 +162,7 @@ pidfile = /tmp/pgbouncer.pid
 			return in
 		})
 	}
-	if vt == kutil.VerbCreated || vt == kutil.VerbPatched{
+	if vt == kutil.VerbCreated {
 		_, _, err = core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
 			in.ObjectMeta.Annotations = map[string]string{
 				"podConfigMap":"created",

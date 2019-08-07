@@ -18,11 +18,7 @@ const (
 	operatorGetRetryInterval = time.Second * 5
 )
 
-func (f *Framework) RunPgBouncerOperatorAndServer() {
-
-}
-
-func (f *Framework) RunKubeDBOperators(kubeconfigPath string) {
+func (f *Framework) InstallKubeDBOperators(kubeconfigPath string) {
 	sh := shell.NewSession()
 
 	By("Installing Posgtres Operator")
