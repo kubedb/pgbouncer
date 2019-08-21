@@ -138,10 +138,6 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbou
 	//TODO: add all the secrets associated with each database in the database list to the list of secrets
 	pgbouncer.SetDefaults()
 
-	//if err := setDefaultsFromDormantDB(extClient, pgbouncer); err != nil {
-	//	return nil, err
-	//}
-
 	// If monitoring spec is given without port,
 	// set default Listening port
 
@@ -149,82 +145,6 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbou
 
 	return pgbouncer, nil
 }
-
-// setDefaultsFromDormantDB takes values from Similar Dormant Database
-//func setDefaultsFromDormantDB(extClient cs.Interface, pgbouncer *api.PgBouncer) error {
-//	// Check if DormantDatabase exists or not
-//	dormantDb, err := extClient.KubedbV1alpha1().DormantDatabases(pgbouncer.Namespace).Get(pgbouncer.Name, metav1.GetOptions{})
-//	if err != nil {
-//		if !kerr.IsNotFound(err) {
-//			return err
-//		}
-//		return nil
-//	}
-//
-//	// Check DatabaseKind
-//	if value, _ := meta_util.GetStringValue(dormantDb.Labels, api.LabelDatabaseKind); value != api.ResourceKindPgBouncer {
-//		return errors.New(fmt.Sprintf(`invalid PgBouncer: "%v/%v". Exists DormantDatabase "%v/%v" of different Kind`, pgbouncer.Namespace, pgbouncer.Name, dormantDb.Namespace, dormantDb.Name))
-//	}
-//
-//	// Check Origin Spec
-//
-//	// If DatabaseSecret of new object is not given,
-//	// Take dormantDatabaseSecretName
-//	if pgbouncer.Spec.DatabaseSecret == nil {
-//		pgbouncer.Spec.DatabaseSecret = ddbOriginSpec.DatabaseSecret
-//	}
-//
-//	// If Monitoring Spec of new object is not given,
-//	// Take Monitoring Settings from Dormant
-//	if pgbouncer.Spec.Monitor == nil {
-//		pgbouncer.Spec.Monitor = ddbOriginSpec.Monitor
-//	} else {
-//		ddbOriginSpec.Monitor = pgbouncer.Spec.Monitor
-//	}
-//
-//	// If Backup Scheduler of new object is not given,
-//	// Take Backup Scheduler Settings from Dormant
-//	if pgbouncer.Spec.BackupSchedule == nil {
-//		pgbouncer.Spec.BackupSchedule = ddbOriginSpec.BackupSchedule
-//	} else {
-//		ddbOriginSpec.BackupSchedule = pgbouncer.Spec.BackupSchedule
-//	}
-//
-//	// If LeaderElectionConfig of new object is not given,
-//	// Take configs from Dormant
-//	if pgbouncer.Spec.LeaderElection == nil {
-//		pgbouncer.Spec.LeaderElection = ddbOriginSpec.LeaderElection
-//	} else {
-//		ddbOriginSpec.LeaderElection = pgbouncer.Spec.LeaderElection
-//	}
-//
-//	// Skip checking UpdateStrategy
-//	ddbOriginSpec.UpdateStrategy = pgbouncer.Spec.UpdateStrategy
-//
-//	// Skip checking ServiceAccountName
-//	ddbOriginSpec.PodTemplate.Spec.ServiceAccountName = pgbouncer.Spec.PodTemplate.Spec.ServiceAccountName
-//
-//	// Skip checking TerminationPolicy
-//	ddbOriginSpec.TerminationPolicy = pgbouncer.Spec.TerminationPolicy
-//
-//	if !meta_util.Equal(ddbOriginSpec, &pgbouncer.Spec) {
-//		diff := meta_util.Diff(ddbOriginSpec, &pgbouncer.Spec)
-//		log.Errorf("pgbouncer spec mismatches with OriginSpec in DormantDatabases. Diff: %v", diff)
-//		return errors.New(fmt.Sprintf("pgbouncer spec mismatches with OriginSpec in DormantDatabases. Diff: %v", diff))
-//	}
-//
-//	if _, err := meta_util.GetString(pgbouncer.Annotations, api.AnnotationInitialized); err == kutil.ErrNotFound &&
-//		pgbouncer.Spec.Init != nil &&
-//		(pgbouncer.Spec.Init.SnapshotSource != nil || pgbouncer.Spec.Init.StashRestoreSession != nil) {
-//		pgbouncer.Annotations = core_util.UpsertMap(pgbouncer.Annotations, map[string]string{
-//			api.AnnotationInitialized: "",
-//		})
-//	}
-//
-//	// Delete  Matching dormantDatabase in Controller
-//
-//	return nil
-//}
 
 // Assign Default Monitoring Port if MonitoringSpec Exists
 // and the AgentVendor is Prometheus.
