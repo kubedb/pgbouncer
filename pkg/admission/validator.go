@@ -134,53 +134,6 @@ func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbo
 	return nil
 }
 
-//func matchWithDormantDatabase(extClient cs.Interface, pgbouncer *api.PgBouncer) error {
-//	// Check if DormantDatabase exists or not
-//	dormantDb, err := extClient.KubedbV1alpha1().DormantDatabases(pgbouncer.Namespace).Get(pgbouncer.Name, metav1.GetOptions{})
-//	if err != nil {
-//		if !kerr.IsNotFound(err) {
-//			return err
-//		}
-//		return nil
-//	}
-//
-//	// Check DatabaseKind
-//	if value, _ := meta_util.GetStringValue(dormantDb.Labels, api.LabelDatabaseKind); value != api.ResourceKindPgBouncer {
-//		return errors.New(fmt.Sprintf(`invalid PgBouncer: "%v/%v". Exists DormantDatabase "%v/%v" of different Kind`, pgbouncer.Namespace, pgbouncer.Name, dormantDb.Namespace, dormantDb.Name))
-//	}
-//
-//	// Check Origin Spec
-//	drmnOriginSpec := dormantDb.Spec.Origin.Spec.PgBouncer
-//	drmnOriginSpec.SetDefaults()
-//	originalSpec := pgbouncer.Spec
-//
-//	// Skip checking UpdateStrategy
-//	drmnOriginSpec.UpdateStrategy = originalSpec.UpdateStrategy
-//
-//	// Skip checking ServiceAccountName
-//	drmnOriginSpec.PodTemplate.Spec.ServiceAccountName = originalSpec.PodTemplate.Spec.ServiceAccountName
-//
-//	// Skip checking TerminationPolicy
-//	drmnOriginSpec.TerminationPolicy = originalSpec.TerminationPolicy
-//
-//	// Skip checking Monitoring
-//	drmnOriginSpec.Monitor = originalSpec.Monitor
-//
-//	// Skip Checking Backup Scheduler
-//	drmnOriginSpec.BackupSchedule = originalSpec.BackupSchedule
-//
-//	// Skip Checking LeaderElectionConfigs
-//	drmnOriginSpec.LeaderElection = originalSpec.LeaderElection
-//
-//	if !meta_util.Equal(drmnOriginSpec, &originalSpec) {
-//		diff := meta_util.Diff(drmnOriginSpec, &originalSpec)
-//		log.Errorf("pgbouncer spec mismatches with OriginSpec in DormantDatabases. Diff: %v", diff)
-//		return errors.New(fmt.Sprintf("pgbouncer spec mismatches with OriginSpec in DormantDatabases. Diff: %v", diff))
-//	}
-//
-//	return nil
-//}
-
 func validateUpdate(obj, oldObj runtime.Object, kind string) error {
 	log.Infoln("Validator.go :::::::::::::::::::  ValidateUpdate ====")
 	preconditions := getPreconditionFunc()
