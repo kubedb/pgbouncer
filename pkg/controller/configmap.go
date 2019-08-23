@@ -28,6 +28,7 @@ const (
 	pgbouncerAdminName = "pgbouncer"
 	PbRetryInterval    = time.Second * 5
 	DefaultHostPort    = 5432
+	ignoredParmeter = "extra_float_digits"
 )
 
 func (c *Controller) deleteLeaderLockConfigMap(meta metav1.ObjectMeta) error {
@@ -121,6 +122,8 @@ pidfile = /tmp/pgbouncer.pid
 `, pgbouncer.Spec.ConnectionPool.ListenAddress)
 			pbinfo = pbinfo + fmt.Sprintf(`pool_mode = %s
 `, pgbouncer.Spec.ConnectionPool.PoolMode)
+			pbinfo = pbinfo + fmt.Sprintf(`ignore_startup_parameters = %s
+`, ignoredParmeter)
 
 			adminList := pgbouncer.Spec.ConnectionPool.AdminUsers
 			for _, adminListItem := range adminList {
@@ -134,7 +137,7 @@ pidfile = /tmp/pgbouncer.pid
 %s`, dbinfo, pbinfo)
 		//println(pgbouncerData)
 		userListData = userListData + fmt.Sprintf(`"%s" "%s"
-`, pgbouncerAdminName, "md59c7cb15d3dbd78fcbdfd1e46bcc6105e")
+`, pgbouncerAdminName, "md59c7cb15d3dbd78fcbdfd1e46bcc6105e") //kubedb:kubedb123
 		//println(userListData)
 
 		in.Data = map[string]string{
@@ -153,7 +156,7 @@ pidfile = /tmp/pgbouncer.pid
 			//error is non blocking
 			log.Infoln(err)
 		} else {
-			log.Infoln("PgBouncer reloaded successfully")
+			log.Infoln(">>>PgBouncer reloaded successfully")
 		}
 		_, _, err = core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
 			in.ObjectMeta.Annotations = map[string]string{
@@ -192,7 +195,7 @@ func (c *Controller) waitUntilPatchedConfigMapReady(pgbouncer *api.PgBouncer, ne
 	}
 	return wait.PollImmediate(PbRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
 		if pgbouncerConfig, _, err := c.echoPgBouncerConfig(pgbouncer); err == nil {
-			println("::::::::::::>Comparing existing map with new map")
+			println(">>>Comparing existing map with new map")
 			if newCfgMap.Data["pgbouncer.ini"] == pgbouncerConfig {
 				return true, nil
 			}

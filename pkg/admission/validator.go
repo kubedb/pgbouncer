@@ -45,7 +45,7 @@ func (a *PgBouncerValidator) Resource() (plural schema.GroupVersionResource, sin
 }
 
 func (a *PgBouncerValidator) Initialize(config *rest.Config, stopCh <-chan struct{}) error {
-	log.Infoln("Validator.go :::::::::::::::::::  Initialize ====")
+	log.Infoln("Validator.go >>>  Initialize ====")
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -63,7 +63,7 @@ func (a *PgBouncerValidator) Initialize(config *rest.Config, stopCh <-chan struc
 
 func (pbValidator *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *admission.AdmissionResponse {
 	status := &admission.AdmissionResponse{}
-	log.Infoln("Validator.go :::::::::::::::::::  Admit ====")
+	log.Info("Validator.go >>>  Admit ====")
 
 	if (req.Operation != admission.Create && req.Operation != admission.Update && req.Operation != admission.Delete) ||
 		len(req.SubResource) != 0 ||
@@ -116,7 +116,7 @@ func (pbValidator *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *a
 			return hookapi.StatusForbidden(err)
 		}
 	}
-	println(":::::::::::::::::Validation successful")
+	log.Infoln(">>>Validation successful")
 	status.Allowed = true
 	return status
 }
@@ -124,7 +124,7 @@ func (pbValidator *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *a
 // ValidatePgBouncer checks if the object satisfies all the requirements.
 // It is not method of Interface, because it is referenced from controller package too.
 func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbouncer *api.PgBouncer, strictValidation bool) error {
-	log.Infoln("Validator.go :::::::::::::::::::  ValidatePgBouncer ====")
+	log.Info("Validator.go >>>  ValidatePgBouncer ====")
 	if pgbouncer.Spec.Replicas == nil || *pgbouncer.Spec.Replicas < 1 {
 		return fmt.Errorf(`spec.replicas "%v" invalid. Value must be greater than zero`, pgbouncer.Spec.Replicas)
 	}
@@ -135,11 +135,11 @@ func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbo
 }
 
 func validateUpdate(obj, oldObj runtime.Object, kind string) error {
-	log.Infoln("Validator.go :::::::::::::::::::  ValidateUpdate ====")
+	log.Infoln("Validator.go >>>  ValidateUpdate ====")
 	preconditions := getPreconditionFunc()
 	_, err := meta_util.CreateStrategicPatch(oldObj, obj, preconditions...)
 	if err != nil {
-		println(":::::::::::PreConditions failed")
+		println(">>>PreConditions failed")
 		if mergepatch.IsPreconditionFailed(err) {
 			return fmt.Errorf("%v.%v", err, preconditionFailedError(kind))
 		}
@@ -149,7 +149,7 @@ func validateUpdate(obj, oldObj runtime.Object, kind string) error {
 }
 
 func getPreconditionFunc() []mergepatch.PreconditionFunc {
-	log.Infoln("Validator.go :::::::::::::::::::  getPreconditionFunc ====")
+	log.Infoln("Validator.go >>>  getPreconditionFunc ====")
 	preconditions := []mergepatch.PreconditionFunc{
 		mergepatch.RequireKeyUnchanged("apiVersion"),
 		mergepatch.RequireKeyUnchanged("kind"),

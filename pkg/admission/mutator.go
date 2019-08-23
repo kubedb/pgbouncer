@@ -44,7 +44,7 @@ func (a *PgBouncerMutator) Resource() (plural schema.GroupVersionResource, singu
 }
 
 func (a *PgBouncerMutator) Initialize(config *rest.Config, stopCh <-chan struct{}) error {
-	log.Infoln("Mutator.go :::::::::::::::::::  Initialize ====")
+	log.Infoln("Mutator.go >>>  Initialize ====")
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -61,7 +61,7 @@ func (a *PgBouncerMutator) Initialize(config *rest.Config, stopCh <-chan struct{
 }
 
 func (a *PgBouncerMutator) Admit(req *admission.AdmissionRequest) *admission.AdmissionResponse {
-	log.Infoln("Mutator.go :::::::::::::::::::  Admit ====")
+	log.Info("Mutator.go >>>  Admit ====")
 	status := &admission.AdmissionResponse{}
 
 	// N.B.: No Mutating for delete
@@ -101,7 +101,7 @@ func (a *PgBouncerMutator) Admit(req *admission.AdmissionRequest) *admission.Adm
 
 // setDefaultValues provides the defaulting that is performed in mutating stage of creating/updating a PgBouncer database
 func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbouncer *api.PgBouncer) (runtime.Object, error) {
-	log.Infoln("Mutator.go :::::::::::::::::::  setDefaultValues ====")
+	log.Infoln("Mutator.go >>>  setDefaultValues ====")
 
 	if pgbouncer.Spec.Replicas == nil {
 		pgbouncer.Spec.Replicas = types.Int32P(1)
@@ -140,8 +140,7 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbou
 
 	// If monitoring spec is given without port,
 	// set default Listening port
-
-	//setMonitoringPort(pgbouncer)
+	setMonitoringPort(pgbouncer)
 
 	return pgbouncer, nil
 }
@@ -149,7 +148,6 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbou
 // Assign Default Monitoring Port if MonitoringSpec Exists
 // and the AgentVendor is Prometheus.
 func setMonitoringPort(pgbouncer *api.PgBouncer) {
-	log.Infoln("Mutator.go :::::::::::::::::::  setMonitoringPort ====")
 	if pgbouncer.Spec.Monitor != nil &&
 		pgbouncer.GetMonitoringVendor() == mona.VendorPrometheus {
 		if pgbouncer.Spec.Monitor.Prometheus == nil {

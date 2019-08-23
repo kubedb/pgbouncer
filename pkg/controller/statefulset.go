@@ -3,8 +3,6 @@ package controller
 import (
 	"fmt"
 
-	catalog "kubedb.dev/apimachinery/apis/catalog/v1alpha1"
-
 	"github.com/appscode/go/types"
 	"github.com/aws/aws-sdk-go/aws"
 	apps "k8s.io/api/apps/v1"
@@ -16,6 +14,8 @@ import (
 	kutil "kmodules.xyz/client-go"
 	app_util "kmodules.xyz/client-go/apps/v1"
 	core_util "kmodules.xyz/client-go/core/v1"
+	mona "kmodules.xyz/monitoring-agent-api/api/v1"
+	catalog "kubedb.dev/apimachinery/apis/catalog/v1alpha1"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/apimachinery/pkg/eventer"
 )
@@ -108,6 +108,10 @@ func (c *Controller) ensureStatefulSet(
 			},
 		}
 		in = upsertPort(in, pgbouncer)
+
+		println("===========> upsertMonitoringContainer start")
+		in = c.upsertMonitoringContainer(in,pgbouncer, pgbouncerVersion)
+		println("===========> upsertMonitoringContainer finish")
 
 		return in
 	})
@@ -215,5 +219,46 @@ func upsertPort(statefulSet *apps.StatefulSet, pgbouncer *api.PgBouncer) *apps.S
 		}
 	}
 
+	return statefulSet
+}
+
+func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pgbouncer *api.PgBouncer, pgbouncerVersion *catalog.PgBouncerVersion) *apps.StatefulSet {
+	if pgbouncer.GetMonitoringVendor() == mona.VendorPrometheus {
+		container := core.Container{
+			Name: "exporter",
+			//Args: append([]string{
+			//	fmt.Sprintf("---web.listen-address=:%d",api.PrometheusExporterPortNumber),
+			//}, pgbouncer.Spec.Monitor.Args...),
+			Image:           pgbouncerVersion.Spec.Exporter.Image,
+			ImagePullPolicy: core.PullIfNotPresent,
+			Ports: []core.ContainerPort{
+				{
+					Name:          api.PrometheusExporterPortName,
+					Protocol:      core.ProtocolTCP,
+					ContainerPort: int32(9127),
+				},
+			},
+			Env:             pgbouncer.Spec.Monitor.Env,
+			Resources:       pgbouncer.Spec.Monitor.Resources,
+			SecurityContext: pgbouncer.Spec.Monitor.SecurityContext,
+		}
+
+		envList := []core.EnvVar{
+			{
+				Name:  "DATA_SOURCE_NAME",
+				Value: fmt.Sprintf("postgres://pgbouncer:@localhost:%d?sslmode=disable", *pgbouncer.Spec.ConnectionPool.ListenPort),
+			},
+			{
+				Name: "PGPASSWORD",
+				Value:"kubedb123",
+			},
+
+		}
+
+		container.Env = core_util.UpsertEnvVars(container.Env, envList...)
+		containers := statefulSet.Spec.Template.Spec.Containers
+		containers = core_util.UpsertContainer(containers, container)
+		statefulSet.Spec.Template.Spec.Containers = containers
+	}
 	return statefulSet
 }

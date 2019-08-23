@@ -4,23 +4,27 @@ metadata:
   name: pgbouncer-server-2
   namespace: demo
 spec:
+  version: "1.9.0-r"
   replicas: 3
   databases:
-  - dbAlias: "db" 
-    dbName: "postgres"
-    pgObjectName: "quick-postgress"
-    pgObjectNamespace: "demo"
-  connectionPoolConfig:
+  - Alias: "postgres"
+    databaseName: "postgres"
+    appBindingName: "quick-postgress"
+    appBindingNamespace: "demo"
+  connectionPool:
     listenPort: 5432
-    poolMode: "session"
     adminUsers:
     - admin
-    - admin1
-    
+    - admin1 
   secretList:
-  - secretName: quick-postgress-auth
-    secretNamespace: demo
-  - secretName: admin-secret
-    secretNamespace: demo
-  - secretName: admin1-secret
-    secretNamespace: demo
+  - name: quick-postgress-auth
+    namespace: demo
+  - name: admin-secret
+    namespace: demo
+  monitor:
+    agent: prometheus.io/coreos-operator
+    prometheus:
+      namespace: demo
+      labels:
+        k8s-app: prometheus
+      interval: 10s

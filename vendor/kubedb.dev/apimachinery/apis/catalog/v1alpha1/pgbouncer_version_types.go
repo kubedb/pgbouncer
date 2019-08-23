@@ -28,6 +28,8 @@ type PgBouncerVersionSpec struct {
 	Version string `json:"version"`
 	// Database Image
 	DB PgBouncerVersionDatabase `json:"db"`
+	// Exporter Image
+	Exporter PgBouncerVersionExporter `json:"exporter"`
 	// Deprecated versions usable but regarded as obsolete and best avoided, typically due to having been superseded.
 	// +optional
 	Deprecated bool `json:"deprecated,omitempty"`
@@ -37,6 +39,11 @@ type PgBouncerVersionSpec struct {
 
 // PgBouncerVersionDatabase is the PgBouncer Database image
 type PgBouncerVersionDatabase struct {
+	Image string `json:"image"`
+}
+
+// PostgresVersionExporter is the image for the Postgres exporter
+type PgBouncerVersionExporter struct {
 	Image string `json:"image"`
 }
 
