@@ -41,8 +41,6 @@ github.com/appscode/go/homedir
 github.com/appscode/go/encoding/yaml
 # github.com/appscode/osm v0.12.0
 github.com/appscode/osm/context
-# github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2
-github.com/armon/circbuf
 # github.com/aws/aws-sdk-go v1.20.20
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/awserr
@@ -280,7 +278,6 @@ github.com/peterbourgon/diskv
 github.com/pkg/errors
 # github.com/prometheus/client_golang v0.9.4
 github.com/prometheus/client_golang/prometheus
-github.com/prometheus/client_golang/prometheus/push
 github.com/prometheus/client_golang/prometheus/internal
 # github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
 github.com/prometheus/client_model/go
@@ -471,7 +468,6 @@ k8s.io/api/core/v1
 k8s.io/api/apps/v1
 k8s.io/api/policy/v1beta1
 k8s.io/api/rbac/v1beta1
-k8s.io/api/rbac/v1
 k8s.io/api/authentication/v1
 k8s.io/api/admissionregistration/v1beta1
 k8s.io/api/apps/v1beta1
@@ -495,6 +491,7 @@ k8s.io/api/networking/v1
 k8s.io/api/networking/v1beta1
 k8s.io/api/node/v1alpha1
 k8s.io/api/node/v1beta1
+k8s.io/api/rbac/v1
 k8s.io/api/rbac/v1alpha1
 k8s.io/api/scheduling/v1
 k8s.io/api/scheduling/v1alpha1
@@ -890,6 +887,9 @@ kmodules.xyz/custom-resources/client/clientset/versioned/typed/appcatalog/v1alph
 kmodules.xyz/custom-resources/apis/appcatalog
 # kmodules.xyz/monitoring-agent-api v0.0.0-20190513065523-186af167f817
 kmodules.xyz/monitoring-agent-api/api/v1
+kmodules.xyz/monitoring-agent-api/agents
+kmodules.xyz/monitoring-agent-api/agents/coreosprometheusoperator
+kmodules.xyz/monitoring-agent-api/agents/prometheusbuiltin
 # kmodules.xyz/objectstore-api v0.0.0-20190718002052-da668b440b0b
 kmodules.xyz/objectstore-api/api/v1
 kmodules.xyz/objectstore-api/osm
@@ -898,7 +898,7 @@ kmodules.xyz/offshoot-api/api/v1
 # kmodules.xyz/webhook-runtime v0.0.0-20190715115250-a84fbf77dd30
 kmodules.xyz/webhook-runtime/admission/v1beta1
 kmodules.xyz/webhook-runtime/registry/admissionreview/v1beta1
-# kubedb.dev/apimachinery v0.0.0-20190805062608-1227c91d7b04
+# kubedb.dev/apimachinery v0.0.0-20190823080542-190304dba104
 kubedb.dev/apimachinery/apis/kubedb/v1alpha1
 kubedb.dev/apimachinery/client/clientset/versioned
 kubedb.dev/apimachinery/client/clientset/versioned/scheme
@@ -956,16 +956,15 @@ sigs.k8s.io/structured-merge-diff/schema
 # sigs.k8s.io/yaml v1.1.0
 sigs.k8s.io/yaml
 # stash.appscode.dev/stash v0.0.0-20190718015558-6bc80ce219d9
-stash.appscode.dev/stash/apis/stash/v1alpha1
-stash.appscode.dev/stash/apis/stash/v1beta1
 stash.appscode.dev/stash/client/clientset/versioned
-stash.appscode.dev/stash/pkg/restic
+stash.appscode.dev/stash/apis/stash/v1beta1
 stash.appscode.dev/stash/client/informers/externalversions
-stash.appscode.dev/stash/apis
-stash.appscode.dev/stash/apis/stash
 stash.appscode.dev/stash/client/clientset/versioned/typed/repositories/v1alpha1
 stash.appscode.dev/stash/client/clientset/versioned/typed/stash/v1alpha1
 stash.appscode.dev/stash/client/clientset/versioned/typed/stash/v1beta1
+stash.appscode.dev/stash/apis
+stash.appscode.dev/stash/apis/stash
+stash.appscode.dev/stash/apis/stash/v1alpha1
 stash.appscode.dev/stash/client/informers/externalversions/internalinterfaces
 stash.appscode.dev/stash/client/informers/externalversions/stash
 stash.appscode.dev/stash/apis/repositories/v1alpha1

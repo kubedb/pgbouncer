@@ -1,7 +1,7 @@
 apiVersion: kubedb.com/v1alpha1
 kind: PgBouncer
 metadata:
-  name: pgbouncer-server-2
+  name: pgbouncer-server
   namespace: demo
 spec:
   version: "1.9.0-r"
@@ -12,7 +12,7 @@ spec:
     appBindingName: "quick-postgress"
     appBindingNamespace: "demo"
   connectionPool:
-    listenPort: 5433
+    listenPort: 5432
     adminUsers:
     - admin
     - admin1 
@@ -21,3 +21,5 @@ spec:
     namespace: demo
   - name: admin-secret
     namespace: demo
+  monitor:
+    agent: prometheus.io/builtin

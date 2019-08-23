@@ -414,7 +414,7 @@ func (f *Framework) waitUntilPatchedConfigMapReady( meta metav1.ObjectMeta) erro
 //			defer tunnel.Close()
 //			println("LOcal tunnel = ", tunnel.Local)
 //			pingResult := f.PingPgBouncerServer(tunnel.Local)
-//			println("::::Ping result = ", pingResult)
+//			println("Ping result = ", pingResult)
 //			return pingResult
 //		},
 //		time.Minute*10,

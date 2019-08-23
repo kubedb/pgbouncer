@@ -694,8 +694,8 @@ kmodules.xyz/openshift v0.0.0-20190225002038-ca9787d09794/go.mod h1:OA2SQV7Rn2+E
 kmodules.xyz/openshift v0.0.0-20190508141315-99ec9fc946bf/go.mod h1:5l0No0OizfJ55sjDDpi0TgtGYWgmhy+F+i4+6DN61Ak=
 kmodules.xyz/webhook-runtime v0.0.0-20190715115250-a84fbf77dd30 h1:laqTozueJ7IDWmKuS2ARiRbjbGt2U/tzd9opPFrhidU=
 kmodules.xyz/webhook-runtime v0.0.0-20190715115250-a84fbf77dd30/go.mod h1:sojwlxXyjyHoF0arpK238DnHsecWij9VpWf50HtyBzE=
-kubedb.dev/apimachinery v0.0.0-20190805062608-1227c91d7b04 h1:tjt8LIDAQjeZGeGDxZnmtABG+GB6VeA+mxZ6wWaCKlw=
-kubedb.dev/apimachinery v0.0.0-20190805062608-1227c91d7b04/go.mod h1:PaUCqKJTTeaq2X2SINnhcewUhk8PouE5x8QypLZJQ2Q=
+kubedb.dev/apimachinery v0.0.0-20190823080542-190304dba104 h1:EB4VXc4Cscjvr0xTdTzXaK6E6Jp9ehpu0itqq+KgTuo=
+kubedb.dev/apimachinery v0.0.0-20190823080542-190304dba104/go.mod h1:PaUCqKJTTeaq2X2SINnhcewUhk8PouE5x8QypLZJQ2Q=
 pack.ag/amqp v0.8.0/go.mod h1:4/cbmt4EJXSKlG6LCfWHoqmN0uFdy5i/+YFz+fTfhV4=
 pack.ag/amqp v0.11.0/go.mod h1:4/cbmt4EJXSKlG6LCfWHoqmN0uFdy5i/+YFz+fTfhV4=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
