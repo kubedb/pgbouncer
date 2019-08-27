@@ -128,12 +128,8 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbou
 			}
 		}
 	}
-	if pgbouncer.Spec.SecretList != nil {
-		for i, sec := range pgbouncer.Spec.SecretList {
-			if sec.SecretNamespace == "" {
-				pgbouncer.Spec.SecretList[i].SecretNamespace = pgbouncer.Namespace
-			}
-		}
+	if pgbouncer.Spec.UserList.SecretNamespace == "" {
+		pgbouncer.Spec.UserList.SecretNamespace = pgbouncer.Namespace
 	}
 	//TODO: add all the secrets associated with each database in the database list to the list of secrets
 	pgbouncer.SetDefaults()

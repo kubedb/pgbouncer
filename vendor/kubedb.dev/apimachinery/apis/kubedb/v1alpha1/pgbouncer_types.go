@@ -39,20 +39,29 @@ type PgBouncerSpec struct {
 	Databases []Databases `json:"databases, omitempty"`
 	// ConnectionPoolConfig defines Connection pool configuration
 	ConnectionPool *ConnectionPoolConfig `json:"connectionPool"`
-	// SecretList keeps a list of pgbouncer user's secrets
+	// UserList keeps a list of pgbouncer user's secrets
 	// +optional
-	SecretList []SecretList `json:"secretList, omitempty"`
+	UserList UserList `json:"userList, omitempty"`
 	// Monitor is used monitor database instance
 	// +optional
 	Monitor *mona.AgentSpec `json:"monitor,omitempty"`
 }
 
 type Databases struct {
-	Alias             string `json:"Alias"`                     //alias to identify target database
-	DbName            string `json:"databaseName"`                      //Name of the target database
-	AppBindingName      string `json:"appBindingName"`                //Reference to PgBouncer object where the target database is located
-	AppBindingNamespace string `json:"appBindingNamespace,omitempty"` //Namespace of PgBouncer object
-	UserSecret        string `json:"userSecret,omitempty"`        //To bind a single user to a specific connection , Optional
+	//alias to uniquely identify a target database running inside a specific Postgres instance
+	Alias             string `json:"alias"`
+	//Name of the target database inside a Postgres instance
+	DbName            string `json:"databaseName"`
+	//Reference to Postgres instance where the target database is located
+	AppBindingName      string `json:"appBindingName"`
+	//Namespace of PgBouncer object
+	//if left empty, pgBouncer namespace is assigned
+	// use "default" for dafault namespace
+	// +optional
+	AppBindingNamespace string `json:"appBindingNamespace,omitempty"`
+	//To bind a single user to a specific connection
+	// +optional
+	UserName        string `json:"username,omitempty"`
 }
 
 type ConnectionPoolConfig struct {
@@ -66,7 +75,7 @@ type ConnectionPoolConfig struct {
 	ObservedGeneration *types.IntHash `json:"observedGeneration,omitempty"`
 }
 
-type SecretList struct {
+type UserList struct {
 	SecretName      string `json:"name"`                //contains a single username-password combo that exists in a target database
 	SecretNamespace string `json:"namespace,omitempty"` //Namespace of PgBouncer object
 }

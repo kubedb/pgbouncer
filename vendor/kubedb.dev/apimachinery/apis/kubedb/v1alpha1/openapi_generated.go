@@ -421,13 +421,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.RedisSpec":                      schema_apimachinery_apis_kubedb_v1alpha1_RedisSpec(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.RedisStatus":                    schema_apimachinery_apis_kubedb_v1alpha1_RedisStatus(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.ScriptSourceSpec":               schema_apimachinery_apis_kubedb_v1alpha1_ScriptSourceSpec(ref),
-		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.SecretList":                     schema_apimachinery_apis_kubedb_v1alpha1_SecretList(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.Snapshot":                       schema_apimachinery_apis_kubedb_v1alpha1_Snapshot(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.SnapshotList":                   schema_apimachinery_apis_kubedb_v1alpha1_SnapshotList(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.SnapshotSourceSpec":             schema_apimachinery_apis_kubedb_v1alpha1_SnapshotSourceSpec(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.SnapshotSpec":                   schema_apimachinery_apis_kubedb_v1alpha1_SnapshotSpec(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.SnapshotStatus":                 schema_apimachinery_apis_kubedb_v1alpha1_SnapshotStatus(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.TLSPolicy":                      schema_apimachinery_apis_kubedb_v1alpha1_TLSPolicy(ref),
+		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.UserList":                       schema_apimachinery_apis_kubedb_v1alpha1_UserList(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.elasticsearchApp":               schema_apimachinery_apis_kubedb_v1alpha1_elasticsearchApp(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.elasticsearchStatsService":      schema_apimachinery_apis_kubedb_v1alpha1_elasticsearchStatsService(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.etcdApp":                        schema_apimachinery_apis_kubedb_v1alpha1_etcdApp(ref),
@@ -15863,42 +15863,43 @@ func schema_apimachinery_apis_kubedb_v1alpha1_Databases(ref common.ReferenceCall
 			SchemaProps: spec.SchemaProps{
 				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
-					"Alias": {
+					"alias": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Description: "alias to uniquely identify a target database running inside a specific Postgres instance",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"databaseName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "alias to identify target database",
+							Description: "Name of the target database inside a Postgres instance",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"appBindingName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Name of the target database",
+							Description: "Reference to Postgres instance where the target database is located",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"appBindingNamespace": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Reference to PgBouncer object where the target database is located",
+							Description: "Namespace of PgBouncer object if left empty, pgBouncer namespace is assigned use \"default\" for dafault namespace",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"userSecret": {
+					"username": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Namespace of PgBouncer object",
+							Description: "To bind a single user to a specific connection",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
-				Required: []string{"Alias", "databaseName", "appBindingName"},
+				Required: []string{"alias", "databaseName", "appBindingName"},
 			},
 		},
 	}
@@ -18429,17 +18430,10 @@ func schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerSpec(ref common.Reference
 							Ref:         ref("kubedb.dev/apimachinery/apis/kubedb/v1alpha1.ConnectionPoolConfig"),
 						},
 					},
-					"secretList": {
+					"userList": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretList keeps a list of pgbouncer user's secrets",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("kubedb.dev/apimachinery/apis/kubedb/v1alpha1.SecretList"),
-									},
-								},
-							},
+							Description: "UserList keeps a list of pgbouncer user's secrets",
+							Ref:         ref("kubedb.dev/apimachinery/apis/kubedb/v1alpha1.UserList"),
 						},
 					},
 					"monitor": {
@@ -18453,7 +18447,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerSpec(ref common.Reference
 			},
 		},
 		Dependencies: []string{
-			"kmodules.xyz/monitoring-agent-api/api/v1.AgentSpec", "kmodules.xyz/offshoot-api/api/v1.ServiceTemplateSpec", "kubedb.dev/apimachinery/apis/kubedb/v1alpha1.ConnectionPoolConfig", "kubedb.dev/apimachinery/apis/kubedb/v1alpha1.Databases", "kubedb.dev/apimachinery/apis/kubedb/v1alpha1.SecretList"},
+			"kmodules.xyz/monitoring-agent-api/api/v1.AgentSpec", "kmodules.xyz/offshoot-api/api/v1.ServiceTemplateSpec", "kubedb.dev/apimachinery/apis/kubedb/v1alpha1.ConnectionPoolConfig", "kubedb.dev/apimachinery/apis/kubedb/v1alpha1.Databases", "kubedb.dev/apimachinery/apis/kubedb/v1alpha1.UserList"},
 	}
 }
 
@@ -19466,32 +19460,6 @@ func schema_apimachinery_apis_kubedb_v1alpha1_ScriptSourceSpec(ref common.Refere
 	}
 }
 
-func schema_apimachinery_apis_kubedb_v1alpha1_SecretList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"namespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "contains a single username-password combo that exists in a target database",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-				},
-				Required: []string{"name"},
-			},
-		},
-	}
-}
-
 func schema_apimachinery_apis_kubedb_v1alpha1_Snapshot(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -19766,6 +19734,32 @@ func schema_apimachinery_apis_kubedb_v1alpha1_TLSPolicy(ref common.ReferenceCall
 		},
 		Dependencies: []string{
 			"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.MemberSecret"},
+	}
+}
+
+func schema_apimachinery_apis_kubedb_v1alpha1_UserList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"namespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "contains a single username-password combo that exists in a target database",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
 	}
 }
 
