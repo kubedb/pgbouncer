@@ -1,9 +1,8 @@
 package controller
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/appscode/go/log"
@@ -25,7 +24,7 @@ import (
 const (
 	PostgresPassword   = "POSTGRES_PASSWORD"
 	PostgresUser       = "POSTGRES_USER"
-	pgbouncerAdminName = "pgbouncer"
+	pgbouncerAdminName = "kubedb"
 	PbRetryInterval    = time.Second * 5
 	DefaultHostPort    = 5432
 	ignoredParmeter = "extra_float_digits"
@@ -52,12 +51,14 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 		var dbinfo = `[databases]
 `
 		var pbinfo = `[pgbouncer]
-auth_file = /etc/config/userlist.txt
 logfile = /tmp/pgbouncer.log
 pidfile = /tmp/pgbouncer.pid
 `
+		authFileLocation := filepath.Join(UserListMountPath,c.getUserListFileName(pgbouncer))
+		pbinfo = pbinfo + fmt.Sprintf(`auth_file = %s
+`,authFileLocation)
+
 		var admins string
-		var userListData string
 
 		in.ObjectMeta.Annotations = map[string]string{
 				"podConfigMap":"ready",
@@ -67,7 +68,6 @@ pidfile = /tmp/pgbouncer.pid
 		core_util.EnsureOwnerReference(&in.ObjectMeta, ref)
 		if pgbouncer.Spec.Databases != nil {
 			for _, db := range pgbouncer.Spec.Databases {
-
 				var hostPort = int32(DefaultHostPort)
 				namespace := db.AppBindingNamespace
 				name := db.AppBindingName
@@ -95,24 +95,28 @@ pidfile = /tmp/pgbouncer.pid
 			}
 		}
 
-		if pgbouncer.Spec.SecretList != nil {
-			for _, secretListItem := range pgbouncer.Spec.SecretList {
-				username, password, err := c.getDbCredentials(secretListItem)
-				if err != nil {
-					if kerr.IsNotFound(err) {
-						log.Warningf("Secret %s not found in namespace %s.", secretListItem.SecretName, secretListItem.SecretNamespace)
-						log.Warningln("ConfigMap will be updated with this secret when its available")
-					} else {
-						log.Warningln("Error extracting database credentials from secret ", secretListItem.SecretNamespace, "/", secretListItem.SecretName, ". ", err)
-						return nil
-					}
-					continue
-				}
-				//List of users
-				userListData = userListData + fmt.Sprintf(`"%s" "%s"
-`, string(username), password)
-			}
+		if pgbouncer.Spec.UserList.SecretName == ""{
+			log.Infoln("PgBouncer userlist was not provided")
 		}
+
+//		if pgbouncer.Spec.UserList != nil {
+//			for _, secretListItem := range pgbouncer.Spec.SecretList {
+//				username, password, err := c.getDbCredentials(secretListItem)
+//				if err != nil {
+//					if kerr.IsNotFound(err) {
+//						log.Warningf("Secret %s not found in namespace %s.", secretListItem.SecretName, secretListItem.SecretNamespace)
+//						log.Warningln("ConfigMap will be updated with this secret when its available")
+//					} else {
+//						log.Warningln("Error extracting database credentials from secret ", secretListItem.SecretNamespace, "/", secretListItem.SecretName, ". ", err)
+//						return nil
+//					}
+//					continue
+//				}
+//				//List of users
+//				userListData = userListData + fmt.Sprintf(`"%s" "%s"
+//`, string(username), password)
+//			}
+//		}
 
 		if pgbouncer.Spec.ConnectionPool != nil {
 			admins = fmt.Sprintf(`%s`, pgbouncerAdminName)
@@ -135,14 +139,11 @@ pidfile = /tmp/pgbouncer.pid
 
 		pgbouncerData := fmt.Sprintf(`%s
 %s`, dbinfo, pbinfo)
-		//println(pgbouncerData)
-		userListData = userListData + fmt.Sprintf(`"%s" "%s"
-`, pgbouncerAdminName, "md59c7cb15d3dbd78fcbdfd1e46bcc6105e") //kubedb:kubedb123
+		println("pgbouncerData = ",pgbouncerData)
 		//println(userListData)
 
 		in.Data = map[string]string{
 			"pgbouncer.ini": pgbouncerData,
-			"userlist.txt":  userListData,
 		}
 		return in
 	})
@@ -175,18 +176,18 @@ pidfile = /tmp/pgbouncer.pid
 	return vt, err
 }
 
-func (c *Controller) getDbCredentials(secretListItem api.SecretList) (string, string, error) {
-	scrt, err := c.Client.CoreV1().Secrets(secretListItem.SecretNamespace).Get(secretListItem.SecretName, metav1.GetOptions{})
-	if err != nil {
-		return "", "", err
-	}
-	username := scrt.Data[PostgresUser]
-	password := scrt.Data[PostgresPassword]
-	md5key := md5.Sum([]byte(string(password) + string(username)))
-	pbPassword := fmt.Sprintf("md5%s", hex.EncodeToString(md5key[:]))
-
-	return string(username), pbPassword, nil
-}
+//func (c *Controller) getDbCredentials(secretListItem api.SecretList) (string, string, error) {
+//	scrt, err := c.Client.CoreV1().Secrets(secretListItem.SecretNamespace).Get(secretListItem.SecretName, metav1.GetOptions{})
+//	if err != nil {
+//		return "", "", err
+//	}
+//	username := scrt.Data[PostgresUser]
+//	password := scrt.Data[PostgresPassword]
+//	md5key := md5.Sum([]byte(string(password) + string(username)))
+//	pbPassword := fmt.Sprintf("md5%s", hex.EncodeToString(md5key[:]))
+//
+//	return string(username), pbPassword, nil
+//}
 
 func (c *Controller) waitUntilPatchedConfigMapReady(pgbouncer *api.PgBouncer, newCfgMap *core.ConfigMap) error {
 	if _, err := c.getPgBouncerPod(pgbouncer); err != nil {
@@ -270,3 +271,31 @@ func (c *Controller) getPgBouncerConfigCmd() []string {
 func (c *Controller) getUserListCmd() []string {
 	return []string{"cat", "/etc/config/userlist.txt"}
 }
+
+func (c *Controller) getUserListFileName(bouncer *api.PgBouncer) (filename string) {
+	if bouncer.Spec.UserList.SecretName == "" {
+		log.Infoln(":::::No secret found")
+		return ""
+	}
+	var ns string
+	if bouncer.Spec.UserList.SecretNamespace != ""{
+		ns = bouncer.Spec.UserList.SecretNamespace
+	} else {
+		ns = bouncer.Namespace
+
+	}
+	sec, err := c.Client.CoreV1().Secrets(ns).Get(bouncer.Spec.UserList.SecretName,metav1.GetOptions{})
+	if err != nil {
+		log.Infoln(err)
+		return ""
+	}
+	secStData := sec.Data
+	for key,_ := range secStData{
+		if key != ""{
+			filename = key
+			break
+		}
+	}
+	return filename
+}
+

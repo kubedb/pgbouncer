@@ -15,6 +15,7 @@ import (
 	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 	"kubedb.dev/apimachinery/pkg/eventer"
 	validator "kubedb.dev/pgbouncer/pkg/admission"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 )
 
 func (c *Controller) create(pgbouncer *api.PgBouncer) error {
@@ -70,8 +71,14 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 	if err := c.manageFinalPhase(pgbouncer); err != nil {
 		return err
 	}
+
+
 	//println("Setting annotations")
 	//c.UpsertDatabaseAnnotation(pgbouncer.GetObjectMeta(),)
+
+	if err := c.managePatchedUserList(pgbouncer); err != nil {
+		return err
+	}
 	println(">>>Mischief Managed for ", pgbouncer.Name)
 	return nil
 }
@@ -346,6 +353,24 @@ func (c *Controller) manageStatService (pgbouncer *api.PgBouncer) error {
 		)
 	}
 	log.Infoln("Stat Service ", statServiceVerb)
+	return nil //if no err
+}
+func (c *Controller) managePatchedUserList (pgbouncer *api.PgBouncer) error {
+	pbSecretName := pgbouncer.Spec.UserList.SecretName
+	pbSecretNamespace := pgbouncer.Spec.UserList.SecretNamespace
+	if pbSecretName == "" && pbSecretNamespace == "" {
+		return nil
+	}
+	sec, err := c.Client.CoreV1().Secrets(pbSecretNamespace).Get(pbSecretName,metav1.GetOptions{})
+	if err != nil {
+		if kerr.IsNotFound(err) {
+			//secret has not been created yet, which is fine. We have watcher to take action when its created
+			return nil
+		}
+		return err
+	}
+	//if secret is already there, then add default admin if necessary
+	c.ensureUserlistHasDefaultAdmin(pgbouncer, sec)
 	return nil //if no err
 }
 

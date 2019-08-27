@@ -7,7 +7,7 @@ spec:
   version: "1.9.0-r"
   replicas: 3
   databases:
-  - Alias: "postgres"
+  - alias: "postgres"
     databaseName: "postgres"
     appBindingName: "quick-postgress"
     appBindingNamespace: "demo"
@@ -16,10 +16,8 @@ spec:
     adminUsers:
     - admin
     - admin1 
-  secretList:
-  - name: quick-postgress-auth
-    namespace: demo
-  - name: admin-secret
+  userList:
+    name: db-user-pass
     namespace: demo
   monitor:
     agent: prometheus.io/builtin

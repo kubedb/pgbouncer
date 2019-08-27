@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-
 	"github.com/appscode/go/types"
 	"github.com/aws/aws-sdk-go/aws"
 	apps "k8s.io/api/apps/v1"
@@ -22,7 +21,8 @@ import (
 
 const (
 	securityContextCode = int64(65535)
-	congigMountPath     = "/etc/config"
+	configMountPath     = "/etc/config"
+	UserListMountPath     = "/var/run/pgbouncer/secrets"
 )
 
 func (c *Controller) ensureStatefulSet(
@@ -69,11 +69,54 @@ func (c *Controller) ensureStatefulSet(
 			MatchLabels: pgbouncer.OffshootSelectors(),
 		}
 		in.Spec.Template.Labels = pgbouncer.OffshootSelectors()
+
+		var volumes []core.Volume
+		configMapVolume:= core.Volume{
+			Name: pgbouncer.OffshootName(),
+			VolumeSource: core.VolumeSource{
+				ConfigMap: &core.ConfigMapVolumeSource{
+					LocalObjectReference: core.LocalObjectReference{
+						Name: pgbouncer.OffshootName(),
+					},
+				},
+			},
+		}
+		volumes = append(volumes,configMapVolume)
+
+		var volumeMounts []core.VolumeMount
+		configMapVolumeMount := core.VolumeMount{
+			Name:      pgbouncer.OffshootName(),
+			MountPath: configMountPath,
+			}
+		volumeMounts = append(volumeMounts,configMapVolumeMount)
+
+		if pgbouncer.Spec.UserList.SecretName != "" { //Add secret (user list file) as volume
+			secretVolume := core.Volume{
+				Name: "userlist",
+				VolumeSource: core.VolumeSource{
+					Secret: &core.SecretVolumeSource{
+						SecretName: pgbouncer.Spec.UserList.SecretName,
+					},
+				},
+			}
+			volumes = append(volumes,secretVolume)
+
+			in.Spec.Template.Spec.Volumes = append(in.Spec.Template.Spec.Volumes, secretVolume)
+			//Add to volumeMounts to mount the vpilume
+			secretVolumeMount := core.VolumeMount{
+				Name:      "userlist",
+				MountPath: UserListMountPath,
+				ReadOnly:  true,
+			}
+			volumeMounts = append(volumeMounts,secretVolumeMount)
+
+		}
 		//in.Spec.Template.Spec.InitContainers = core_util.UpsertContainers(in.Spec.Template.Spec.InitContainers, pgbouncer.Spec.PodTemplate.Spec.InitContainers)
 		in.Spec.Template.Spec.Containers = core_util.UpsertContainer(
 			in.Spec.Template.Spec.Containers,
 			core.Container{
 				Name: api.ResourceSingularPgBouncer,
+				//TODO: decide what to do with Args and Env
 				//Args: append([]string{
 				//	fmt.Sprintf(`--enable-analytics=%v`, c.EnableAnalytics),
 				//}, c.LoggerOptions.ToFlags()...),
@@ -83,35 +126,20 @@ func (c *Controller) ensureStatefulSet(
 				//		Value: c.AnalyticsClientID,
 				//	},
 				//},
+
 				Image:           image,
 				ImagePullPolicy: core.PullIfNotPresent,
 				SecurityContext: &core.SecurityContext{
 					RunAsUser: aws.Int64(securityContextCode),
 				},
-				VolumeMounts: []core.VolumeMount{
-					{
-						Name:      pgbouncer.OffshootName(),
-						MountPath: congigMountPath,
-					},
-				},
+				VolumeMounts: volumeMounts,
 			})
-		in.Spec.Template.Spec.Volumes = []core.Volume{
-			{
-				Name: pgbouncer.OffshootName(),
-				VolumeSource: core.VolumeSource{
-					ConfigMap: &core.ConfigMapVolumeSource{
-						LocalObjectReference: core.LocalObjectReference{
-							Name: pgbouncer.OffshootName(),
-						},
-					},
-				},
-			},
-		}
+
+		in.Spec.Template.Spec.Volumes = volumes
+
 		in = upsertPort(in, pgbouncer)
 
-		println("===========> upsertMonitoringContainer start")
 		in = c.upsertMonitoringContainer(in,pgbouncer, pgbouncerVersion)
-		println("===========> upsertMonitoringContainer finish")
 
 		return in
 	})

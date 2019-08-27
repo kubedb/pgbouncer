@@ -2,12 +2,13 @@ package controller
 
 import (
 	"errors"
+	"fmt"
+	kutil "kmodules.xyz/client-go"
 	"strings"
 
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kutil "kmodules.xyz/client-go"
 	core_util "kmodules.xyz/client-go/core/v1"
 	"kmodules.xyz/client-go/tools/queue"
 	"kubedb.dev/apimachinery/apis"
@@ -18,6 +19,8 @@ import (
 const (
 	systemNamespace = "kube-system"
 	publicNamespace = "kube-public"
+	namespaceKey = "namespace"
+	nameKey = "name"
 )
 
 func (c *Controller) initWatcher() {
@@ -78,7 +81,7 @@ func (c *Controller) runPgBouncer(key string) error {
 
 func (c *Controller) runPgSecret(key string) error {
 	//wait for pgboncer to ber ready
-	log.Debugln("started processing, key:", key)
+	log.Debugln("started processing secret, key:", key)
 	_, exists, err := c.secretInformer.GetIndexer().GetByKey(key)
 	if err != nil {
 		log.Errorf("Fetching secret with key %s from store failed with %v", key, err)
@@ -91,24 +94,23 @@ func (c *Controller) runPgSecret(key string) error {
 	}
 	//Now we are interested in this particular secret
 	secretInfo := make(map[string]string)
-	secretInfo["Namespace"] = splitKey[0]
-	secretInfo["Name"] = splitKey[1]
-	if secretInfo["Namespace"] == systemNamespace || secretInfo["Namespace"] == publicNamespace {
+	secretInfo[namespaceKey] = splitKey[0]
+	secretInfo[nameKey] = splitKey[1]
+	if secretInfo[namespaceKey] == systemNamespace || secretInfo[namespaceKey] == publicNamespace {
 		return nil
 	}
-	pgBouncerList, err := c.ExtClient.KubedbV1alpha1().PgBouncers(core.NamespaceAll).List(v1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
 	if !exists {
 		log.Debugf("PgBouncer Secret %s deleted.", key)
 
 	} else {
 		log.Debugf("Updates for PgBouncer Secret %s received.", key)
 	}
+	pgBouncerList, err := c.ExtClient.KubedbV1alpha1().PgBouncers(core.NamespaceAll).List(v1.ListOptions{})
+	if err != nil {
+		return err
+	}
 	for _, pgbouncer := range pgBouncerList.Items {
-		err := c.syncSecretWithPgBouncer(secretInfo, &pgbouncer)
+		err := c.ensureUserListInSecret(secretInfo, &pgbouncer)
 		if err != nil {
 			log.Warning(err)
 		}
@@ -116,24 +118,58 @@ func (c *Controller) runPgSecret(key string) error {
 	return nil
 }
 
-func (c *Controller) syncSecretWithPgBouncer(secretInfo map[string]string, pgbouncer *api.PgBouncer) error {
+func (c *Controller) ensureUserListInSecret(secretInfo map[string]string, pgbouncer *api.PgBouncer) error {
 	if pgbouncer == nil {
 		return errors.New("cant sync secret with pgbouncer == nil")
 	}
-	secretList := pgbouncer.Spec.SecretList
-	for _, singleSecret := range secretList {
-		if singleSecret.SecretNamespace == secretInfo["Namespace"] && singleSecret.SecretName == secretInfo["Name"] {
-			log.Infof("Secret %s update found for PgBouncer: %s", secretInfo["Name"], pgbouncer.Name)
-			//log.Infof(singleSecret.SecretNamespace, " ", singleSecret.SecretName, " == ", secretInfo["Namespace"], " ", secretInfo["Name"])
-			vt, err := c.ensureConfigMapFromCRD(pgbouncer)
+	pbSecretName := pgbouncer.Spec.UserList.SecretName
+	pbSecretNamespace := pgbouncer.Spec.UserList.SecretNamespace
+
+		if pbSecretNamespace == secretInfo[namespaceKey] && pbSecretName == secretInfo[nameKey] {
+			log.Infof("secret %s update found for PgBouncer: %s", secretInfo[nameKey], pgbouncer.Name)
+			secret, err := c.Client.CoreV1().Secrets(secretInfo[namespaceKey]).Get(secretInfo[nameKey],v1.GetOptions{})
 			if err != nil {
 				return err
 			}
-			if vt != kutil.VerbUnchanged {
-				log.Infof("%s configMap for PgBouncer = m%s and PgBouncer Secret = %s' ", vt, pgbouncer.Name, secretInfo["Name"])
+			//log.Infof(singleSecret.SecretNamespace, " ", singleSecret.SecretName, " == ", secretInfo[namespaceKey], " ", secretInfo[nameKey])
+			//vt, err := c.ensureSecretIsUpdated(pgbouncer)
+			//if err != nil {
+			//	return err
+			//}
+			//if vt != kutil.VerbUnchanged {
+			//	log.Infof("%s configMap for PgBouncer = m%s and PgBouncer Secret = %s' ", vt, pgbouncer.Name, secretInfo[nameKey])
+			//}
+			//TODO: ensure that changes to secrets result in secret being updated in pod (No need to RELOAD)
+			//TODO: ensure that we have kubedb as a user in the userlist
+			c.ensureUserlistHasDefaultAdmin(pgbouncer, secret)
+
+		}
+
+	return nil
+}
+
+func (c *Controller) ensureUserlistHasDefaultAdmin(pgbouncer *api.PgBouncer, secret *core.Secret){
+	 for key, value := range secret.Data{
+	 	if key != "" && value != nil{
+			kubedbUserString := fmt.Sprintf(`"kubedb" "kubedb"`)
+	 		if !strings.Contains(string(value), kubedbUserString){
+				tmpData := string(value)+ fmt.Sprintf(`
+%s`,kubedbUserString)
+				secret.Data[key] = []byte(tmpData)
+				_, vt, err := core_util.CreateOrPatchSecret(c.Client,secret.ObjectMeta, func(in *core.Secret) *core.Secret {
+					in = secret
+					return in
+				},false)
+				if err != nil {
+					log.Infoln("error patching secret with modified file, err = ", err)
+				}
+				if vt == kutil.VerbPatched {
+					log.Infoln("secret patched with kubedb as an admin")
+				}
+
+				//Annotate secret to mark that secret is already patched
 			}
 			break
 		}
-	}
-	return nil
+	 }
 }
