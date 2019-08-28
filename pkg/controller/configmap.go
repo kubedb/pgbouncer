@@ -24,7 +24,6 @@ import (
 const (
 	PostgresPassword   = "POSTGRES_PASSWORD"
 	PostgresUser       = "POSTGRES_USER"
-	pgbouncerAdminName = "kubedb"
 	PbRetryInterval    = time.Second * 5
 	DefaultHostPort    = 5432
 	ignoredParmeter = "extra_float_digits"
@@ -69,8 +68,9 @@ pidfile = /tmp/pgbouncer.pid
 		if pgbouncer.Spec.Databases != nil {
 			for _, db := range pgbouncer.Spec.Databases {
 				var hostPort = int32(DefaultHostPort)
-				namespace := db.AppBindingNamespace
 				name := db.AppBindingName
+				namespace := db.AppBindingNamespace
+
 				appBinding, err := c.AppCatalogClient.AppBindings(namespace).Get(name, metav1.GetOptions{})
 				if err != nil {
 					if kerr.IsNotFound(err) {
@@ -88,10 +88,17 @@ pidfile = /tmp/pgbouncer.pid
 				}
 
 				hostname := name + "." + namespace + ".svc.cluster.local"
+				url, err := appBinding.URL()
+				if err != nil {
+					log.Errorln(err)
+				}
+				print(":::URL = ", url)
+				//parsedURL,err := pq.ParseURL(url)
 
 				//dbinfo
 				dbinfo = dbinfo + fmt.Sprintf(`%s = host=%s port=%d dbname=%s
 `, db.Alias, hostname, hostPort, db.DbName)
+				print(":::current URL format = ", dbinfo)
 			}
 		}
 
@@ -99,27 +106,8 @@ pidfile = /tmp/pgbouncer.pid
 			log.Infoln("PgBouncer userlist was not provided")
 		}
 
-//		if pgbouncer.Spec.UserList != nil {
-//			for _, secretListItem := range pgbouncer.Spec.SecretList {
-//				username, password, err := c.getDbCredentials(secretListItem)
-//				if err != nil {
-//					if kerr.IsNotFound(err) {
-//						log.Warningf("Secret %s not found in namespace %s.", secretListItem.SecretName, secretListItem.SecretNamespace)
-//						log.Warningln("ConfigMap will be updated with this secret when its available")
-//					} else {
-//						log.Warningln("Error extracting database credentials from secret ", secretListItem.SecretNamespace, "/", secretListItem.SecretName, ". ", err)
-//						return nil
-//					}
-//					continue
-//				}
-//				//List of users
-//				userListData = userListData + fmt.Sprintf(`"%s" "%s"
-//`, string(username), password)
-//			}
-//		}
-
 		if pgbouncer.Spec.ConnectionPool != nil {
-			admins = fmt.Sprintf(`%s`, pgbouncerAdminName)
+			admins = fmt.Sprintf(`%s`, pbAdminCredential)
 			pbinfo = pbinfo + fmt.Sprintf(`listen_port = %d
 `, *pgbouncer.Spec.ConnectionPool.ListenPort)
 			pbinfo = pbinfo + fmt.Sprintf(`listen_addr = %s
@@ -139,7 +127,6 @@ pidfile = /tmp/pgbouncer.pid
 
 		pgbouncerData := fmt.Sprintf(`%s
 %s`, dbinfo, pbinfo)
-		println("pgbouncerData = ",pgbouncerData)
 		//println(userListData)
 
 		in.Data = map[string]string{
@@ -157,21 +144,12 @@ pidfile = /tmp/pgbouncer.pid
 			//error is non blocking
 			log.Infoln(err)
 		} else {
-			log.Infoln(">>>PgBouncer reloaded successfully")
+			log.Infoln("PgBouncer reloaded successfully")
 		}
-		_, _, err = core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
-			in.ObjectMeta.Annotations = map[string]string{
-				"podConfigMap":"patched",
-			}
-			return in
-		})
-		//revert to ready state so that it doesnt create a patched-ready loop
-		_, _, err = core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
-			in.ObjectMeta.Annotations = map[string]string{
-				"podConfigMap":"ready",
-			}
-			return in
-		})
+		err = c.AnnotateService(pgbouncer, "patched")
+
+	} else {
+		err = c.AnnotateService(pgbouncer, "ready")
 	}
 	return vt, err
 }
@@ -195,7 +173,7 @@ func (c *Controller) waitUntilPatchedConfigMapReady(pgbouncer *api.PgBouncer, ne
 		return nil
 	}
 	return wait.PollImmediate(PbRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
-		if pgbouncerConfig, _, err := c.echoPgBouncerConfig(pgbouncer); err == nil {
+		if pgbouncerConfig, err := c.echoPgBouncerConfig(pgbouncer); err == nil {
 			println(">>>Comparing existing map with new map")
 			if newCfgMap.Data["pgbouncer.ini"] == pgbouncerConfig {
 				return true, nil
@@ -222,10 +200,10 @@ func (c *Controller) reloadPgBouncer(bouncer *api.PgBouncer) error {
 	return nil
 }
 
-func (c *Controller) echoPgBouncerConfig(bouncer *api.PgBouncer) (string, string, error) {
+func (c *Controller) echoPgBouncerConfig(bouncer *api.PgBouncer) (string, error) {
 	pod, err := c.getPgBouncerPod(bouncer)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	options := []func(options *exec.Options){
 		exec.Command(c.getPgBouncerConfigCmd()...),
@@ -233,17 +211,9 @@ func (c *Controller) echoPgBouncerConfig(bouncer *api.PgBouncer) (string, string
 
 	pgbouncerconfig, err := exec.ExecIntoPod(c.ClientConfig, &pod, options...)
 	if err != nil {
-		return "", "", errors.Wrapf(err, "Failed to execute get config command")
+		return "", errors.Wrapf(err, "Failed to execute get config command")
 	}
-	options = []func(options *exec.Options){
-		exec.Command(c.getUserListCmd()...),
-	}
-
-	userlist, err := exec.ExecIntoPod(c.ClientConfig, &pod, options...)
-	if err != nil {
-		return "", "", errors.Wrapf(err, "Failed to execute RELOAD command")
-	}
-	return pgbouncerconfig, userlist, nil
+	return pgbouncerconfig, nil
 }
 
 func (c *Controller) getPgBouncerPod(bouncer *api.PgBouncer) (core.Pod, error) {
@@ -262,19 +232,24 @@ func (c *Controller) getPgBouncerPod(bouncer *api.PgBouncer) (core.Pod, error) {
 }
 
 func (c *Controller) reloadCmd(localPort int32) []string {
-	return []string{"env", "PGPASSWORD=kubedb123", "psql", "--host=127.0.0.1", fmt.Sprintf("--port=%d", localPort), "--username=pgbouncer", "pgbouncer", "--command=RELOAD"}
+
+	return []string{"env", fmt.Sprintf("PGPASSWORD=%s",pbAdminCredential), "psql", "--host=127.0.0.1", fmt.Sprintf("--port=%d", localPort), fmt.Sprintf("--username=%s",pbAdminCredential), "pgbouncer", "--command=RELOAD"}
 }
 
 func (c *Controller) getPgBouncerConfigCmd() []string {
 	return []string{"cat", "/etc/config/pgbouncer.ini"}
 }
-func (c *Controller) getUserListCmd() []string {
-	return []string{"cat", "/etc/config/userlist.txt"}
+func (c *Controller) getUserListCmd(bouncer *api.PgBouncer) ([]string, error) {
+	//TODO: extract pgbouncer secrets's filename for userlist
+	secretFileName, err := c.getSecretKey(bouncer)
+	if err != nil {
+		return nil,err
+	}
+	return []string{"cat", fmt.Sprintf("/var/run/pgbouncer/secrets/%s",secretFileName)}, nil
 }
 
 func (c *Controller) getUserListFileName(bouncer *api.PgBouncer) (filename string) {
 	if bouncer.Spec.UserList.SecretName == "" {
-		log.Infoln(":::::No secret found")
 		return ""
 	}
 	var ns string

@@ -3,12 +3,13 @@ package controller
 import (
 	"errors"
 	"fmt"
-	kutil "kmodules.xyz/client-go"
 	"strings"
 
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kutil "kmodules.xyz/client-go"
 	core_util "kmodules.xyz/client-go/core/v1"
 	"kmodules.xyz/client-go/tools/queue"
 	"kubedb.dev/apimachinery/apis"
@@ -17,10 +18,11 @@ import (
 )
 
 const (
-	systemNamespace = "kube-system"
-	publicNamespace = "kube-public"
-	namespaceKey = "namespace"
-	nameKey = "name"
+	systemNamespace   = "kube-system"
+	publicNamespace   = "kube-public"
+	namespaceKey      = "namespace"
+	nameKey           = "name"
+	pbAdminCredential = api.DatabaseNamePrefix
 )
 
 func (c *Controller) initWatcher() {
@@ -125,41 +127,32 @@ func (c *Controller) ensureUserListInSecret(secretInfo map[string]string, pgboun
 	pbSecretName := pgbouncer.Spec.UserList.SecretName
 	pbSecretNamespace := pgbouncer.Spec.UserList.SecretNamespace
 
-		if pbSecretNamespace == secretInfo[namespaceKey] && pbSecretName == secretInfo[nameKey] {
-			log.Infof("secret %s update found for PgBouncer: %s", secretInfo[nameKey], pgbouncer.Name)
-			secret, err := c.Client.CoreV1().Secrets(secretInfo[namespaceKey]).Get(secretInfo[nameKey],v1.GetOptions{})
-			if err != nil {
-				return err
-			}
-			//log.Infof(singleSecret.SecretNamespace, " ", singleSecret.SecretName, " == ", secretInfo[namespaceKey], " ", secretInfo[nameKey])
-			//vt, err := c.ensureSecretIsUpdated(pgbouncer)
-			//if err != nil {
-			//	return err
-			//}
-			//if vt != kutil.VerbUnchanged {
-			//	log.Infof("%s configMap for PgBouncer = m%s and PgBouncer Secret = %s' ", vt, pgbouncer.Name, secretInfo[nameKey])
-			//}
-			//TODO: ensure that changes to secrets result in secret being updated in pod (No need to RELOAD)
-			//TODO: ensure that we have kubedb as a user in the userlist
-			c.ensureUserlistHasDefaultAdmin(pgbouncer, secret)
-
+	if pbSecretNamespace == secretInfo[namespaceKey] && pbSecretName == secretInfo[nameKey] {
+		log.Infof("secret %s update found for PgBouncer: %s", secretInfo[nameKey], pgbouncer.Name)
+		secret, err := c.Client.CoreV1().Secrets(secretInfo[namespaceKey]).Get(secretInfo[nameKey], v1.GetOptions{})
+		if err != nil {
+			return err
 		}
+		//TODO: ensure that changes to secrets result in secret being updated in pod (No need to RELOAD)
+		//TODO: ensure that we have kubedb as a user in the userlist
+		c.ensureUserlistHasDefaultAdmin(pgbouncer, secret)
+	}
 
 	return nil
 }
 
-func (c *Controller) ensureUserlistHasDefaultAdmin(pgbouncer *api.PgBouncer, secret *core.Secret){
-	 for key, value := range secret.Data{
-	 	if key != "" && value != nil{
-			kubedbUserString := fmt.Sprintf(`"kubedb" "kubedb"`)
-	 		if !strings.Contains(string(value), kubedbUserString){
-				tmpData := string(value)+ fmt.Sprintf(`
-%s`,kubedbUserString)
+func (c *Controller) ensureUserlistHasDefaultAdmin(pgbouncer *api.PgBouncer, secret *core.Secret) {
+	for key, value := range secret.Data {
+		if key != "" && value != nil {
+			kubedbUserString := fmt.Sprintf(`"%s" "%s"`, pbAdminCredential, pbAdminCredential)
+			if !strings.Contains(string(value), kubedbUserString) {
+				tmpData := string(value) + fmt.Sprintf(`
+%s`, kubedbUserString)
 				secret.Data[key] = []byte(tmpData)
-				_, vt, err := core_util.CreateOrPatchSecret(c.Client,secret.ObjectMeta, func(in *core.Secret) *core.Secret {
+				_, vt, err := core_util.CreateOrPatchSecret(c.Client, secret.ObjectMeta, func(in *core.Secret) *core.Secret {
 					in = secret
 					return in
-				},false)
+				}, false)
 				if err != nil {
 					log.Infoln("error patching secret with modified file, err = ", err)
 				}
@@ -171,5 +164,46 @@ func (c *Controller) ensureUserlistHasDefaultAdmin(pgbouncer *api.PgBouncer, sec
 			}
 			break
 		}
-	 }
+	}
+}
+
+func (c *Controller) getSecretKeyValuePair(pgbouncer *api.PgBouncer) (key, value string, err error) {
+	pbSecretName := pgbouncer.Spec.UserList.SecretName
+	pbSecretNamespace := pgbouncer.Spec.UserList.SecretNamespace
+	if pbSecretName == "" && pbSecretNamespace == "" {
+		return "", "", errors.New("no secret has been defined yet")
+	}
+	sec, err := c.Client.CoreV1().Secrets(pbSecretNamespace).Get(pbSecretName, metav1.GetOptions{})
+	if err != nil {
+			//secret has not been created yet, which is fine. We have watcher to take action when its created
+			return "", "", err
+	}
+	for k, v := range sec.Data {
+		if k != "" && v != nil {
+			key = k
+			value = string(v)
+			break
+		}
+	}
+	return key,value, nil
+}
+
+func (c *Controller) getSecretKey(pgbouncer *api.PgBouncer) (key string, err error) {
+	pbSecretName := pgbouncer.Spec.UserList.SecretName
+	pbSecretNamespace := pgbouncer.Spec.UserList.SecretNamespace
+	if pbSecretName == "" && pbSecretNamespace == "" {
+		return "", errors.New("no secret has been defined yet")
+	}
+	sec, err := c.Client.CoreV1().Secrets(pbSecretNamespace).Get(pbSecretName, metav1.GetOptions{})
+	if err != nil {
+		//secret has not been created yet, which is fine. We have watcher to take action when its created
+		return "", err
+	}
+	for k, v := range sec.Data {
+		if k != "" && v != nil {
+			key = k
+			break
+		}
+	}
+	return key, nil
 }

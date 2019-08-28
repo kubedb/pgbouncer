@@ -2,9 +2,11 @@ package controller
 
 import (
 	"fmt"
+
 	"github.com/appscode/go/encoding/json/types"
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	kutil "kmodules.xyz/client-go"
@@ -15,7 +17,6 @@ import (
 	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 	"kubedb.dev/apimachinery/pkg/eventer"
 	validator "kubedb.dev/pgbouncer/pkg/admission"
-	kerr "k8s.io/apimachinery/pkg/api/errors"
 )
 
 func (c *Controller) create(pgbouncer *api.PgBouncer) error {
@@ -23,7 +24,7 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 		return err
 	}
 
-	println(">>>CREATE PGBOUNCER ", pgbouncer.Name)
+	println("===CREATE/UPDATE PGBOUNCER===", pgbouncer.Name)
 	if err := c.manageInitialPhase(pgbouncer); err != nil {
 		return err
 	}
@@ -32,16 +33,20 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 	if err := c.CreateGoverningService(governingService, pgbouncer.Namespace); err != nil {
 		return fmt.Errorf(`failed to create Service: "%v/%v". Reason: %v`, pgbouncer.Namespace, governingService, err)
 	}
+
+	if err := c.managePatchedUserList(pgbouncer); err != nil {
+		return err
+	}
+	// create or patch Service
+	if err := c.manageService(pgbouncer); err != nil {
+		return err
+	}
 	// create or patch ConfigMap
 	if err := c.manageConfigMap(pgbouncer); err != nil {
 		return err
 	}
 	// create or patch Statefulset
 	if err := c.manageStatefulSet(pgbouncer); err != nil {
-		return err
-	}
-	// create or patch Service
-	if err := c.manageService(pgbouncer); err != nil {
 		return err
 	}
 	// create or patch Stat service
@@ -72,14 +77,9 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 		return err
 	}
 
-
 	//println("Setting annotations")
 	//c.UpsertDatabaseAnnotation(pgbouncer.GetObjectMeta(),)
-
-	if err := c.managePatchedUserList(pgbouncer); err != nil {
-		return err
-	}
-	println(">>>Mischief Managed for ", pgbouncer.Name)
+	println("===Mischief Managed for ", pgbouncer.Name,"===")
 	return nil
 }
 
@@ -189,7 +189,7 @@ func (c *Controller) removeOwnerReferenceFromOffshoots(pgbouncer *api.PgBouncer,
 //	return err
 //}
 
-func (c *Controller) manageValidation (pgbouncer *api.PgBouncer) error {
+func (c *Controller) manageValidation(pgbouncer *api.PgBouncer) error {
 	if err := validator.ValidatePgBouncer(c.Client, c.ExtClient, pgbouncer, true); err != nil {
 		c.recorder.Event(
 			pgbouncer,
@@ -250,7 +250,7 @@ func (c *Controller) manageFinalPhase(pgbouncer *api.PgBouncer) error {
 	return nil //if no err
 }
 
-func (c *Controller) manageConfigMap (pgbouncer *api.PgBouncer) error {
+func (c *Controller) manageConfigMap(pgbouncer *api.PgBouncer) error {
 	configMapVerb, err := c.ensureConfigMapFromCRD(pgbouncer)
 	if err != nil {
 		return err
@@ -271,13 +271,11 @@ func (c *Controller) manageConfigMap (pgbouncer *api.PgBouncer) error {
 			"Successfully patched PgBouncer configMap",
 		)
 	}
-
 	log.Infoln("ConfigMap ", configMapVerb)
-
 	return nil //if no err
 }
 
-func (c *Controller) manageStatefulSet (pgbouncer *api.PgBouncer) error {
+func (c *Controller) manageStatefulSet(pgbouncer *api.PgBouncer) error {
 	println("string(pgbouncer.Spec.Version) = ", string(pgbouncer.Spec.Version))
 	pgBouncerVersion, err := c.ExtClient.CatalogV1alpha1().PgBouncerVersions().Get(string(pgbouncer.Spec.Version), metav1.GetOptions{})
 	if err != nil {
@@ -304,11 +302,10 @@ func (c *Controller) manageStatefulSet (pgbouncer *api.PgBouncer) error {
 		)
 	}
 	log.Infoln("Statefulset ", statefulsetVerb)
-
 	return nil //if no err
 }
 
-func (c *Controller) manageService (pgbouncer *api.PgBouncer) error {
+func (c *Controller) manageService(pgbouncer *api.PgBouncer) error {
 	serviceVerb, err := c.ensureService(pgbouncer)
 	if err != nil {
 		return err
@@ -332,7 +329,7 @@ func (c *Controller) manageService (pgbouncer *api.PgBouncer) error {
 	return nil //if no err
 }
 
-func (c *Controller) manageStatService (pgbouncer *api.PgBouncer) error {
+func (c *Controller) manageStatService(pgbouncer *api.PgBouncer) error {
 	statServiceVerb, err := c.ensureStatsService(pgbouncer)
 	if err != nil {
 		return err
@@ -355,13 +352,13 @@ func (c *Controller) manageStatService (pgbouncer *api.PgBouncer) error {
 	log.Infoln("Stat Service ", statServiceVerb)
 	return nil //if no err
 }
-func (c *Controller) managePatchedUserList (pgbouncer *api.PgBouncer) error {
+func (c *Controller) managePatchedUserList(pgbouncer *api.PgBouncer) error {
 	pbSecretName := pgbouncer.Spec.UserList.SecretName
 	pbSecretNamespace := pgbouncer.Spec.UserList.SecretNamespace
 	if pbSecretName == "" && pbSecretNamespace == "" {
 		return nil
 	}
-	sec, err := c.Client.CoreV1().Secrets(pbSecretNamespace).Get(pbSecretName,metav1.GetOptions{})
+	sec, err := c.Client.CoreV1().Secrets(pbSecretNamespace).Get(pbSecretName, metav1.GetOptions{})
 	if err != nil {
 		if kerr.IsNotFound(err) {
 			//secret has not been created yet, which is fine. We have watcher to take action when its created
@@ -374,7 +371,7 @@ func (c *Controller) managePatchedUserList (pgbouncer *api.PgBouncer) error {
 	return nil //if no err
 }
 
-func (c *Controller) manageTemPlate (pgbouncer *api.PgBouncer) error {
+func (c *Controller) manageTemPlate(pgbouncer *api.PgBouncer) error {
 
 	return nil //if no err
 }
