@@ -50,11 +50,9 @@ func (i *Invocation) PgBouncer() *api.PgBouncer {
 				},
 			},
 
-			SecretList: []api.SecretList{
-				{
-					SecretName:      PostgresName + "-auth",
-					SecretNamespace: i.namespace,
-				},
+			UserList: api.UserList{
+				SecretName:      PgBouncerUserListSecret,
+				SecretNamespace: i.namespace,
 			},
 		},
 	}
