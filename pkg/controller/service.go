@@ -127,7 +127,6 @@ func upsertServicePort(in *core.Service, pgbouncer *api.PgBouncer) []core.Servic
 func (c *Controller) ensureStatsService(pgbouncer *api.PgBouncer) (kutil.VerbType, error) {
 	// return if monitoring is not prometheus
 	if pgbouncer.GetMonitoringVendor() != mona.VendorPrometheus {
-		println("....Err= xyz")
 		log.Infoln("pgbouncer.spec.monitor.agent is not coreos-operator or builtin.")
 		return kutil.VerbUnchanged, nil
 	}
@@ -181,4 +180,17 @@ func (c *Controller) ensureStatsService(pgbouncer *api.PgBouncer) (kutil.VerbTyp
 		)
 	}
 	return vt, nil
+}
+func (c *Controller) AnnotateService(pgbouncer *api.PgBouncer ,annotaion string) error {
+	service, err := c.Client.CoreV1().Services(pgbouncer.Namespace).Get(pgbouncer.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	_,_, err = core_util.CreateOrPatchService(c.Client,service.ObjectMeta, func(in *core.Service) *core.Service {
+		in.ObjectMeta.Annotations = map[string]string{
+			"podConfigMap":fmt.Sprintf("%s",annotaion),
+		}
+		return in
+	})
+	return err
 }
