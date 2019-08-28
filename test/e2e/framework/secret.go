@@ -10,12 +10,57 @@ import (
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	core_util "kmodules.xyz/client-go/core/v1"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/pgbouncer/pkg/controller"
 )
 
+const (
+	PgBouncerUserListSecret = "pb-userlist-secret"
+)
+
 func (f *Framework) CreateSecret(obj *core.Secret) error {
 	_, err := f.kubeClient.CoreV1().Secrets(obj.Namespace).Create(obj)
+	return err
+}
+
+func (f *Framework) CreateUserListSecret() error {
+	username, password, err := f.GetPostgresCredentials()
+	if err != nil {
+		return err
+	}
+	useListSecretSpec := &core.Secret{
+		StringData: map[string]string{
+			"userlist.txt": fmt.Sprintf(`"%s" "%s"
+"%s" "%s"`, username, password, testUser, testPass),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      PgBouncerUserListSecret,
+			Namespace: f.namespace,
+		},
+		//TypeMeta: metav1.TypeMeta{},
+	}
+	_, err = f.kubeClient.CoreV1().Secrets(f.namespace).Create(useListSecretSpec)
+	return err
+}
+
+func (f *Framework) AddUserToUserListSecret(username, password string) error {
+	sec, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(PgBouncerUserListSecret, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	secStData := sec.StringData
+	for key, data := range secStData {
+		println("Key = ", key)
+		println("Data = ", string(data))
+		newData := string(data) + fmt.Sprintf(`
+"%s" "%s"`, username, password)
+		sec.StringData[key] = newData
+	}
+	_, _, err = core_util.CreateOrPatchSecret(f.kubeClient, sec.ObjectMeta, func(in *core.Secret) *core.Secret {
+		in = sec
+		return in
+	}, false)
 	return err
 }
 

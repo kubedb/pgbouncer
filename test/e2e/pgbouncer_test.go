@@ -67,6 +67,9 @@ var _ = Describe("PgBouncer", func() {
 	})
 
 	var createAndRunPgBouncer = func() {
+		By("Addind postgres to userlist from: " + postgres.Name)
+		err := f.CreateUserListSecret()
+		Expect(err).NotTo(HaveOccurred())
 		By("Creating PgBouncer: " + pgbouncer.Name)
 		err = f.CreatePgBouncer(pgbouncer)
 		Expect(err).NotTo(HaveOccurred())
