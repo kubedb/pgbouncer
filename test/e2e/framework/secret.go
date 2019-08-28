@@ -117,6 +117,16 @@ func (f *Framework) CheckSecret() error {
 	return err
 }
 
+func (f *Framework) CheckUserListSecret() error {
+	_, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(PgBouncerUserListSecret, metav1.GetOptions{})
+	return err
+}
+
+func (f *Framework) DeleteUserListSecret() error {
+	err := f.kubeClient.CoreV1().Secrets(f.namespace).Delete(PgBouncerUserListSecret, &metav1.DeleteOptions{})
+	return err
+}
+
 func (f *Framework) GetPostgresCredentials() (string, string, error) {
 	scrt, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(PostgresName+"-auth", metav1.GetOptions{})
 	if err != nil {
