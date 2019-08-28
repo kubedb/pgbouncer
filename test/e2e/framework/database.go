@@ -292,6 +292,7 @@ func (f *Framework) CreateDatabaseViaPgBouncer(username, password, dbName string
 	return nil
 }
 func (f *Framework) CreateUserViaPgBouncer(username, password, dbName string, port int) error {
+	sqlCommand := fmt.Sprintf("create user %s with encrypted password '%s';",testUser,testPass)
 	outText, err := f.ApplyCMD(username, password, sqlCommand, api.ResourceSingularPostgres, port)
 	if err != nil {
 		return err

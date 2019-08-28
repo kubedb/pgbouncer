@@ -95,6 +95,16 @@ var _ = Describe("PgBouncer", func() {
 		if pgbouncer == nil {
 			Skip("Skipping")
 		}
+		By("Check if userlist secret exists.")
+		err  = f.CheckUserListSecret()
+		if err != nil {
+			if !kerr.IsNotFound(err){
+				Expect(err).NotTo(HaveOccurred())
+			}
+		}else {
+			By("Delete  userlist secret")
+			err  = f.DeleteUserListSecret()
+		}
 
 		By("Check if PgBouncer " + pgbouncer.Name + " exists.")
 		_, err := f.GetPgBouncer(pgbouncer.ObjectMeta)
