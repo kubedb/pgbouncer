@@ -24,11 +24,11 @@ import (
 )
 
 const (
-	PostgresPassword   = "POSTGRES_PASSWORD"
-	PostgresUser       = "POSTGRES_USER"
-	PbRetryInterval    = time.Second * 5
-	DefaultHostPort    = 5432
-	ignoredParmeter = "extra_float_digits"
+	PostgresPassword = "POSTGRES_PASSWORD"
+	PostgresUser     = "POSTGRES_USER"
+	PbRetryInterval  = time.Second * 5
+	DefaultHostPort  = 5432
+	ignoredParmeter  = "extra_float_digits"
 )
 
 func (c *Controller) deleteLeaderLockConfigMap(meta metav1.ObjectMeta) error {
@@ -55,9 +55,9 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 logfile = /tmp/pgbouncer.log
 pidfile = /tmp/pgbouncer.pid
 `
-		authFileLocation := filepath.Join(userListMountPath,c.getUserListFileName(pgbouncer))
+		authFileLocation := filepath.Join(userListMountPath, c.getUserListFileName(pgbouncer))
 		pbinfo = pbinfo + fmt.Sprintf(`auth_file = %s
-`,authFileLocation)
+`, authFileLocation)
 
 		var admins string
 
@@ -93,14 +93,14 @@ pidfile = /tmp/pgbouncer.pid
 				}
 				println(":::URL = ", urlString)
 
-				parsedURL,err := pq.ParseURL(urlString)
-				println(":::Parsed URL= ",parsedURL)
+				parsedURL, err := pq.ParseURL(urlString)
+				println(":::Parsed URL= ", parsedURL)
 
 				rawurl, err := url.Parse(urlString)
 				if err != nil {
 					println("URL parse error = ", err)
 				}
-				println(":::Raw URL host = ",rawurl.Host, "..rawurl.Scheme = ", rawurl.Scheme)
+				println(":::Raw URL host = ", rawurl.Host, "..rawurl.Scheme = ", rawurl.Scheme)
 
 				//dbinfo
 				dbinfo = dbinfo + fmt.Sprintf(`%s = host=%s port=%d dbname=%s
@@ -109,7 +109,7 @@ pidfile = /tmp/pgbouncer.pid
 			}
 		}
 
-		if pgbouncer.Spec.UserList.SecretName == ""{
+		if pgbouncer.Spec.UserList.SecretName == "" {
 			log.Infoln("PgBouncer userlist was not provided")
 		}
 
@@ -240,7 +240,7 @@ func (c *Controller) getPgBouncerPod(bouncer *api.PgBouncer) (core.Pod, error) {
 
 func (c *Controller) reloadCmd(localPort int32) []string {
 
-	return []string{"env", fmt.Sprintf("PGPASSWORD=%s",pbAdminPassword), "psql", "--host=127.0.0.1", fmt.Sprintf("--port=%d", localPort), fmt.Sprintf("--username=%s",pbAdminUser), "pgbouncer", "--command=RELOAD"}
+	return []string{"env", fmt.Sprintf("PGPASSWORD=%s", pbAdminPassword), "psql", "--host=127.0.0.1", fmt.Sprintf("--port=%d", localPort), fmt.Sprintf("--username=%s", pbAdminUser), "pgbouncer", "--command=RELOAD"}
 }
 
 func (c *Controller) getPgBouncerConfigCmd() []string {
@@ -250,9 +250,9 @@ func (c *Controller) getUserListCmd(bouncer *api.PgBouncer) ([]string, error) {
 	//TODO: extract pgbouncer secrets's filename for userlist
 	secretFileName, err := c.getSecretKey(bouncer)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	return []string{"cat", fmt.Sprintf("/var/run/pgbouncer/secrets/%s",secretFileName)}, nil
+	return []string{"cat", fmt.Sprintf("/var/run/pgbouncer/secrets/%s", secretFileName)}, nil
 }
 
 func (c *Controller) getUserListFileName(bouncer *api.PgBouncer) (filename string) {
@@ -260,24 +260,23 @@ func (c *Controller) getUserListFileName(bouncer *api.PgBouncer) (filename strin
 		return ""
 	}
 	var ns string
-	if bouncer.Spec.UserList.SecretNamespace != ""{
+	if bouncer.Spec.UserList.SecretNamespace != "" {
 		ns = bouncer.Spec.UserList.SecretNamespace
 	} else {
 		ns = bouncer.Namespace
 
 	}
-	sec, err := c.Client.CoreV1().Secrets(ns).Get(bouncer.Spec.UserList.SecretName,metav1.GetOptions{})
+	sec, err := c.Client.CoreV1().Secrets(ns).Get(bouncer.Spec.UserList.SecretName, metav1.GetOptions{})
 	if err != nil {
 		log.Infoln(err)
 		return ""
 	}
 	secStData := sec.Data
-	for key,_ := range secStData{
-		if key != ""{
+	for key, _ := range secStData {
+		if key != "" {
 			filename = key
 			break
 		}
 	}
 	return filename
 }
-

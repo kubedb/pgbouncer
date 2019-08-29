@@ -18,11 +18,11 @@ import (
 )
 
 const (
-	systemNamespace   = "kube-system"
-	publicNamespace   = "kube-public"
-	namespaceKey      = "namespace"
-	nameKey           = "name"
-	pbAdminUser = "pgbouncer"
+	systemNamespace = "kube-system"
+	publicNamespace = "kube-public"
+	namespaceKey    = "namespace"
+	nameKey         = "name"
+	pbAdminUser     = "pgbouncer"
 	pbAdminPassword = "kubedb"
 )
 
@@ -176,8 +176,8 @@ func (c *Controller) getSecretKeyValuePair(pgbouncer *api.PgBouncer) (key, value
 	}
 	sec, err := c.Client.CoreV1().Secrets(pbSecretNamespace).Get(pbSecretName, metav1.GetOptions{})
 	if err != nil {
-			//secret has not been created yet, which is fine. We have watcher to take action when its created
-			return "", "", err
+		//secret has not been created yet, which is fine. We have watcher to take action when its created
+		return "", "", err
 	}
 	for k, v := range sec.Data {
 		if k != "" && v != nil {
@@ -186,7 +186,7 @@ func (c *Controller) getSecretKeyValuePair(pgbouncer *api.PgBouncer) (key, value
 			break
 		}
 	}
-	return key,value, nil
+	return key, value, nil
 }
 
 func (c *Controller) getSecretKey(pgbouncer *api.PgBouncer) (key string, err error) {

@@ -141,12 +141,11 @@ func (c *Controller) ensureStatsService(pgbouncer *api.PgBouncer) (kutil.VerbTyp
 		return kutil.VerbUnchanged, rerr
 	}
 	var statsPort int32
-	if pgbouncer.Spec.Monitor.Prometheus != nil && pgbouncer.Spec.Monitor.Prometheus.Port != 0{
+	if pgbouncer.Spec.Monitor.Prometheus != nil && pgbouncer.Spec.Monitor.Prometheus.Port != 0 {
 		statsPort = pgbouncer.Spec.Monitor.Prometheus.Port
 	} else {
 		statsPort = int32(9090)
 	}
-
 
 	// reconcile stats service
 	meta := metav1.ObjectMeta{
@@ -159,10 +158,10 @@ func (c *Controller) ensureStatsService(pgbouncer *api.PgBouncer) (kutil.VerbTyp
 		in.Spec.Selector = pgbouncer.OffshootSelectors()
 		in.Spec.Ports = core_util.MergeServicePorts(in.Spec.Ports, []core.ServicePort{
 			{
-				Name:       api.PrometheusExporterPortName,
-				Protocol:   core.ProtocolTCP,
+				Name:     api.PrometheusExporterPortName,
+				Protocol: core.ProtocolTCP,
 				//Port:       pgbouncer.Spec.Monitor.Prometheus.Port,
-				Port:statsPort,
+				Port:       statsPort,
 				TargetPort: intstr.FromString(api.PrometheusExporterPortName),
 			},
 		})
@@ -181,14 +180,14 @@ func (c *Controller) ensureStatsService(pgbouncer *api.PgBouncer) (kutil.VerbTyp
 	}
 	return vt, nil
 }
-func (c *Controller) AnnotateService(pgbouncer *api.PgBouncer ,annotaion string) error {
+func (c *Controller) AnnotateService(pgbouncer *api.PgBouncer, annotaion string) error {
 	service, err := c.Client.CoreV1().Services(pgbouncer.Namespace).Get(pgbouncer.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-	_,_, err = core_util.CreateOrPatchService(c.Client,service.ObjectMeta, func(in *core.Service) *core.Service {
+	_, _, err = core_util.CreateOrPatchService(c.Client, service.ObjectMeta, func(in *core.Service) *core.Service {
 		in.ObjectMeta.Annotations = map[string]string{
-			"podConfigMap":fmt.Sprintf("%s",annotaion),
+			"podConfigMap": fmt.Sprintf("%s", annotaion),
 		}
 		return in
 	})

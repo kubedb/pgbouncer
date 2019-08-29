@@ -79,7 +79,7 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 
 	//println("Setting annotations")
 	//c.UpsertDatabaseAnnotation(pgbouncer.GetObjectMeta(),)
-	println("===Mischief Managed for ", pgbouncer.Name,"===")
+	println("===Mischief Managed for ", pgbouncer.Name, "===")
 	return nil
 }
 
@@ -391,7 +391,7 @@ func (c *Controller) getVolumeAndVoulumeMountForUserList(pgbouncer *api.PgBounce
 		ReadOnly:  true,
 	}
 
-	return secretVolume, secretVolumeMount,nil //if no err
+	return secretVolume, secretVolumeMount, nil //if no err
 }
 func (c *Controller) manageTemPlate(pgbouncer *api.PgBouncer) error {
 

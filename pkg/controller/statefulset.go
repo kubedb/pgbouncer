@@ -72,7 +72,7 @@ func (c *Controller) ensureStatefulSet(
 		in.Spec.Template.Labels = pgbouncer.OffshootSelectors()
 
 		var volumes []core.Volume
-		configMapVolume:= core.Volume{
+		configMapVolume := core.Volume{
 			Name: pgbouncer.OffshootName(),
 			VolumeSource: core.VolumeSource{
 				ConfigMap: &core.ConfigMapVolumeSource{
@@ -82,23 +82,23 @@ func (c *Controller) ensureStatefulSet(
 				},
 			},
 		}
-		volumes = append(volumes,configMapVolume)
+		volumes = append(volumes, configMapVolume)
 
 		var volumeMounts []core.VolumeMount
 		configMapVolumeMount := core.VolumeMount{
 			Name:      pgbouncer.OffshootName(),
 			MountPath: configMountPath,
-			}
-		volumeMounts = append(volumeMounts,configMapVolumeMount)
+		}
+		volumeMounts = append(volumeMounts, configMapVolumeMount)
 
 		if pgbouncer.Spec.UserList.SecretName != "" { //Add secret (user list file) as volume
-			secretVolume , secretVolumeMount , err := c.getVolumeAndVoulumeMountForUserList(pgbouncer)
+			secretVolume, secretVolumeMount, err := c.getVolumeAndVoulumeMountForUserList(pgbouncer)
 			if err == nil {
-				volumes = append(volumes,*secretVolume)
+				volumes = append(volumes, *secretVolume)
 				//Add to volumeMounts to mount the volume
-				volumeMounts = append(volumeMounts,*secretVolumeMount)
-			} else if kerr.IsNotFound(err){
-				log.Infoln("UserList secret "+pgbouncer.Spec.UserList.SecretNamespace+"/"+pgbouncer.Spec.UserList.SecretName+" is not available")
+				volumeMounts = append(volumeMounts, *secretVolumeMount)
+			} else if kerr.IsNotFound(err) {
+				log.Infoln("UserList secret " + pgbouncer.Spec.UserList.SecretNamespace + "/" + pgbouncer.Spec.UserList.SecretName + " is not available")
 			}
 			//We are not concerned about other errors
 		}
@@ -130,7 +130,7 @@ func (c *Controller) ensureStatefulSet(
 
 		in = upsertPort(in, pgbouncer)
 
-		in = c.upsertMonitoringContainer(in,pgbouncer, pgbouncerVersion)
+		in = c.upsertMonitoringContainer(in, pgbouncer, pgbouncerVersion)
 
 		return in
 	})
@@ -268,10 +268,9 @@ func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pg
 				Value: fmt.Sprintf("postgres://pgbouncer:@localhost:%d?sslmode=disable", *pgbouncer.Spec.ConnectionPool.ListenPort),
 			},
 			{
-				Name: "PGPASSWORD",
-				Value:"kubedb",
+				Name:  "PGPASSWORD",
+				Value: "kubedb",
 			},
-
 		}
 
 		container.Env = core_util.UpsertEnvVars(container.Env, envList...)

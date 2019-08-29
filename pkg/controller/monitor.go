@@ -31,7 +31,7 @@ func (c *Controller) newMonitorController(pgbouncer *api.PgBouncer) (mona.Agent,
 func (c *Controller) addOrUpdateMonitor(pgbouncer *api.PgBouncer) (kutil.VerbType, error) {
 	agent, err := c.newMonitorController(pgbouncer)
 	if err != nil {
-		log.Infoln("=== newMonitorController err = ",err)
+		log.Infoln("=== newMonitorController err = ", err)
 		return kutil.VerbUnchanged, err
 	}
 	log.Infoln("=== Agent create or update monitor")
@@ -82,8 +82,8 @@ func (c *Controller) manageMonitor(pgbouncer *api.PgBouncer) error {
 			if _, err := oldAgent.Delete(pgbouncer.StatsService()); err != nil {
 				log.Errorf("error in deleting Prometheus agent. Reason: %s", err)
 			}
-			log.Infoln("=== pgbouncer.Spec.Monitor.Agent",pgbouncer.Spec.Monitor.Agent)
-			log.Infoln("=== pgbouncer.Spec.Monitor.Agent.Vendor()",pgbouncer.Spec.Monitor.Agent.Vendor())
+			log.Infoln("=== pgbouncer.Spec.Monitor.Agent", pgbouncer.Spec.Monitor.Agent)
+			log.Infoln("=== pgbouncer.Spec.Monitor.Agent.Vendor()", pgbouncer.Spec.Monitor.Agent.Vendor())
 		}
 		log.Infoln("=== Add or update Monitor")
 		if _, err := c.addOrUpdateMonitor(pgbouncer); err != nil {
