@@ -2,6 +2,8 @@ package controller
 
 import (
 	"fmt"
+	"github.com/lib/pq"
+	"net/url"
 	"path/filepath"
 	"time"
 
@@ -53,15 +55,11 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 logfile = /tmp/pgbouncer.log
 pidfile = /tmp/pgbouncer.pid
 `
-		authFileLocation := filepath.Join(UserListMountPath,c.getUserListFileName(pgbouncer))
+		authFileLocation := filepath.Join(userListMountPath,c.getUserListFileName(pgbouncer))
 		pbinfo = pbinfo + fmt.Sprintf(`auth_file = %s
 `,authFileLocation)
 
 		var admins string
-
-		in.ObjectMeta.Annotations = map[string]string{
-				"podConfigMap":"ready",
-		}
 
 		in.Labels = pgbouncer.OffshootLabels()
 		core_util.EnsureOwnerReference(&in.ObjectMeta, ref)
@@ -88,17 +86,26 @@ pidfile = /tmp/pgbouncer.pid
 				}
 
 				hostname := name + "." + namespace + ".svc.cluster.local"
-				url, err := appBinding.URL()
+
+				urlString, err := appBinding.URL()
 				if err != nil {
 					log.Errorln(err)
 				}
-				print(":::URL = ", url)
-				//parsedURL,err := pq.ParseURL(url)
+				println(":::URL = ", urlString)
+
+				parsedURL,err := pq.ParseURL(urlString)
+				println(":::Parsed URL= ",parsedURL)
+
+				rawurl, err := url.Parse(urlString)
+				if err != nil {
+					println("URL parse error = ", err)
+				}
+				println(":::Raw URL host = ",rawurl.Host, "..rawurl.Scheme = ", rawurl.Scheme)
 
 				//dbinfo
 				dbinfo = dbinfo + fmt.Sprintf(`%s = host=%s port=%d dbname=%s
 `, db.Alias, hostname, hostPort, db.DbName)
-				print(":::current URL format = ", dbinfo)
+				print(":::current URL format = ", hostname)
 			}
 		}
 
@@ -107,7 +114,7 @@ pidfile = /tmp/pgbouncer.pid
 		}
 
 		if pgbouncer.Spec.ConnectionPool != nil {
-			admins = fmt.Sprintf(`%s`, pbAdminCredential)
+			admins = fmt.Sprintf(`%s`, pbAdminUser)
 			pbinfo = pbinfo + fmt.Sprintf(`listen_port = %d
 `, *pgbouncer.Spec.ConnectionPool.ListenPort)
 			pbinfo = pbinfo + fmt.Sprintf(`listen_addr = %s
@@ -233,7 +240,7 @@ func (c *Controller) getPgBouncerPod(bouncer *api.PgBouncer) (core.Pod, error) {
 
 func (c *Controller) reloadCmd(localPort int32) []string {
 
-	return []string{"env", fmt.Sprintf("PGPASSWORD=%s",pbAdminCredential), "psql", "--host=127.0.0.1", fmt.Sprintf("--port=%d", localPort), fmt.Sprintf("--username=%s",pbAdminCredential), "pgbouncer", "--command=RELOAD"}
+	return []string{"env", fmt.Sprintf("PGPASSWORD=%s",pbAdminPassword), "psql", "--host=127.0.0.1", fmt.Sprintf("--port=%d", localPort), fmt.Sprintf("--username=%s",pbAdminUser), "pgbouncer", "--command=RELOAD"}
 }
 
 func (c *Controller) getPgBouncerConfigCmd() []string {
