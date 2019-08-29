@@ -371,6 +371,28 @@ func (c *Controller) managePatchedUserList(pgbouncer *api.PgBouncer) error {
 	return nil //if no err
 }
 
+func (c *Controller) getVolumeAndVoulumeMountForUserList(pgbouncer *api.PgBouncer) (*core.Volume, *core.VolumeMount, error) {
+	_, err := c.Client.CoreV1().Secrets(pgbouncer.Spec.UserList.SecretNamespace).Get(pgbouncer.Spec.UserList.SecretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, nil, err
+	}
+	secretVolume := &core.Volume{
+		Name: "userlist",
+		VolumeSource: core.VolumeSource{
+			Secret: &core.SecretVolumeSource{
+				SecretName: pgbouncer.Spec.UserList.SecretName,
+			},
+		},
+	}
+	//Add to volumeMounts to mount the vpilume
+	secretVolumeMount := &core.VolumeMount{
+		Name:      "userlist",
+		MountPath: userListMountPath,
+		ReadOnly:  true,
+	}
+
+	return secretVolume, secretVolumeMount,nil //if no err
+}
 func (c *Controller) manageTemPlate(pgbouncer *api.PgBouncer) error {
 
 	return nil //if no err

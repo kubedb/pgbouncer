@@ -22,7 +22,8 @@ const (
 	publicNamespace   = "kube-public"
 	namespaceKey      = "namespace"
 	nameKey           = "name"
-	pbAdminCredential = api.DatabaseNamePrefix
+	pbAdminUser = "pgbouncer"
+	pbAdminPassword = "kubedb"
 )
 
 func (c *Controller) initWatcher() {
@@ -144,7 +145,7 @@ func (c *Controller) ensureUserListInSecret(secretInfo map[string]string, pgboun
 func (c *Controller) ensureUserlistHasDefaultAdmin(pgbouncer *api.PgBouncer, secret *core.Secret) {
 	for key, value := range secret.Data {
 		if key != "" && value != nil {
-			kubedbUserString := fmt.Sprintf(`"%s" "%s"`, pbAdminCredential, pbAdminCredential)
+			kubedbUserString := fmt.Sprintf(`"%s" "%s"`, pbAdminUser, pbAdminPassword)
 			if !strings.Contains(string(value), kubedbUserString) {
 				tmpData := string(value) + fmt.Sprintf(`
 %s`, kubedbUserString)

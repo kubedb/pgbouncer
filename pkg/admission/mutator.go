@@ -1,6 +1,7 @@
 package admission
 
 import (
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sync"
 
 	"github.com/appscode/go/log"
@@ -82,6 +83,10 @@ func (a *PgBouncerMutator) Admit(req *admission.AdmissionRequest) *admission.Adm
 	if err != nil {
 		return hookapi.StatusBadRequest(err)
 	}
+	if err := a.CheckSecretAvailable(obj.(*api.PgBouncer).DeepCopy());err != nil {
+		return hookapi.StatusForbidden(err)
+	}
+
 	dbMod, err := setDefaultValues(a.client, a.extClient, obj.(*api.PgBouncer).DeepCopy())
 	if err != nil {
 		return hookapi.StatusForbidden(err)
@@ -131,8 +136,9 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbou
 	if pgbouncer.Spec.UserList.SecretNamespace == "" {
 		pgbouncer.Spec.UserList.SecretNamespace = pgbouncer.Namespace
 	}
-	//TODO: add all the secrets associated with each database in the database list to the list of secrets
+	//TODO: refuse pgbouncer without secret
 	pgbouncer.SetDefaults()
+
 
 	// If monitoring spec is given without port,
 	// set default Listening port
@@ -153,4 +159,9 @@ func setMonitoringPort(pgbouncer *api.PgBouncer) {
 			pgbouncer.Spec.Monitor.Prometheus.Port = api.PrometheusExporterPortNumber
 		}
 	}
+}
+
+func (a *PgBouncerMutator) CheckSecretAvailable(bouncer *api.PgBouncer) error {
+	_, err := a.client.CoreV1().Secrets(bouncer.Spec.UserList.SecretNamespace).Get(bouncer.Spec.UserList.SecretName, v1.GetOptions{})
+	return err
 }

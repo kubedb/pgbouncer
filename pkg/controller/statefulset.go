@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"github.com/appscode/go/log"
 	"github.com/appscode/go/types"
 	"github.com/aws/aws-sdk-go/aws"
 	apps "k8s.io/api/apps/v1"
@@ -22,7 +23,7 @@ import (
 const (
 	securityContextCode = int64(65535)
 	configMountPath     = "/etc/config"
-	UserListMountPath     = "/var/run/pgbouncer/secrets"
+	userListMountPath   = "/var/run/pgbouncer/secrets"
 )
 
 func (c *Controller) ensureStatefulSet(
@@ -91,25 +92,15 @@ func (c *Controller) ensureStatefulSet(
 		volumeMounts = append(volumeMounts,configMapVolumeMount)
 
 		if pgbouncer.Spec.UserList.SecretName != "" { //Add secret (user list file) as volume
-			secretVolume := core.Volume{
-				Name: "userlist",
-				VolumeSource: core.VolumeSource{
-					Secret: &core.SecretVolumeSource{
-						SecretName: pgbouncer.Spec.UserList.SecretName,
-					},
-				},
+			secretVolume , secretVolumeMount , err := c.getVolumeAndVoulumeMountForUserList(pgbouncer)
+			if err == nil {
+				volumes = append(volumes,*secretVolume)
+				//Add to volumeMounts to mount the volume
+				volumeMounts = append(volumeMounts,*secretVolumeMount)
+			} else if kerr.IsNotFound(err){
+				log.Infoln("UserList secret "+pgbouncer.Spec.UserList.SecretNamespace+"/"+pgbouncer.Spec.UserList.SecretName+" is not available")
 			}
-			volumes = append(volumes,secretVolume)
-
-			in.Spec.Template.Spec.Volumes = append(in.Spec.Template.Spec.Volumes, secretVolume)
-			//Add to volumeMounts to mount the vpilume
-			secretVolumeMount := core.VolumeMount{
-				Name:      "userlist",
-				MountPath: UserListMountPath,
-				ReadOnly:  true,
-			}
-			volumeMounts = append(volumeMounts,secretVolumeMount)
-
+			//We are not concerned about other errors
 		}
 		//in.Spec.Template.Spec.InitContainers = core_util.UpsertContainers(in.Spec.Template.Spec.InitContainers, pgbouncer.Spec.PodTemplate.Spec.InitContainers)
 		in.Spec.Template.Spec.Containers = core_util.UpsertContainer(
@@ -278,7 +269,7 @@ func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pg
 			},
 			{
 				Name: "PGPASSWORD",
-				Value:"kubedb123",
+				Value:"kubedb",
 			},
 
 		}

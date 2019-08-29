@@ -15,7 +15,7 @@ spec:
     listenPort: 5432
     adminUsers:
     - admin
-    - admin1 
+    - admin1
   userList:
     name: db-user-pass
     namespace: demo

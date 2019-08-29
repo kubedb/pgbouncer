@@ -7,20 +7,21 @@ spec:
   version: "1.9.0-r"
   replicas: 3
   databases:
-  - Alias: "postgres"
-    databaseName: "postgres"
-    appBindingName: "quick-postgress"
-    appBindingNamespace: "demo"
+    - alias: "postgres"
+      databaseName: "postgres"
+      appBindingName: "quick-postgress"
+      appBindingNamespace: "demo"
   connectionPool:
     listenPort: 5432
     adminUsers:
-    - admin
-    - admin1 
-  secretList:
-  - name: quick-postgress-auth
+      - admin
+      - admin1
+  userList:
+    name: db-user-pass
     namespace: demo
-  - name: admin-secret
-    namespace: demo
+  monitor:
+    agent: prometheus.io/builtin
+
   monitor:
     agent: prometheus.io/coreos-operator
     prometheus:
