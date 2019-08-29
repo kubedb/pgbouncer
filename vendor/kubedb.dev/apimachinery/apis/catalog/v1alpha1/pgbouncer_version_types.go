@@ -49,7 +49,7 @@ type PgBouncerVersionExporter struct {
 
 // PgBouncerVersionPodSecurityPolicy is the PgBouncer pod security policies
 type PgBouncerVersionPodSecurityPolicy struct {
-	DatabasePolicyName    string `json:"databasePolicyName"`
+	DatabasePolicyName string `json:"databasePolicyName"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

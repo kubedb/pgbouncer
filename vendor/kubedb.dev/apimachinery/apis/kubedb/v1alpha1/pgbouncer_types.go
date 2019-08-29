@@ -49,11 +49,11 @@ type PgBouncerSpec struct {
 
 type Databases struct {
 	//alias to uniquely identify a target database running inside a specific Postgres instance
-	Alias             string `json:"alias"`
+	Alias string `json:"alias"`
 	//Name of the target database inside a Postgres instance
-	DbName            string `json:"databaseName"`
+	DbName string `json:"databaseName"`
 	//Reference to Postgres instance where the target database is located
-	AppBindingName      string `json:"appBindingName"`
+	AppBindingName string `json:"appBindingName"`
 	//Namespace of PgBouncer object
 	//if left empty, pgBouncer namespace is assigned
 	// use "default" for dafault namespace
@@ -61,7 +61,7 @@ type Databases struct {
 	AppBindingNamespace string `json:"appBindingNamespace,omitempty"`
 	//To bind a single user to a specific connection
 	// +optional
-	UserName        string `json:"username,omitempty"`
+	UserName string `json:"username,omitempty"`
 }
 
 type ConnectionPoolConfig struct {
@@ -76,8 +76,8 @@ type ConnectionPoolConfig struct {
 }
 
 type UserList struct {
-	SecretName      string `json:"name"`                //contains a single username-password combo that exists in a target database
-	SecretNamespace string `json:"namespace,omitempty"` //Namespace of PgBouncer object
+	SecretName      string `json:"secretName"`                //points secret that holds a file containing list of users
+	SecretNamespace string `json:"secretNamespace,omitempty"` //Namespace of PgBouncer object
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
