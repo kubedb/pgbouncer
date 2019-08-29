@@ -23,7 +23,7 @@ const (
 	POSTGRES_INITDB_ARGS    = "POSTGRES_INITDB_ARGS"
 	POSTGRES_INITDB_WALDIR  = "POSTGRES_INITDB_WALDIR"
 	POSTGRES_INITDB_XLOGDIR = "POSTGRES_INITDB_XLOGDIR"
-	POSTGRES_NAME            = "postgres-for-pgbouncer-test"
+	POSTGRES_NAME           = "postgres-for-pgbouncer-test"
 )
 
 var _ = Describe("PgBouncer", func() {
@@ -96,14 +96,14 @@ var _ = Describe("PgBouncer", func() {
 			Skip("Skipping")
 		}
 		By("Check if userlist secret exists.")
-		err  = f.CheckUserListSecret()
+		err = f.CheckUserListSecret()
 		if err != nil {
-			if !kerr.IsNotFound(err){
+			if !kerr.IsNotFound(err) {
 				Expect(err).NotTo(HaveOccurred())
 			}
-		}else {
+		} else {
 			By("Delete  userlist secret")
-			err  = f.DeleteUserListSecret()
+			err = f.DeleteUserListSecret()
 		}
 
 		By("Check if PgBouncer " + pgbouncer.Name + " exists.")

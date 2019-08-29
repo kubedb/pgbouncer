@@ -21,8 +21,9 @@ import (
 const (
 	testUser = "myuser"
 	testPass = "mypass"
-	testDB = "tmpdb"
+	testDB   = "tmpdb"
 )
+
 func (f *Framework) ForwardPgBouncerPort(meta metav1.ObjectMeta) (*portforward.Tunnel, error) {
 	pgbouncer, err := f.GetPgBouncer(meta)
 	if err != nil {
@@ -110,11 +111,11 @@ func (f *Framework) PingPgBouncerServer(port int) bool {
 	sh := shell.NewSession()
 	pgbouncer := api.ResourceSingularPgBouncer
 	cmd := sh.Command("docker", "run",
-		"-e",fmt.Sprintf("%s=%s","PGPASSWORD","kubedb"),
+		"-e", fmt.Sprintf("%s=%s", "PGPASSWORD", "kubedb"),
 		"--network=host",
 		"postgres:11.1-alpine", "psql",
 		"--host=localhost", fmt.Sprintf("--port=%d", port),
-		fmt.Sprintf("--username=%s", "kubedb"), pgbouncer, "--command=RELOAD")
+		fmt.Sprintf("--username=%s", pgbouncer), pgbouncer, "--command=RELOAD")
 	out, err := cmd.Output()
 	if err != nil {
 		log.Infoln("CMD out err = ", err)
@@ -234,7 +235,7 @@ func (f *Framework) CreateUserAndDatabaseViaPgBouncer(meta metav1.ObjectMeta) er
 	}
 	defer tunnel.Close()
 	//Create Database tmpdb in postgres
-	err = f.CreateDatabaseViaPgBouncer(username, password,api.ResourceSingularPostgres ,tunnel.Local)
+	err = f.CreateDatabaseViaPgBouncer(username, password, api.ResourceSingularPostgres, tunnel.Local)
 	if err != nil {
 		return err
 	}
@@ -247,9 +248,9 @@ func (f *Framework) CreateUserAndDatabaseViaPgBouncer(meta metav1.ObjectMeta) er
 	//Add database info to pgbouncer
 	_, err = f.PatchPgBouncer(meta, func(in *api.PgBouncer) *api.PgBouncer {
 		tmpDB := api.Databases{
-			Alias:testDB,
-			DbName:testDB,
-			AppBindingName:PostgresName,
+			Alias:          testDB,
+			DbName:         testDB,
+			AppBindingName: PostgresName,
 		}
 		in.Spec.Databases = append(in.Spec.Databases, tmpDB)
 		return in
@@ -281,7 +282,7 @@ func (f *Framework) CreateUserAndDatabaseViaPgBouncer(meta metav1.ObjectMeta) er
 }
 
 func (f *Framework) CreateDatabaseViaPgBouncer(username, password, dbName string, port int) error {
-	sqlCommand := fmt.Sprintf("CREATE DATABASE %s;",testDB)
+	sqlCommand := fmt.Sprintf("CREATE DATABASE %s;", testDB)
 	outText, err := f.ApplyCMD(username, password, sqlCommand, dbName, port)
 	if err != nil {
 		return err
@@ -292,7 +293,7 @@ func (f *Framework) CreateDatabaseViaPgBouncer(username, password, dbName string
 	return nil
 }
 func (f *Framework) CreateUserViaPgBouncer(username, password, dbName string, port int) error {
-	sqlCommand := fmt.Sprintf("create user %s with encrypted password '%s';",testUser,testPass)
+	sqlCommand := fmt.Sprintf("create user %s with encrypted password '%s';", testUser, testPass)
 	outText, err := f.ApplyCMD(username, password, sqlCommand, api.ResourceSingularPostgres, port)
 	if err != nil {
 		return err
@@ -306,7 +307,7 @@ func (f *Framework) CreateUserViaPgBouncer(username, password, dbName string, po
 func (f *Framework) ApplyCMD(username, password, sqlCommand, dbName string, port int) (string, error) {
 	sh := shell.NewSession()
 	cmd := sh.Command("docker", "run",
-		"-e",fmt.Sprintf("%s=%s","PGPASSWORD",password),
+		"-e", fmt.Sprintf("%s=%s", "PGPASSWORD", password),
 		"--network=host",
 		"postgres:11.1-alpine", "psql",
 		"--host=localhost", fmt.Sprintf("--port=%d", port),
@@ -319,15 +320,15 @@ func (f *Framework) ApplyCMD(username, password, sqlCommand, dbName string, port
 	return outText, nil
 }
 
-func (f *Framework) waitUntilPatchedConfigMapReady( meta metav1.ObjectMeta) error {
+func (f *Framework) waitUntilPatchedConfigMapReady(meta metav1.ObjectMeta) error {
 	return wait.PollImmediate(kutil.RetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
-		service, err := f.kubeClient.CoreV1().Services(meta.Namespace).Get(meta.Name,metav1.GetOptions{})
+		service, err := f.kubeClient.CoreV1().Services(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
 		print(".")
 		if err != nil {
 			return false, err
 		}
 		antn := service.GetObjectMeta().GetAnnotations()
-		if  antn["podConfigMap"] =="patched"{
+		if antn["podConfigMap"] == "patched" {
 			println(". Done!")
 			return true, nil
 		}

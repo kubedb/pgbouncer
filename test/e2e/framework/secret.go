@@ -51,8 +51,6 @@ func (f *Framework) AddUserToUserListSecret(username, password string) error {
 	}
 	secStData := sec.StringData
 	for key, data := range secStData {
-		println("Key = ", key)
-		println("Data = ", string(data))
 		newData := string(data) + fmt.Sprintf(`
 "%s" "%s"`, username, password)
 		sec.StringData[key] = newData
