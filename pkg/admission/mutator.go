@@ -83,7 +83,7 @@ func (a *PgBouncerMutator) Admit(req *admission.AdmissionRequest) *admission.Adm
 	if err != nil {
 		return hookapi.StatusBadRequest(err)
 	}
-	if err := a.CheckSecretAvailable(obj.(*api.PgBouncer).DeepCopy());err != nil {
+	if err := a.CheckSecretAvailable(obj.(*api.PgBouncer).DeepCopy()); err != nil {
 		return hookapi.StatusForbidden(err)
 	}
 
@@ -138,7 +138,6 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbou
 	}
 	//TODO: refuse pgbouncer without secret
 	pgbouncer.SetDefaults()
-
 
 	// If monitoring spec is given without port,
 	// set default Listening port
