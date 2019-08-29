@@ -36,12 +36,12 @@ require (
 	kmodules.xyz/monitoring-agent-api v0.0.0-20190513065523-186af167f817
 	kmodules.xyz/offshoot-api v0.0.0-20190715115723-36c8fce142c1
 	kmodules.xyz/webhook-runtime v0.0.0-20190715115250-a84fbf77dd30
-	kubedb.dev/apimachinery v0.0.0-20190826072029-96ebc72cbafc
+	kubedb.dev/apimachinery v0.0.0-20190829102627-6aea9d5e6a5e
 	stash.appscode.dev/stash v0.0.0-20190718015558-6bc80ce219d9
 )
 
 replace (
-	github.com/Azure/go-autorest => github.com/Azure/go-autorest/autorest v0.5.1-0.20190730195624-efe8ae788a2f
+	github.com/Azure/go-autorest => github.com/Azure/go-autorest/autorest v0.7.0
 	k8s.io/api => k8s.io/api v0.0.0-20190313235455-40a48860b5ab
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190315093550-53c4693659ed
 	k8s.io/apimachinery => github.com/kmodules/apimachinery v0.0.0-20190508045248-a52a97a7a2bf

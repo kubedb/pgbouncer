@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
@@ -11,6 +12,7 @@ import (
 	appcat_util "kmodules.xyz/custom-resources/client/clientset/versioned/typed/appcatalog/v1alpha1/util"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/apimachinery/pkg/eventer"
+	"strings"
 )
 
 func (c *Controller) ensureAppBinding(db *api.PgBouncer) (kutil.VerbType, error) {
@@ -62,4 +64,61 @@ func (c *Controller) ensureAppBinding(db *api.PgBouncer) (kutil.VerbType, error)
 		)
 	}
 	return vt, nil
+}
+
+func (c *Controller) manageAppBindingEvent(key string) error {
+	//wait for pgboncer to ber ready
+	log.Debugln("started processing appBindings, key:", key)
+	_, exists, err := c.appBindingInformer.GetIndexer().GetByKey(key)
+	if err != nil {
+		log.Errorf("Fetching appBinding with key %s from store failed with %v", key, err)
+		return err
+	}
+	splitKey := strings.Split(key, "/")
+
+	if len(splitKey) != 2 || splitKey[0] == "" || splitKey[1] == "" {
+		return nil
+	}
+	//Now we are interested in this particular appBinding
+	appBindingInfo := make(map[string]string)
+	appBindingInfo[namespaceKey] = splitKey[0]
+	appBindingInfo[nameKey] = splitKey[1]
+	if appBindingInfo[namespaceKey] == systemNamespace || appBindingInfo[namespaceKey] == publicNamespace {
+		return nil
+	}
+	if !exists {
+		log.Debugf("PgBouncer Secret %s deleted.", key)
+
+	} else {
+		log.Debugf("Updates for PgBouncer Secret %s received.", key)
+	}
+	pgBouncerList, err := c.ExtClient.KubedbV1alpha1().PgBouncers(core.NamespaceAll).List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, pgBouncer := range pgBouncerList.Items {
+		err := c.checkAppBindingsInPgBouncer(appBindingInfo, &pgBouncer)
+		if err != nil {
+			log.Warning(err)
+		}
+	}
+	return nil
+}
+func (c *Controller) checkAppBindingsInPgBouncer(appBindingInfo map[string]string, pgbouncer *api.PgBouncer) error  {
+	if pgbouncer.Spec.Databases != nil && len(pgbouncer.Spec.Databases) > 0{
+		for _, db := range pgbouncer.Spec.Databases{
+			if db.AppBindingName ==	appBindingInfo[nameKey] && db.AppBindingNamespace == appBindingInfo[namespaceKey] {
+				log.Infoln("A matching appbinding is found.")
+				err := c.manageService(pgbouncer)
+				if err != nil {
+					return err
+				}
+				err = c.manageConfigMap(pgbouncer)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }

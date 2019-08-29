@@ -20,6 +20,7 @@ import (
 	meta_util "kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/queue"
 	appcat_cs "kmodules.xyz/custom-resources/client/clientset/versioned/typed/appcatalog/v1alpha1"
+	appcat_listers "kmodules.xyz/custom-resources/client/listers/appcatalog/v1alpha1"
 	"kubedb.dev/apimachinery/apis"
 	catalog "kubedb.dev/apimachinery/apis/catalog/v1alpha1"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
@@ -51,7 +52,11 @@ type Controller struct {
 	// Secret
 	secretQueue    *queue.Worker
 	secretInformer cache.SharedIndexInformer
-	secretLister   corev1_listers.SecretLister
+	secretLister       corev1_listers.SecretLister
+
+	appBindingQueue    *queue.Worker
+	appBindingInformer cache.SharedIndexInformer
+	appBindingLister   appcat_listers.AppBindingLister
 }
 
 func (c *Controller) WaitUntilPaused(*api.DormantDatabase) error {
@@ -117,10 +122,7 @@ func (c *Controller) Init() error {
 	println("Initwatchers")
 	c.initWatcher()
 	c.initSecretWatcher()
-	//c.DrmnQueue = drmnc.NewController(c.Controller, c, c.Config, nil, c.recorder).AddEventHandlerFunc(c.selector)
-	//c.SnapQueue, c.JobQueue = snapc.NewController(c.Controller, c, c.Config, nil, c.recorder).AddEventHandlerFunc(c.selector)
-	//c.RSQueue = restoresession.NewController(c.Controller, c, c.Config, nil, c.recorder).AddEventHandlerFunc(c.selector)
-
+	c.initAppBindingWatcher()
 	return nil
 }
 
@@ -132,6 +134,7 @@ func (c *Controller) RunControllers(stopCh <-chan struct{}) {
 	// Watch x  TPR objects
 	c.pgQueue.Run(stopCh)
 	c.secretQueue.Run(stopCh)
+	c.appBindingQueue.Run(stopCh)
 	//c.DrmnQueue.Run(stopCh)
 	//c.SnapQueue.Run(stopCh)
 	//c.JobQueue.Run(stopCh)
@@ -160,6 +163,7 @@ func (c *Controller) StartAndRunControllers(stopCh <-chan struct{}) {
 	log.Infoln("Starting KubeDB controller")
 	c.KubeInformerFactory.Start(stopCh)
 	c.KubedbInformerFactory.Start(stopCh)
+	c.AppCatInformerFactory.Start(stopCh)
 
 	// Wait for all involved caches to be synced, before processing items from the queue is started
 	for t, v := range c.KubeInformerFactory.WaitForCacheSync(stopCh) {
@@ -171,6 +175,12 @@ func (c *Controller) StartAndRunControllers(stopCh <-chan struct{}) {
 	for t, v := range c.KubedbInformerFactory.WaitForCacheSync(stopCh) {
 		if !v {
 			log.Fatalf("%v timed out waiting for caches to sync", t)
+			return
+		}
+	}
+	for t, v := range c.AppCatInformerFactory.WaitForCacheSync(stopCh) {
+		if !v {
+			log.Fatalf("%v timed out waiting for appCatalog caches to sync", t)
 			return
 		}
 	}
