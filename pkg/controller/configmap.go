@@ -2,8 +2,6 @@ package controller
 
 import (
 	"fmt"
-	"github.com/lib/pq"
-	"net/url"
 	"path/filepath"
 	"time"
 
@@ -49,15 +47,13 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 	}
 
 	cfgMap, vt, err := core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
-		var dbinfo = `[databases]
-`
-		var pbinfo = `[pgbouncer]
-logfile = /tmp/pgbouncer.log
-pidfile = /tmp/pgbouncer.pid
-`
+		var dbinfo = fmt.Sprintln("[databases]")
+		var pbinfo = fmt.Sprintln("[pgbouncer]")
+		pbinfo = pbinfo + fmt.Sprintln("logfile = /tmp/pgbouncer.log")
+		pbinfo = pbinfo + fmt.Sprintln("pidfile = /tmp/pgbouncer.pid")
+
 		authFileLocation := filepath.Join(userListMountPath, c.getUserListFileName(pgbouncer))
-		pbinfo = pbinfo + fmt.Sprintf(`auth_file = %s
-`, authFileLocation)
+		pbinfo = pbinfo + fmt.Sprintln("auth_file = ", authFileLocation)
 
 		var admins string
 
@@ -69,10 +65,9 @@ pidfile = /tmp/pgbouncer.pid
 				name := db.AppBindingName
 				namespace := db.AppBindingNamespace
 
-				appBinding, err := c.AppCatalogClient.AppBindings(namespace).Get(name, metav1.GetOptions{})
+				appBinding, err := c.AppCatalogClient.AppcatalogV1alpha1().AppBindings(namespace).Get(name, metav1.GetOptions{})
 				if err != nil {
 					if kerr.IsNotFound(err) {
-						println("TODO: expect appbinding ", name, " to be ready later (currently just skipping)")
 						log.Warning(err)
 					} else {
 						log.Error(err)
@@ -84,28 +79,31 @@ pidfile = /tmp/pgbouncer.pid
 					namespace = appBinding.Namespace
 					hostPort = appBinding.Spec.ClientConfig.Service.Port
 				}
+				var hostname string
+				if appBinding.Spec.ClientConfig.URL == nil {
+					if appBinding.Spec.ClientConfig.Service != nil {
+						//urlString, err := appBinding.URL()
+						//if err != nil {
+						//	log.Errorln(err)
+						//}
+						//parsedURL, err := pq.ParseURL(urlString)
+						//if err != nil {
+						//	log.Errorln(err)
+						//}
+						//println(":::Parsed URL= ", parsedURL)
+						//parsedURL = strings.ReplaceAll(parsedURL, " sslmode=disable","")
+						//dbinfo = dbinfo +fmt.Sprintln(db.Alias +" = " + parsedURL +" dbname="+db.DbName )
 
-				hostname := name + "." + namespace + ".svc.cluster.local"
-
-				urlString, err := appBinding.URL()
-				if err != nil {
-					log.Errorln(err)
+						hostname = appBinding.Spec.ClientConfig.Service.Name + "." + namespace + ".svc"
+						hostPort = appBinding.Spec.ClientConfig.Service.Port
+						dbinfo = dbinfo +fmt.Sprintln(db.Alias +"x = host=" + hostname +" port="+fmt.Sprintf("%d",hostPort)+" dbname="+db.DbName )
+						//dbinfo = dbinfo +fmt.Sprintln(db.Alias +"x = host=" + hostname +" port="+strconv.Itoa(int(hostPort))+" dbname="+db.DbName )
+					}
+				} else {
+					//Reminder URL should contain host=localhost port=5432
+					dbinfo = dbinfo + fmt.Sprintln(db.Alias + " = " + *(appBinding.Spec.ClientConfig.URL)+ " dbname=" + db.DbName)
 				}
-				println(":::URL = ", urlString)
 
-				parsedURL, err := pq.ParseURL(urlString)
-				println(":::Parsed URL= ", parsedURL)
-
-				rawurl, err := url.Parse(urlString)
-				if err != nil {
-					println("URL parse error = ", err)
-				}
-				println(":::Raw URL host = ", rawurl.Host, "..rawurl.Scheme = ", rawurl.Scheme)
-
-				//dbinfo
-				dbinfo = dbinfo + fmt.Sprintf(`%s = host=%s port=%d dbname=%s
-`, db.Alias, hostname, hostPort, db.DbName)
-				print(":::current URL format = ", hostname)
 			}
 		}
 
@@ -114,27 +112,21 @@ pidfile = /tmp/pgbouncer.pid
 		}
 
 		if pgbouncer.Spec.ConnectionPool != nil {
-			admins = fmt.Sprintf(`%s`, pbAdminUser)
-			pbinfo = pbinfo + fmt.Sprintf(`listen_port = %d
-`, *pgbouncer.Spec.ConnectionPool.ListenPort)
-			pbinfo = pbinfo + fmt.Sprintf(`listen_addr = %s
-`, pgbouncer.Spec.ConnectionPool.ListenAddress)
-			pbinfo = pbinfo + fmt.Sprintf(`pool_mode = %s
-`, pgbouncer.Spec.ConnectionPool.PoolMode)
-			pbinfo = pbinfo + fmt.Sprintf(`ignore_startup_parameters = %s
-`, ignoredParmeter)
+			admins = fmt.Sprintf("%s", pbAdminUser)
+			pbinfo = pbinfo + fmt.Sprintln("listen_port =" + fmt.Sprintf("%d",*pgbouncer.Spec.ConnectionPool.ListenPort))
+			pbinfo = pbinfo + fmt.Sprintln("listen_addr = ", pgbouncer.Spec.ConnectionPool.ListenAddress)
+			pbinfo = pbinfo + fmt.Sprintln("pool_mode = ", pgbouncer.Spec.ConnectionPool.PoolMode)
+			//TODO: add max connection and pool size
+			pbinfo = pbinfo + fmt.Sprintln("ignore_startup_parameters =", ignoredParmeter)
 
 			adminList := pgbouncer.Spec.ConnectionPool.AdminUsers
 			for _, adminListItem := range adminList {
-				admins = fmt.Sprintf(`%s,%s`, admins, adminListItem)
+				admins = fmt.Sprintf("%s,%s", admins, adminListItem)
 			}
-			pbinfo = pbinfo + fmt.Sprintf(`admin_users = %s
-`, admins)
+			pbinfo = pbinfo + fmt.Sprintln("admin_users = ", admins)
 		}
-
-		pgbouncerData := fmt.Sprintf(`%s
-%s`, dbinfo, pbinfo)
-		//println(userListData)
+		pgbouncerData := fmt.Sprintln(dbinfo)
+		pgbouncerData = pgbouncerData + pbinfo
 
 		in.Data = map[string]string{
 			"pgbouncer.ini": pgbouncerData,
@@ -179,10 +171,12 @@ func (c *Controller) waitUntilPatchedConfigMapReady(pgbouncer *api.PgBouncer, ne
 		log.Warning("Pods not ready")
 		return nil
 	}
+	println("Waiting for updated configurations to synchronize")
 	return wait.PollImmediate(PbRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
+		println("_")
 		if pgbouncerConfig, err := c.echoPgBouncerConfig(pgbouncer); err == nil {
-			println(">>>Comparing existing map with new map")
 			if newCfgMap.Data["pgbouncer.ini"] == pgbouncerConfig {
+				println("Done!")
 				return true, nil
 			}
 		}
@@ -272,7 +266,7 @@ func (c *Controller) getUserListFileName(bouncer *api.PgBouncer) (filename strin
 		return ""
 	}
 	secStData := sec.Data
-	for key, _ := range secStData {
+	for key := range secStData {
 		if key != "" {
 			filename = key
 			break

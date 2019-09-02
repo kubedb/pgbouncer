@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"strings"
+
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,7 +14,6 @@ import (
 	appcat_util "kmodules.xyz/custom-resources/client/clientset/versioned/typed/appcatalog/v1alpha1/util"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/apimachinery/pkg/eventer"
-	"strings"
 )
 
 func (c *Controller) ensureAppBinding(db *api.PgBouncer) (kutil.VerbType, error) {
@@ -28,7 +29,7 @@ func (c *Controller) ensureAppBinding(db *api.PgBouncer) (kutil.VerbType, error)
 		return kutil.VerbUnchanged, err
 	}
 
-	_, vt, err := appcat_util.CreateOrPatchAppBinding(c.AppCatalogClient, meta, func(in *appcat.AppBinding) *appcat.AppBinding {
+	_, vt, err := appcat_util.CreateOrPatchAppBinding(c.AppCatalogClient.AppcatalogV1alpha1(), meta, func(in *appcat.AppBinding) *appcat.AppBinding {
 		core_util.EnsureOwnerReference(&in.ObjectMeta, ref)
 		in.Labels = db.OffshootLabels()
 		in.Annotations = db.Spec.ServiceTemplate.Annotations
@@ -104,11 +105,11 @@ func (c *Controller) manageAppBindingEvent(key string) error {
 	}
 	return nil
 }
-func (c *Controller) checkAppBindingsInPgBouncer(appBindingInfo map[string]string, pgbouncer *api.PgBouncer) error  {
-	if pgbouncer.Spec.Databases != nil && len(pgbouncer.Spec.Databases) > 0{
-		for _, db := range pgbouncer.Spec.Databases{
-			if db.AppBindingName ==	appBindingInfo[nameKey] && db.AppBindingNamespace == appBindingInfo[namespaceKey] {
-				log.Infoln("A matching appbinding is found.")
+func (c *Controller) checkAppBindingsInPgBouncer(appBindingInfo map[string]string, pgbouncer *api.PgBouncer) error {
+	if pgbouncer.Spec.Databases != nil && len(pgbouncer.Spec.Databases) > 0 {
+		for _, db := range pgbouncer.Spec.Databases {
+			if db.AppBindingName == appBindingInfo[nameKey] && db.AppBindingNamespace == appBindingInfo[namespaceKey] {
+				log.Infoln("A matching appBinding is found.")
 				err := c.manageService(pgbouncer)
 				if err != nil {
 					return err

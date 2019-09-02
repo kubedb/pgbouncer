@@ -19743,21 +19743,21 @@ func schema_apimachinery_apis_kubedb_v1alpha1_UserList(ref common.ReferenceCallb
 			SchemaProps: spec.SchemaProps{
 				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
-					"name": {
+					"secretName": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"string"},
 							Format: "",
 						},
 					},
-					"namespace": {
+					"secretNamespace": {
 						SchemaProps: spec.SchemaProps{
-							Description: "contains a single username-password combo that exists in a target database",
+							Description: "points to a secret that holds a file containing list of users",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
-				Required: []string{"name"},
+				Required: []string{"secretName"},
 			},
 		},
 	}
