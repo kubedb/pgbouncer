@@ -79,8 +79,7 @@ func (c *Controller) ensureUserlistHasDefaultAdmin(pgbouncer *api.PgBouncer, sec
 		if key != "" && value != nil {
 			kubedbUserString := fmt.Sprintf(`"%s" "%s"`, pbAdminUser, pbAdminPassword)
 			if !strings.Contains(string(value), kubedbUserString) {
-				tmpData := string(value) + fmt.Sprintf(`
-%s`, kubedbUserString)
+				tmpData := fmt.Sprintln(string(value)) + kubedbUserString
 				secret.Data[key] = []byte(tmpData)
 				_, vt, err := core_util.CreateOrPatchSecret(c.Client, secret.ObjectMeta, func(in *core.Secret) *core.Secret {
 					in = secret
@@ -92,8 +91,6 @@ func (c *Controller) ensureUserlistHasDefaultAdmin(pgbouncer *api.PgBouncer, sec
 				if vt == kutil.VerbPatched {
 					log.Infoln("secret patched with kubedb as an admin")
 				}
-
-				//Annotate secret to mark that secret is already patched
 			}
 			break
 		}

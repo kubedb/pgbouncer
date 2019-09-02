@@ -76,8 +76,8 @@ type ConnectionPoolConfig struct {
 }
 
 type UserList struct {
-	SecretName      string `json:"secretName"`                //points secret that holds a file containing list of users
-	SecretNamespace string `json:"secretNamespace,omitempty"` //Namespace of PgBouncer object
+	SecretName      string `json:"secretName"`                //points to a secret that holds a file containing list of users
+	SecretNamespace string `json:"secretNamespace,omitempty"` //Namespace of specified secret, same namespace a pgbouncer if left empty, doesn't use default namespace.
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

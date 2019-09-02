@@ -1,0 +1,42 @@
+apiVersion: appcatalog.appscode.com/v1alpha1
+kind: AppBinding
+metadata:
+  generation: 1
+  labels:
+    app.kubernetes.io/component: database
+    app.kubernetes.io/instance: quick-postgress
+    app.kubernetes.io/managed-by: kubedb.com
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/version: 11.1-v1
+    kubedb.com/kind: Postgres
+    kubedb.com/name: quick-postgress
+  name: quick-postgress
+  namespace: demo
+  ownerReferences:
+    - apiVersion: kubedb.com/v1alpha1
+      blockOwnerDeletion: false
+      kind: Postgres
+      name: quick-postgress
+      uid: 31cf4fdc-746d-4d74-bfb1-a05ff6e60677
+  resourceVersion: "20234"
+  selfLink: /apis/appcatalog.appscode.com/v1alpha1/namespaces/demo/appbindings/quick-postgress
+  uid: 749481ae-fc50-4eb6-80dc-7114786de144
+spec:
+  clientConfig:
+    service:
+      name: quick-postgress
+      path: /
+      port: 5432
+      query: sslmode=disable
+      scheme: postgresql
+  secret:
+    name: quick-postgress-auth
+  secretTransforms:
+    - renameKey:
+        from: POSTGRES_USER
+        to: usernames
+    - renameKey:
+        from: POSTGRES_PASSWORD
+        to: passwords
+  type: kubedb.com/postgres
+  version: "11.1"

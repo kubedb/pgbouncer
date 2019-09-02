@@ -13,7 +13,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/cli"
-	appcat_cs "kmodules.xyz/custom-resources/client/clientset/versioned/typed/appcatalog/v1alpha1"
+	appcat_cs "kmodules.xyz/custom-resources/client/clientset/versioned"
+	appcat_in "kmodules.xyz/custom-resources/client/informers/externalversions"
 	"kubedb.dev/apimachinery/apis"
 	cs "kubedb.dev/apimachinery/client/clientset/versioned"
 	kubedbinformers "kubedb.dev/apimachinery/client/informers/externalversions"
@@ -121,6 +122,7 @@ func (s *ExtraOptions) ApplyTo(cfg *controller.OperatorConfig) error {
 
 	cfg.KubeInformerFactory = informers.NewSharedInformerFactory(cfg.KubeClient, cfg.ResyncPeriod)
 	cfg.KubedbInformerFactory = kubedbinformers.NewSharedInformerFactory(cfg.DBClient, cfg.ResyncPeriod)
+	cfg.AppCatInformerFactory = appcat_in.NewSharedInformerFactory(cfg.AppCatalogClient, cfg.ResyncPeriod)
 
 	cfg.CronController = snapc.NewCronController(cfg.KubeClient, cfg.DBClient, cfg.DynamicClient)
 

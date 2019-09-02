@@ -881,15 +881,15 @@ kmodules.xyz/client-go/apiregistration/v1beta1
 kmodules.xyz/client-go/policy/v1beta1
 # kmodules.xyz/custom-resources v0.0.0-20190508103408-464e8324c3ec
 kmodules.xyz/custom-resources/client/clientset/versioned/scheme
-kmodules.xyz/custom-resources/client/clientset/versioned/typed/appcatalog/v1alpha1
+kmodules.xyz/custom-resources/client/clientset/versioned
+kmodules.xyz/custom-resources/client/informers/externalversions
 kmodules.xyz/custom-resources/apis/appcatalog/v1alpha1
 kmodules.xyz/custom-resources/client/clientset/versioned/typed/appcatalog/v1alpha1/util
 kmodules.xyz/custom-resources/client/listers/appcatalog/v1alpha1
-kmodules.xyz/custom-resources/apis/appcatalog
-kmodules.xyz/custom-resources/client/informers/externalversions
-kmodules.xyz/custom-resources/client/clientset/versioned
+kmodules.xyz/custom-resources/client/clientset/versioned/typed/appcatalog/v1alpha1
 kmodules.xyz/custom-resources/client/informers/externalversions/appcatalog
 kmodules.xyz/custom-resources/client/informers/externalversions/internalinterfaces
+kmodules.xyz/custom-resources/apis/appcatalog
 kmodules.xyz/custom-resources/client/informers/externalversions/appcatalog/v1alpha1
 # kmodules.xyz/monitoring-agent-api v0.0.0-20190513065523-186af167f817
 kmodules.xyz/monitoring-agent-api/api/v1
@@ -904,7 +904,7 @@ kmodules.xyz/offshoot-api/api/v1
 # kmodules.xyz/webhook-runtime v0.0.0-20190715115250-a84fbf77dd30
 kmodules.xyz/webhook-runtime/admission/v1beta1
 kmodules.xyz/webhook-runtime/registry/admissionreview/v1beta1
-# kubedb.dev/apimachinery v0.0.0-20190829102627-6aea9d5e6a5e
+# kubedb.dev/apimachinery v0.0.0-20190830070051-1816b09e5bba
 kubedb.dev/apimachinery/apis/kubedb/v1alpha1
 kubedb.dev/apimachinery/client/clientset/versioned
 kubedb.dev/apimachinery/client/clientset/versioned/scheme

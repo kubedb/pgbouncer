@@ -17,9 +17,10 @@ import (
 	"k8s.io/client-go/tools/record"
 	reg_util "kmodules.xyz/client-go/admissionregistration/v1beta1"
 	apiext_util "kmodules.xyz/client-go/apiextensions/v1beta1"
+	appcat_util "kmodules.xyz/custom-resources/apis/appcatalog/v1alpha1"
 	meta_util "kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/queue"
-	appcat_cs "kmodules.xyz/custom-resources/client/clientset/versioned/typed/appcatalog/v1alpha1"
+	appcat_cs "kmodules.xyz/custom-resources/client/clientset/versioned"
 	appcat_listers "kmodules.xyz/custom-resources/client/listers/appcatalog/v1alpha1"
 	"kubedb.dev/apimachinery/apis"
 	catalog "kubedb.dev/apimachinery/apis/catalog/v1alpha1"
@@ -52,7 +53,7 @@ type Controller struct {
 	// Secret
 	secretQueue    *queue.Worker
 	secretInformer cache.SharedIndexInformer
-	secretLister       corev1_listers.SecretLister
+	secretLister   corev1_listers.SecretLister
 
 	appBindingQueue    *queue.Worker
 	appBindingInformer cache.SharedIndexInformer
@@ -75,7 +76,7 @@ func New(
 	apiExtKubeClient crd_cs.ApiextensionsV1beta1Interface,
 	extClient cs.Interface,
 	dc dynamic.Interface,
-	appCatalogClient appcat_cs.AppcatalogV1alpha1Interface,
+	appCatalogClient appcat_cs.Interface,
 	promClient pcm.MonitoringV1Interface,
 	cronController snapc.CronControllerInterface,
 	opt amc.Config,
@@ -106,12 +107,10 @@ func (c *Controller) EnsureCustomResourceDefinitions() error {
 	crds := []*crd_api.CustomResourceDefinition{
 		api.PgBouncer{}.CustomResourceDefinition(),
 		catalog.PgBouncerVersion{}.CustomResourceDefinition(),
-		//api.DormantDatabase{}.CustomResourceDefinition(),
-		//api.Snapshot{}.CustomResourceDefinition(),
 		//authorization.DatabaseAccessRequest{}.CustomResourceDefinition(),
-		//appcat.AppBinding{}.CustomResourceDefinition(),
+		appcat_util.AppBinding{}.CustomResourceDefinition(),
 	}
-	log.Infoln("EnsureCustomResourceDefinitions ok")
+	log.Infoln("Ensured CustomResourceDefinitions")
 	err := apiext_util.RegisterCRDs(c.ApiExtKubeClient, crds)
 	println(" err  = ", err)
 	return err
@@ -119,7 +118,6 @@ func (c *Controller) EnsureCustomResourceDefinitions() error {
 
 // InitInformer initializes PgBouncer, DormantDB amd Snapshot watcher
 func (c *Controller) Init() error {
-	println("Initwatchers")
 	c.initWatcher()
 	c.initSecretWatcher()
 	c.initAppBindingWatcher()
@@ -128,16 +126,9 @@ func (c *Controller) Init() error {
 
 // RunControllers runs queue.worker
 func (c *Controller) RunControllers(stopCh <-chan struct{}) {
-	// Start Cron
-	//c.cronController.StartCron()
-
-	// Watch x  TPR objects
 	c.pgQueue.Run(stopCh)
 	c.secretQueue.Run(stopCh)
 	c.appBindingQueue.Run(stopCh)
-	//c.DrmnQueue.Run(stopCh)
-	//c.SnapQueue.Run(stopCh)
-	//c.JobQueue.Run(stopCh)
 }
 
 // Blocks caller. Intended to be called as a Go routine.

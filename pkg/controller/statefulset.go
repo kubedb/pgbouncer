@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+
 	"github.com/appscode/go/log"
 	"github.com/appscode/go/types"
 	"github.com/aws/aws-sdk-go/aws"
@@ -245,6 +246,7 @@ func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pg
 	if pgbouncer.GetMonitoringVendor() == mona.VendorPrometheus {
 		container := core.Container{
 			Name: "exporter",
+			//TODO: decide what to do with Args
 			//Args: append([]string{
 			//	fmt.Sprintf("---web.listen-address=:%d",api.PrometheusExporterPortNumber),
 			//}, pgbouncer.Spec.Monitor.Args...),
