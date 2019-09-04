@@ -65,6 +65,41 @@ func (in *ConnectionPoolConfig) DeepCopyInto(out *ConnectionPoolConfig) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.MaxClientConn != nil {
+		in, out := &in.MaxClientConn, &out.MaxClientConn
+		*out = new(string)
+		**out = **in
+	}
+	if in.DefaultPoolSize != nil {
+		in, out := &in.DefaultPoolSize, &out.DefaultPoolSize
+		*out = new(string)
+		**out = **in
+	}
+	if in.MinPoolSize != nil {
+		in, out := &in.MinPoolSize, &out.MinPoolSize
+		*out = new(string)
+		**out = **in
+	}
+	if in.ReservePoolSize != nil {
+		in, out := &in.ReservePoolSize, &out.ReservePoolSize
+		*out = new(string)
+		**out = **in
+	}
+	if in.ReservePoolTimeout != nil {
+		in, out := &in.ReservePoolTimeout, &out.ReservePoolTimeout
+		*out = new(string)
+		**out = **in
+	}
+	if in.MaxDbConnections != nil {
+		in, out := &in.MaxDbConnections, &out.MaxDbConnections
+		*out = new(string)
+		**out = **in
+	}
+	if in.MaxUserConnections != nil {
+		in, out := &in.MaxUserConnections, &out.MaxUserConnections
+		*out = new(string)
+		**out = **in
+	}
 	if in.AdminUsers != nil {
 		in, out := &in.AdminUsers, &out.AdminUsers
 		*out = make([]string, len(*in))
