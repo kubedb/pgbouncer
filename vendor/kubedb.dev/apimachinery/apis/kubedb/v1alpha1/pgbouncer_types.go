@@ -65,10 +65,17 @@ type Databases struct {
 }
 
 type ConnectionPoolConfig struct {
-	ListenPort    *int32   `json:"listenPort"`
-	ListenAddress string   `json:"listenAddress,omitempty"`
-	PoolMode      string   `json:"poolMode,omitempty"`
-	AdminUsers    []string `json:"adminUsers,omitempty"`
+	ListenPort         *int32   `json:"listenPort"`
+	ListenAddress      string   `json:"listenAddress,omitempty"`
+	PoolMode           string   `json:"poolMode,omitempty"`
+	MaxClientConn      *string  `json:"maxClientConn,omitempty"`
+	DefaultPoolSize    *string  `json:"defaultPoolSize,omitempty"`
+	MinPoolSize        *string  `json:"minPoolSize,omitempty"`
+	ReservePoolSize    *string  `json:"reservePoolSize,omitempty"`
+	ReservePoolTimeout *string  `json:"reservePoolTimeout,omitempty"`
+	MaxDbConnections   *string  `json:"maxDbConnections,omitempty"`
+	MaxUserConnections *string  `json:"maxUserConnections,omitempty"`
+	AdminUsers         []string `json:"adminUsers,omitempty"`
 	// observedGeneration is the most recent generation observed for this resource. It corresponds to the
 	// resource's generation, which is updated on mutation by the API Server.
 	// +optional

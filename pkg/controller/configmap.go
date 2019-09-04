@@ -96,7 +96,7 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 
 						hostname = appBinding.Spec.ClientConfig.Service.Name + "." + namespace + ".svc"
 						hostPort = appBinding.Spec.ClientConfig.Service.Port
-						dbinfo = dbinfo +fmt.Sprintln(db.Alias +"x = host=" + hostname +" port="+fmt.Sprintf("%d",hostPort)+" dbname="+db.DbName )
+						dbinfo = dbinfo +fmt.Sprintln(db.Alias +"= host=" + hostname +" port="+fmt.Sprintf("%d",hostPort)+" dbname="+db.DbName )
 						//dbinfo = dbinfo +fmt.Sprintln(db.Alias +"x = host=" + hostname +" port="+strconv.Itoa(int(hostPort))+" dbname="+db.DbName )
 					}
 				} else {
@@ -112,12 +112,34 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 		}
 
 		if pgbouncer.Spec.ConnectionPool != nil {
-			admins = fmt.Sprintf("%s", pbAdminUser)
 			pbinfo = pbinfo + fmt.Sprintln("listen_port =" + fmt.Sprintf("%d",*pgbouncer.Spec.ConnectionPool.ListenPort))
-			pbinfo = pbinfo + fmt.Sprintln("listen_addr = ", pgbouncer.Spec.ConnectionPool.ListenAddress)
-			pbinfo = pbinfo + fmt.Sprintln("pool_mode = ", pgbouncer.Spec.ConnectionPool.PoolMode)
+			pbConnectionPool := pgbouncer.Spec.ConnectionPool
+			admins = fmt.Sprintf("%s", pbAdminUser)
+			pbinfo = pbinfo + fmt.Sprintln("listen_addr = ", pbConnectionPool.ListenAddress)
+			pbinfo = pbinfo + fmt.Sprintln("pool_mode = ", pbConnectionPool.PoolMode)
 			//TODO: add max connection and pool size
 			pbinfo = pbinfo + fmt.Sprintln("ignore_startup_parameters =", ignoredParmeter)
+			if pbConnectionPool.MaxClientConn != nil {
+				pbinfo = pbinfo + fmt.Sprintln("max_client_conn = ", pbConnectionPool.MaxClientConn)
+			}
+			if pbConnectionPool.MaxDbConnections != nil {
+				pbinfo = pbinfo + fmt.Sprintln("max_db_connections = ", pbConnectionPool.MaxDbConnections)
+			}
+			if pbConnectionPool.MaxUserConnections != nil {
+				pbinfo = pbinfo + fmt.Sprintln("max_user_connections = ", pbConnectionPool.MaxUserConnections)
+			}
+			if pbConnectionPool.MinPoolSize != nil {
+				pbinfo = pbinfo + fmt.Sprintln("min_pool_size = ", pbConnectionPool.MinPoolSize)
+			}
+			if pbConnectionPool.DefaultPoolSize != nil {
+				pbinfo = pbinfo + fmt.Sprintln("default_pool_size = ", pbConnectionPool.DefaultPoolSize)
+			}
+			if pbConnectionPool.ReservePoolSize != nil {
+				pbinfo = pbinfo + fmt.Sprintln("reserve_pool_size = ", pbConnectionPool.ReservePoolSize)
+			}
+			if pbConnectionPool.ReservePoolTimeout != nil {
+				pbinfo = pbinfo + fmt.Sprintln("reserve_pool_timeout = ", pbConnectionPool.ReservePoolTimeout)
+			}
 
 			adminList := pgbouncer.Spec.ConnectionPool.AdminUsers
 			for _, adminListItem := range adminList {

@@ -1,3 +1,4 @@
-:::URL = postgresql://postgres-for-pgbouncer-test.pgbouncer-3gcftb.svc:5432/?sslmode=disable:::Parsed URL=  host=postgres-for-pgbouncer-test.pgbouncer-3gcftb.svc port=5432 sslmode=disable
+:::URL = postgresql://postgres-for-pgbouncer-test.pgbouncer-3gcftb.svc:5432/?sslmode=disable
+:::Parsed URL=  host=postgres-for-pgbouncer-test.pgbouncer-3gcftb.svc port=5432 sslmode=disable
 :::: Raw URL host =  postgres-for-pgbouncer-test.pgbouncer-3gcftb.svc:5432 ..path =  /
 :::current URL format = postgres-for-pgbouncer-test.pgbouncer-3gcftb.svc.cluster.local
