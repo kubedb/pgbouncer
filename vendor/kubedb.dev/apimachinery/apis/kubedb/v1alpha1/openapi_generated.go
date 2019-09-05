@@ -15831,44 +15831,44 @@ func schema_apimachinery_apis_kubedb_v1alpha1_ConnectionPoolConfig(ref common.Re
 					},
 					"maxClientConn": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Type:   []string{"integer"},
+							Format: "int32",
 						},
 					},
 					"defaultPoolSize": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Type:   []string{"integer"},
+							Format: "int32",
 						},
 					},
 					"minPoolSize": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Type:   []string{"integer"},
+							Format: "int32",
 						},
 					},
 					"reservePoolSize": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Type:   []string{"integer"},
+							Format: "int32",
 						},
 					},
 					"reservePoolTimeout": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Type:   []string{"integer"},
+							Format: "int32",
 						},
 					},
 					"maxDbConnections": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Type:   []string{"integer"},
+							Format: "int32",
 						},
 					},
 					"maxUserConnections": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Type:   []string{"integer"},
+							Format: "int32",
 						},
 					},
 					"adminUsers": {

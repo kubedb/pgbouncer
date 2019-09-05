@@ -904,7 +904,7 @@ kmodules.xyz/offshoot-api/api/v1
 # kmodules.xyz/webhook-runtime v0.0.0-20190715115250-a84fbf77dd30
 kmodules.xyz/webhook-runtime/admission/v1beta1
 kmodules.xyz/webhook-runtime/registry/admissionreview/v1beta1
-# kubedb.dev/apimachinery v0.0.0-20190902113634-b2c9e8e639b3
+# kubedb.dev/apimachinery v0.0.0-20190905063838-c1d6d94694ff
 kubedb.dev/apimachinery/apis/kubedb/v1alpha1
 kubedb.dev/apimachinery/client/clientset/versioned
 kubedb.dev/apimachinery/client/clientset/versioned/scheme
