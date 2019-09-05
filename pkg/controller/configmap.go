@@ -96,14 +96,17 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 
 						hostname = appBinding.Spec.ClientConfig.Service.Name + "." + namespace + ".svc"
 						hostPort = appBinding.Spec.ClientConfig.Service.Port
-						dbinfo = dbinfo +fmt.Sprintln(db.Alias +"= host=" + hostname +" port="+fmt.Sprintf("%d",hostPort)+" dbname="+db.DbName )
+						dbinfo = dbinfo +fmt.Sprint(db.Alias ,"= host=" , hostname ," port=",hostPort," dbname=",db.DbName )
 						//dbinfo = dbinfo +fmt.Sprintln(db.Alias +"x = host=" + hostname +" port="+strconv.Itoa(int(hostPort))+" dbname="+db.DbName )
 					}
 				} else {
 					//Reminder URL should contain host=localhost port=5432
-					dbinfo = dbinfo + fmt.Sprintln(db.Alias + " = " + *(appBinding.Spec.ClientConfig.URL)+ " dbname=" + db.DbName)
+					dbinfo = dbinfo + fmt.Sprint(db.Alias + " = " + *(appBinding.Spec.ClientConfig.URL)+ " dbname=" + db.DbName)
 				}
-
+				if db.UserName != "" {
+					dbinfo = dbinfo +fmt.Sprint(" user=", db.UserName)
+				}
+				dbinfo = dbinfo + fmt.Sprintln("")
 			}
 		}
 
@@ -112,33 +115,34 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 		}
 
 		if pgbouncer.Spec.ConnectionPool != nil {
-			pbinfo = pbinfo + fmt.Sprintln("listen_port =" + fmt.Sprintf("%d",*pgbouncer.Spec.ConnectionPool.ListenPort))
 			pbConnectionPool := pgbouncer.Spec.ConnectionPool
 			admins = fmt.Sprintf("%s", pbAdminUser)
+			pbinfo = pbinfo + fmt.Sprintln("listen_port =" , *pbConnectionPool.ListenPort)
 			pbinfo = pbinfo + fmt.Sprintln("listen_addr = ", pbConnectionPool.ListenAddress)
 			pbinfo = pbinfo + fmt.Sprintln("pool_mode = ", pbConnectionPool.PoolMode)
 			//TODO: add max connection and pool size
 			pbinfo = pbinfo + fmt.Sprintln("ignore_startup_parameters =", ignoredParmeter)
+			//TODO: change to int32 in apimachinery
 			if pbConnectionPool.MaxClientConn != nil {
-				pbinfo = pbinfo + fmt.Sprintln("max_client_conn = ", pbConnectionPool.MaxClientConn)
+				pbinfo = pbinfo + fmt.Sprintln("max_client_conn = ", *pbConnectionPool.MaxClientConn)
 			}
 			if pbConnectionPool.MaxDbConnections != nil {
-				pbinfo = pbinfo + fmt.Sprintln("max_db_connections = ", pbConnectionPool.MaxDbConnections)
+				pbinfo = pbinfo + fmt.Sprintln("max_db_connections = ", *pbConnectionPool.MaxDbConnections)
 			}
 			if pbConnectionPool.MaxUserConnections != nil {
-				pbinfo = pbinfo + fmt.Sprintln("max_user_connections = ", pbConnectionPool.MaxUserConnections)
+				pbinfo = pbinfo + fmt.Sprintln("max_user_connections = ", *pbConnectionPool.MaxUserConnections)
 			}
 			if pbConnectionPool.MinPoolSize != nil {
-				pbinfo = pbinfo + fmt.Sprintln("min_pool_size = ", pbConnectionPool.MinPoolSize)
+				pbinfo = pbinfo + fmt.Sprintln("min_pool_size = ", *pbConnectionPool.MinPoolSize)
 			}
 			if pbConnectionPool.DefaultPoolSize != nil {
-				pbinfo = pbinfo + fmt.Sprintln("default_pool_size = ", pbConnectionPool.DefaultPoolSize)
+				pbinfo = pbinfo + fmt.Sprintln("default_pool_size = ", *pbConnectionPool.DefaultPoolSize)
 			}
 			if pbConnectionPool.ReservePoolSize != nil {
-				pbinfo = pbinfo + fmt.Sprintln("reserve_pool_size = ", pbConnectionPool.ReservePoolSize)
+				pbinfo = pbinfo + fmt.Sprintln("reserve_pool_size = ", *pbConnectionPool.ReservePoolSize)
 			}
 			if pbConnectionPool.ReservePoolTimeout != nil {
-				pbinfo = pbinfo + fmt.Sprintln("reserve_pool_timeout = ", pbConnectionPool.ReservePoolTimeout)
+				pbinfo = pbinfo + fmt.Sprintln("reserve_pool_timeout = ", *pbConnectionPool.ReservePoolTimeout)
 			}
 
 			adminList := pgbouncer.Spec.ConnectionPool.AdminUsers

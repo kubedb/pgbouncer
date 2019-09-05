@@ -16,6 +16,8 @@ spec:
       appBindingName: "quick-postgress"
       appBindingNamespace: "demo"
   connectionPool:
+    maxClientConn: 20
+    reservePoolSize: 5
     listenPort: 5432
     adminUsers:
       - admin
