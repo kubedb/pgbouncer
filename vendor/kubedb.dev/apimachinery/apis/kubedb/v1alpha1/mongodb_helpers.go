@@ -21,6 +21,11 @@ import (
 var _ apis.ResourceInfo = &MongoDB{}
 
 const (
+	MongoTLSKeyFileName    = "ca.key"
+	MongoTLSCertFileName   = "ca.cert"
+	MongoServerPemFileName = "mongo.pem"
+	MongoClientPemFileName = "client.pem"
+
 	MongoDBShardLabelKey  = "mongodb.kubedb.com/node.shard"
 	MongoDBConfigLabelKey = "mongodb.kubedb.com/node.config"
 	MongoDBMongosLabelKey = "mongodb.kubedb.com/node.mongos"
@@ -352,11 +357,7 @@ func (m *MongoDBSpec) SetDefaults() {
 		m.UpdateStrategy.Type = apps.RollingUpdateStatefulSetStrategyType
 	}
 	if m.TerminationPolicy == "" {
-		if m.StorageType == StorageTypeEphemeral {
-			m.TerminationPolicy = TerminationPolicyDelete
-		} else {
-			m.TerminationPolicy = TerminationPolicyPause
-		}
+		m.TerminationPolicy = TerminationPolicyDelete
 	}
 
 	if m.SSLMode == "" {
@@ -364,7 +365,7 @@ func (m *MongoDBSpec) SetDefaults() {
 	}
 
 	if (m.ReplicaSet != nil || m.ShardTopology != nil) && m.ClusterAuthMode == "" {
-		if m.SSLMode == SSLModeDisabled {
+		if m.SSLMode == SSLModeDisabled || m.SSLMode == SSLModeAllowSSL {
 			m.ClusterAuthMode = ClusterAuthModeKeyFile
 		} else {
 			m.ClusterAuthMode = ClusterAuthModeX509
@@ -411,19 +412,18 @@ func (m *MongoDBSpec) setDefaultProbes(podTemplate *ofst.PodTemplateSpec) {
 		return
 	}
 
-	cmd := []string{
-		"mongo",
-		"--host=localhost",
-		"--eval",
-		"db.adminCommand('ping')",
+	var sslArgs string
+	if m.SSLMode == SSLModeRequireSSL {
+		sslArgs = fmt.Sprintf("--ssl --sslCAFile=/data/configdb/%v --sslPEMKeyFile=/data/configdb/%v", MongoTLSCertFileName, MongoClientPemFileName)
 	}
 
-	if m.SSLMode == SSLModeRequireSSL {
-		cmd = append(cmd, []string{
-			"--ssl",
-			"--sslCAFile=/data/configdb/tls.crt",
-			"--sslPEMKeyFile=/data/configdb/mongo.pem",
-		}...)
+	cmd := []string{
+		"bash",
+		"-c",
+		fmt.Sprintf(`if [[ $(mongo admin --host=localhost %v --username=$MONGO_INITDB_ROOT_USERNAME --password=$MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase=admin --quiet --eval "db.adminCommand('ping').ok" ) -eq "1" ]]; then 
+          exit 0
+        fi
+        exit 1`, sslArgs),
 	}
 
 	if podTemplate.Spec.LivenessProbe == nil {

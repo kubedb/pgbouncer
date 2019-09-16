@@ -3,24 +3,25 @@ module kubedb.dev/pgbouncer
 go 1.12
 
 require (
-	github.com/appscode/go v0.0.0-20190621064509-6b292c9166e3
+	contrib.go.opencensus.io/exporter/ocagent v0.4.12 // indirect
+	github.com/appscode/go v0.0.0-20190808133642-1d4ef1f1c1e0
 	github.com/aws/aws-sdk-go v1.20.20
 	github.com/codeskyblue/go-sh v0.0.0-20190412065543-76bd3d59ff27
-	github.com/coreos/bbolt v1.3.3 // indirect
-	github.com/coreos/prometheus-operator v0.30.0
-	github.com/emicklei/go-restful v2.9.6+incompatible // indirect
+	github.com/coreos/prometheus-operator v0.30.1
+	github.com/dnaeon/go-vcr v1.0.1 // indirect
 	github.com/go-openapi/spec v0.19.2 // indirect
 	github.com/go-openapi/swag v0.19.4 // indirect
 	github.com/go-xorm/xorm v0.7.3
+	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/lib/pq v1.1.0
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/procfs v0.0.3 // indirect
+	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/spf13/afero v1.2.2
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.3
-	go.etcd.io/bbolt v1.3.3 // indirect
 	gomodules.xyz/cert v1.0.0
 	k8s.io/api v0.0.0-20190503110853-61630f889b3c
 	k8s.io/apiextensions-apiserver v0.0.0-20190516231611-bf6753f2aa24
@@ -31,13 +32,13 @@ require (
 	k8s.io/klog v0.3.3 // indirect
 	k8s.io/kube-aggregator v0.0.0-20190508224022-f9852b6d3a84
 	k8s.io/kubernetes v1.14.4 // indirect
-	kmodules.xyz/client-go v0.0.0-20190715080709-7162a6c90b04
-	kmodules.xyz/custom-resources v0.0.0-20190508103408-464e8324c3ec
-	kmodules.xyz/monitoring-agent-api v0.0.0-20190513065523-186af167f817
-	kmodules.xyz/offshoot-api v0.0.0-20190715115723-36c8fce142c1
-	kmodules.xyz/webhook-runtime v0.0.0-20190715115250-a84fbf77dd30
-	kubedb.dev/apimachinery v0.0.0-20190905063838-c1d6d94694ff
-	stash.appscode.dev/stash v0.0.0-20190718015558-6bc80ce219d9
+	kmodules.xyz/client-go v0.0.0-20190808141354-bbb9e14f60ab
+	kmodules.xyz/custom-resources v0.0.0-20190808144301-114abf10dfe2
+	kmodules.xyz/monitoring-agent-api v0.0.0-20190808150221-601a4005b7f7
+	kmodules.xyz/offshoot-api v0.0.0-20190808152534-e3dc715f844b
+	kmodules.xyz/webhook-runtime v0.0.0-20190808145328-4186c470d56b
+	kubedb.dev/apimachinery v0.13.0-rc.0.0.20190916092137-025ac92cfa0a
+	stash.appscode.dev/stash v0.9.0-rc.0
 )
 
 replace (

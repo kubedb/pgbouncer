@@ -57,7 +57,7 @@ func (c *Controller) ensureStatefulSet(
 	if pgbouncer.Spec.Replicas != nil {
 		replicas = types.Int32(pgbouncer.Spec.Replicas)
 	}
-	image := pgbouncerVersion.Spec.DB.Image
+	image := pgbouncerVersion.Spec.Server.Image
 
 	statefulSet, vt, err := app_util.CreateOrPatchStatefulSet(c.Client, statefulSetMeta, func(in *apps.StatefulSet) *apps.StatefulSet {
 		in.Annotations = pgbouncer.Annotations //TODO: actual annotations

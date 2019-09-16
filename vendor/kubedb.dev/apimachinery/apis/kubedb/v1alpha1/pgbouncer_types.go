@@ -4,6 +4,7 @@ import (
 	"github.com/appscode/go/encoding/json/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	mona "kmodules.xyz/monitoring-agent-api/api/v1"
+	ofst "kmodules.xyz/offshoot-api/api/v1"
 	v1 "kmodules.xyz/offshoot-api/api/v1"
 )
 
@@ -14,11 +15,18 @@ const (
 	ResourcePluralPgBouncer   = "pgbouncers"
 )
 
+// PgBouncer defines a PgBouncer Server.
+
 // +genclient
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// PgBouncer defines a PgBouncer database.
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:path=pgbouncers,singular=pgbouncer,shortName=pb,categories={proxy,kubedb,appscode,all}
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.version"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type PgBouncer struct {
 	metav1.TypeMeta   `json:",inline,omitempty"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -34,6 +42,9 @@ type PgBouncerSpec struct {
 	// ServiceTemplate is an optional configuration for service used to expose database
 	// +optional
 	ServiceTemplate v1.ServiceTemplateSpec `json:"serviceTemplate,omitempty"`
+	// PodTemplate is an optional configuration for pods
+	// +optional
+	PodTemplate ofst.PodTemplateSpec `json:"podTemplate,omitempty"`
 	// Databases to proxy by connection pooling
 	// +optional
 	Databases []Databases `json:"databases, omitempty"`
@@ -65,7 +76,7 @@ type Databases struct {
 }
 
 type ConnectionPoolConfig struct {
-	ListenPort         *int32   `json:"listenPort"`
+	ListenPort         *int32   `json:"listenPort,omitempty"`
 	ListenAddress      string   `json:"listenAddress,omitempty"`
 	PoolMode           string   `json:"poolMode,omitempty"`
 	MaxClientConn      *int     `json:"maxClientConn,omitempty"`
@@ -76,10 +87,6 @@ type ConnectionPoolConfig struct {
 	MaxDbConnections   *int     `json:"maxDbConnections,omitempty"`
 	MaxUserConnections *int     `json:"maxUserConnections,omitempty"`
 	AdminUsers         []string `json:"adminUsers,omitempty"`
-	// observedGeneration is the most recent generation observed for this resource. It corresponds to the
-	// resource's generation, which is updated on mutation by the API Server.
-	// +optional
-	ObservedGeneration *types.IntHash `json:"observedGeneration,omitempty"`
 }
 
 type UserList struct {
