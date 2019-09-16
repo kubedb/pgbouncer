@@ -96,15 +96,15 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 
 						hostname = appBinding.Spec.ClientConfig.Service.Name + "." + namespace + ".svc"
 						hostPort = appBinding.Spec.ClientConfig.Service.Port
-						dbinfo = dbinfo +fmt.Sprint(db.Alias ,"= host=" , hostname ," port=",hostPort," dbname=",db.DbName )
+						dbinfo = dbinfo + fmt.Sprint(db.Alias, "= host=", hostname, " port=", hostPort, " dbname=", db.DbName)
 						//dbinfo = dbinfo +fmt.Sprintln(db.Alias +"x = host=" + hostname +" port="+strconv.Itoa(int(hostPort))+" dbname="+db.DbName )
 					}
 				} else {
 					//Reminder URL should contain host=localhost port=5432
-					dbinfo = dbinfo + fmt.Sprint(db.Alias + " = " + *(appBinding.Spec.ClientConfig.URL)+ " dbname=" + db.DbName)
+					dbinfo = dbinfo + fmt.Sprint(db.Alias+" = "+*(appBinding.Spec.ClientConfig.URL)+" dbname="+db.DbName)
 				}
 				if db.UserName != "" {
-					dbinfo = dbinfo +fmt.Sprint(" user=", db.UserName)
+					dbinfo = dbinfo + fmt.Sprint(" user=", db.UserName)
 				}
 				dbinfo = dbinfo + fmt.Sprintln("")
 			}
@@ -117,7 +117,7 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 		if pgbouncer.Spec.ConnectionPool != nil {
 			pbConnectionPool := pgbouncer.Spec.ConnectionPool
 			admins = fmt.Sprintf("%s", pbAdminUser)
-			pbinfo = pbinfo + fmt.Sprintln("listen_port =" , *pbConnectionPool.ListenPort)
+			pbinfo = pbinfo + fmt.Sprintln("listen_port =", *pbConnectionPool.ListenPort)
 			pbinfo = pbinfo + fmt.Sprintln("listen_addr = ", pbConnectionPool.ListenAddress)
 			pbinfo = pbinfo + fmt.Sprintln("pool_mode = ", pbConnectionPool.PoolMode)
 			//TODO: add max connection and pool size

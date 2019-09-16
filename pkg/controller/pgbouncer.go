@@ -72,14 +72,9 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 		log.Errorln(err)
 		return nil
 	}
-	// Add initialized or running phase
-	if err := c.manageFinalPhase(pgbouncer); err != nil {
-		return err
-	}
 
 	//println("Setting annotations")
 	//c.UpsertDatabaseAnnotation(pgbouncer.GetObjectMeta(),)
-	println("===Mischief Managed for ", pgbouncer.Name, "===")
 	return nil
 }
 
@@ -220,13 +215,9 @@ func (c *Controller) manageInitialPhase(pgbouncer *api.PgBouncer) error {
 
 func (c *Controller) manageFinalPhase(pgbouncer *api.PgBouncer) error {
 	if _, err := meta_util.GetString(pgbouncer.Annotations, api.AnnotationInitialized); err == kutil.ErrNotFound {
-
-		print(">>>Not found err for phase")
 		if pgbouncer.Status.Phase == api.DatabasePhaseInitializing {
-			println(">>Current phase = ", pgbouncer.Status.Phase)
 			return nil
 		}
-		println(">>Adding phase: Initializing")
 		// add phase that database is being initialized
 		pg, err := util.UpdatePgBouncerStatus(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncerStatus) *api.PgBouncerStatus {
 			in.Phase = api.DatabasePhaseInitializing
@@ -237,7 +228,6 @@ func (c *Controller) manageFinalPhase(pgbouncer *api.PgBouncer) error {
 		}
 		pgbouncer.Status = pg.Status
 	}
-	println(">>>Adding phase: Running")
 	pg, err := util.UpdatePgBouncerStatus(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncerStatus) *api.PgBouncerStatus {
 		in.Phase = api.DatabasePhaseRunning
 		in.ObservedGeneration = types.NewIntHash(pgbouncer.Generation, meta_util.GenerationHash(pgbouncer))
@@ -279,7 +269,7 @@ func (c *Controller) manageStatefulSet(pgbouncer *api.PgBouncer) error {
 	println("string(pgbouncer.Spec.Version) = ", string(pgbouncer.Spec.Version))
 	pgBouncerVersion, err := c.ExtClient.CatalogV1alpha1().PgBouncerVersions().Get(string(pgbouncer.Spec.Version), metav1.GetOptions{})
 	if err != nil {
-		println("PostgresVersion GET err = ", err)
+		return err
 	}
 
 	statefulsetVerb, err := c.ensureStatefulSet(pgbouncer, pgBouncerVersion, []core.EnvVar{})

@@ -61,8 +61,7 @@ BASEIMAGE_DBG    ?= debian:stretch
 IMAGE            := $(REGISTRY)/$(BIN)
 VERSION_PROD     := $(VERSION)
 VERSION_DBG      := $(VERSION)-dbg
-TAG              := 0.12.0
-#$(VERSION)_$(OS)_$(ARCH)
+TAG              := $(VERSION)_$(OS)_$(ARCH)
 TAG_PROD         := $(TAG)
 TAG_DBG          := $(VERSION)-dbg_$(OS)_$(ARCH)
 

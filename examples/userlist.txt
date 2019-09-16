@@ -4,3 +4,4 @@
 "kubedb123" "kubedb123"
 "rezoan" "rezoan"
 "admin1" "admin"
+"myuser" "mypass"

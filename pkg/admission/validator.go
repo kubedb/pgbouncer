@@ -111,7 +111,7 @@ func (pbValidator *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *a
 			}
 		}
 		// validate database specs
-		if err = ValidatePgBouncer(pbValidator.client, pbValidator.extClient, obj.(*api.PgBouncer), false); err != nil {
+		if err = ValidatePgBouncer(pbValidator.client, pbValidator.extClient, obj.(*api.PgBouncer), true); err != nil {
 			return hookapi.StatusForbidden(err)
 		}
 	}
@@ -129,6 +129,25 @@ func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbo
 	}
 	if string(pgbouncer.Spec.Version) == "" { //TODO: compare with actual versions
 		return fmt.Errorf(`spec.Version can't be empty`)
+	}
+
+	if strictValidation {
+		if pgbouncer.Spec.UserList.SecretName != "" {
+			if _, err := client.CoreV1().Secrets(pgbouncer.Spec.UserList.SecretNamespace).Get(pgbouncer.Spec.UserList.SecretName, metav1.GetOptions{}); err != nil {
+				return err
+			}
+		}
+
+		// Check if pgbouncerVersion is deprecated.
+		// If deprecated, return error
+		pgbouncerVersion, err := extClient.CatalogV1alpha1().PgBouncerVersions().Get(string(pgbouncer.Spec.Version), metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if pgbouncerVersion.Spec.Deprecated {
+			return fmt.Errorf("pgbouncer %s/%s is using deprecated version %v. Skipped processing",
+				pgbouncer.Namespace, pgbouncer.Name, pgbouncerVersion.Name)
+		}
 	}
 	return nil
 }
