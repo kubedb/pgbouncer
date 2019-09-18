@@ -127,7 +127,7 @@ func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbo
 	if pgbouncer.Spec.Replicas == nil || *pgbouncer.Spec.Replicas < 1 {
 		return fmt.Errorf(`spec.replicas "%v" invalid. Value must be greater than zero`, pgbouncer.Spec.Replicas)
 	}
-	if string(pgbouncer.Spec.Version) == "" { //TODO: compare with actual versions
+	if string(pgbouncer.Spec.Version) == "" {
 		return fmt.Errorf(`spec.Version can't be empty`)
 	}
 
@@ -138,7 +138,7 @@ func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbo
 			}
 		}
 
-		// Check if pgbouncerVersion is deprecated.
+		// Check if pgbouncerVersion is absent or deprecated.
 		// If deprecated, return error
 		pgbouncerVersion, err := extClient.CatalogV1alpha1().PgBouncerVersions().Get(string(pgbouncer.Spec.Version), metav1.GetOptions{})
 		if err != nil {
@@ -184,13 +184,6 @@ func getPreconditionFunc() []mergepatch.PreconditionFunc {
 }
 
 var preconditionSpecFields = []string{
-	"spec.standby",
-	"spec.streaming",
-	"spec.archiver",
-	"spec.databaseSecret",
-	"spec.storageType",
-	"spec.storage",
-	"spec.init",
 	"spec.podTemplate.spec.nodeSelector",
 }
 

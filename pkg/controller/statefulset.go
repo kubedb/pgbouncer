@@ -103,7 +103,7 @@ func (c *Controller) ensureStatefulSet(
 			}
 			//We are not concerned about other errors
 		}
-		//in.Spec.Template.Spec.InitContainers = core_util.UpsertContainers(in.Spec.Template.Spec.InitContainers, pgbouncer.Spec.PodTemplate.Spec.InitContainers)
+		in.Spec.Template.Spec.InitContainers = core_util.UpsertContainers(in.Spec.Template.Spec.InitContainers, pgbouncer.Spec.PodTemplate.Spec.InitContainers)
 		in.Spec.Template.Spec.Containers = core_util.UpsertContainer(
 			in.Spec.Template.Spec.Containers,
 			core.Container{
@@ -125,12 +125,23 @@ func (c *Controller) ensureStatefulSet(
 					RunAsUser: aws.Int64(securityContextCode),
 				},
 				VolumeMounts: volumeMounts,
+
+				Resources:      pgbouncer.Spec.PodTemplate.Spec.Resources,
+				LivenessProbe:  pgbouncer.Spec.PodTemplate.Spec.LivenessProbe,
+				ReadinessProbe: pgbouncer.Spec.PodTemplate.Spec.ReadinessProbe,
+				Lifecycle:      pgbouncer.Spec.PodTemplate.Spec.Lifecycle,
 			})
 
 		in.Spec.Template.Spec.Volumes = volumes
-
+		in = upsertUserEnv(in, pgbouncer)
 		in = upsertPort(in, pgbouncer)
-
+		in.Spec.Template.Spec.NodeSelector = pgbouncer.Spec.PodTemplate.Spec.NodeSelector
+		in.Spec.Template.Spec.Affinity = pgbouncer.Spec.PodTemplate.Spec.Affinity
+		in.Spec.Template.Spec.Tolerations = pgbouncer.Spec.PodTemplate.Spec.Tolerations
+		in.Spec.Template.Spec.ImagePullSecrets = pgbouncer.Spec.PodTemplate.Spec.ImagePullSecrets
+		in.Spec.Template.Spec.PriorityClassName = pgbouncer.Spec.PodTemplate.Spec.PriorityClassName
+		in.Spec.Template.Spec.Priority = pgbouncer.Spec.PodTemplate.Spec.Priority
+		in.Spec.Template.Spec.SecurityContext = pgbouncer.Spec.PodTemplate.Spec.SecurityContext
 		in = c.upsertMonitoringContainer(in, pgbouncer, pgbouncerVersion)
 
 		return in
@@ -218,6 +229,17 @@ func (c *Controller) checkConfigMap(pgbouncer *api.PgBouncer) error {
 	}
 
 	return nil
+}
+
+// upsertUserEnv add/overwrite env from user provided env in crd spec
+func upsertUserEnv(statefulSet *apps.StatefulSet, pgbouncer *api.PgBouncer) *apps.StatefulSet {
+	for i, container := range statefulSet.Spec.Template.Spec.Containers {
+		if container.Name == api.ResourceSingularPgBouncer {
+			statefulSet.Spec.Template.Spec.Containers[i].Env = core_util.UpsertEnvVars(container.Env, pgbouncer.Spec.PodTemplate.Spec.Env...)
+			return statefulSet
+		}
+	}
+	return statefulSet
 }
 
 func upsertPort(statefulSet *apps.StatefulSet, pgbouncer *api.PgBouncer) *apps.StatefulSet {
