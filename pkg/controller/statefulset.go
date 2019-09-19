@@ -266,19 +266,23 @@ func upsertPort(statefulSet *apps.StatefulSet, pgbouncer *api.PgBouncer) *apps.S
 
 func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pgbouncer *api.PgBouncer, pgbouncerVersion *catalog.PgBouncerVersion) *apps.StatefulSet {
 	if pgbouncer.GetMonitoringVendor() == mona.VendorPrometheus {
+		var monitorArgs []string
+		if pgbouncer.Spec.Monitor != nil {
+			monitorArgs = pgbouncer.Spec.Monitor.Args
+		}
 		container := core.Container{
 			Name: "exporter",
 			//TODO: decide what to do with Args
-			//Args: append([]string{
-			//	fmt.Sprintf("---web.listen-address=:%d",api.PrometheusExporterPortNumber),
-			//}, pgbouncer.Spec.Monitor.Args...),
+			Args: append([]string{
+				fmt.Sprintf("--web.listen-address=:%d",api.PrometheusExporterPortNumber),
+			}, monitorArgs...),
 			Image:           pgbouncerVersion.Spec.Exporter.Image,
 			ImagePullPolicy: core.PullIfNotPresent,
 			Ports: []core.ContainerPort{
 				{
 					Name:          api.PrometheusExporterPortName,
 					Protocol:      core.ProtocolTCP,
-					ContainerPort: int32(9127),
+					ContainerPort: int32(api.PrometheusExporterPortNumber),
 				},
 			},
 			Env:             pgbouncer.Spec.Monitor.Env,

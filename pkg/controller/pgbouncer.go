@@ -24,7 +24,7 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 		return err
 	}
 
-	println("===CREATE/UPDATE PGBOUNCER===", pgbouncer.Name)
+	println("===CRD CREATE/UPDATE EVENT===", pgbouncer.Name)
 	if err := c.manageInitialPhase(pgbouncer); err != nil {
 		return err
 	}
@@ -72,6 +72,10 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 		log.Errorln(err)
 		return nil
 	}
+	// Add initialized or running phase
+	if err := c.manageFinalPhase(pgbouncer); err != nil {
+		return err
+	}
 
 	//println("Setting annotations")
 	//c.UpsertDatabaseAnnotation(pgbouncer.GetObjectMeta(),)
@@ -79,20 +83,6 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 }
 
 func (c *Controller) terminate(pgbouncer *api.PgBouncer) error {
-	//ref, rerr := reference.GetReference(clientsetscheme.Scheme, pgbouncer)
-	//if rerr != nil {
-	//	println(">>>Terminate rerr = ", rerr)
-	//	return rerr
-	//}
-	//if err := c.setOwnerReferenceToOffshoots(pgbouncer, ref); err != nil {
-	//	println(">>>setOwnerReferenceToOffshoots err = ", err)
-	//	//return err
-	//}
-	//if err := c.removeOwnerReferenceFromOffshoots(pgbouncer, ref); err != nil {
-	//	println(">>>removeOwnerReferenceFromOffshoots err = ", err)
-	//	//return err
-	//}
-
 	if pgbouncer.Spec.Monitor != nil {
 		if _, err := c.deleteMonitor(pgbouncer); err != nil {
 			log.Errorln(err)
@@ -100,31 +90,6 @@ func (c *Controller) terminate(pgbouncer *api.PgBouncer) error {
 		}
 	}
 	return nil
-}
-
-func (c *Controller) setOwnerReferenceToOffshoots(pgbouncer *api.PgBouncer, ref *core.ObjectReference) error {
-	selector := labels.SelectorFromSet(pgbouncer.OffshootSelectors())
-
-	// If TerminationPolicy is "wipeOut", delete snapshots and secrets,
-	// else, keep it intact.
-
-	if err := dynamic_util.EnsureOwnerReferenceForSelector(
-		c.DynamicClient,
-		api.SchemeGroupVersion.WithResource(api.ResourcePluralSnapshot),
-		pgbouncer.Namespace,
-		selector,
-		ref); err != nil {
-		return err
-	}
-	// if wal archiver was configured, remove wal data from backend
-
-	// delete PVC for both "wipeOut" and "delete" TerminationPolicy.
-	return dynamic_util.EnsureOwnerReferenceForSelector(
-		c.DynamicClient,
-		core.SchemeGroupVersion.WithResource("persistentvolumeclaims"),
-		pgbouncer.Namespace,
-		selector,
-		ref)
 }
 
 func (c *Controller) removeOwnerReferenceFromOffshoots(pgbouncer *api.PgBouncer, ref *core.ObjectReference) error {
@@ -266,7 +231,6 @@ func (c *Controller) manageConfigMap(pgbouncer *api.PgBouncer) error {
 }
 
 func (c *Controller) manageStatefulSet(pgbouncer *api.PgBouncer) error {
-	println("string(pgbouncer.Spec.Version) = ", string(pgbouncer.Spec.Version))
 	pgBouncerVersion, err := c.ExtClient.CatalogV1alpha1().PgBouncerVersions().Get(string(pgbouncer.Spec.Version), metav1.GetOptions{})
 	if err != nil {
 		return err
