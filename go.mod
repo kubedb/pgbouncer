@@ -3,7 +3,6 @@ module kubedb.dev/pgbouncer
 go 1.12
 
 require (
-	contrib.go.opencensus.io/exporter/ocagent v0.4.12 // indirect
 	github.com/appscode/go v0.0.0-20190808133642-1d4ef1f1c1e0
 	github.com/aws/aws-sdk-go v1.20.20
 	github.com/codeskyblue/go-sh v0.0.0-20190412065543-76bd3d59ff27
@@ -37,12 +36,12 @@ require (
 	kmodules.xyz/monitoring-agent-api v0.0.0-20190808150221-601a4005b7f7
 	kmodules.xyz/offshoot-api v0.0.0-20190808152534-e3dc715f844b
 	kmodules.xyz/webhook-runtime v0.0.0-20190808145328-4186c470d56b
-	kubedb.dev/apimachinery v0.13.0-rc.0.0.20190916092137-025ac92cfa0a
+	kubedb.dev/apimachinery v0.13.0-rc.0.0.20190930062045-6756518dd821
 	stash.appscode.dev/stash v0.9.0-rc.0
 )
 
 replace (
-	github.com/Azure/go-autorest => github.com/Azure/go-autorest/autorest v0.7.0
+	github.com/Azure/go-autorest => github.com/Azure/go-autorest/autorest v0.5.0
 	k8s.io/api => k8s.io/api v0.0.0-20190313235455-40a48860b5ab
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190315093550-53c4693659ed
 	k8s.io/apimachinery => github.com/kmodules/apimachinery v0.0.0-20190508045248-a52a97a7a2bf

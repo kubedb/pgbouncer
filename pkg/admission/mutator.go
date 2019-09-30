@@ -22,7 +22,6 @@ const (
 	defaultListenPort     = int32(5432)
 	defaultListenAddress  = "*"
 	defaultPoolMode       = "session"
-	defaultPgBouncerImage = "rezoan/pb:latest"
 )
 
 type PgBouncerMutator struct {
@@ -132,7 +131,7 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbou
 			}
 		}
 	}
-	if pgbouncer.Spec.UserList.SecretNamespace == "" {
+	if pgbouncer.Spec.UserList != nil && pgbouncer.Spec.UserList.SecretNamespace == "" {
 		pgbouncer.Spec.UserList.SecretNamespace = pgbouncer.Namespace
 	}
 	//TODO: refuse pgbouncer without secret
@@ -159,7 +158,10 @@ func setMonitoringPort(pgbouncer *api.PgBouncer) {
 	}
 }
 
-func (a *PgBouncerMutator) CheckSecretAvailable(bouncer *api.PgBouncer) error {
-	_, err := a.client.CoreV1().Secrets(bouncer.Spec.UserList.SecretNamespace).Get(bouncer.Spec.UserList.SecretName, v1.GetOptions{})
+func (a *PgBouncerMutator) CheckSecretAvailable(pgbouncer *api.PgBouncer) error {
+	if pgbouncer.Spec.UserList == nil  {
+		return nil
+	}
+	_, err := a.client.CoreV1().Secrets(pgbouncer.Spec.UserList.SecretNamespace).Get(pgbouncer.Spec.UserList.SecretName, v1.GetOptions{})
 	return err
 }
