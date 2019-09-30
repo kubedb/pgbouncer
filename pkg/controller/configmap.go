@@ -53,7 +53,9 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 		pbinfo = pbinfo + fmt.Sprintln("pidfile = /tmp/pgbouncer.pid")
 
 		authFileLocation := filepath.Join(userListMountPath, c.getUserListFileName(pgbouncer))
-		pbinfo = pbinfo + fmt.Sprintln("auth_file = ", authFileLocation)
+		if pgbouncer.Spec.ConnectionPool == nil || (pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any"){
+			pbinfo = pbinfo + fmt.Sprintln("auth_file = ", authFileLocation)
+		}
 
 		var admins string
 
@@ -74,11 +76,11 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 					}
 					continue //Dont add pgbouncer databse base for this non existent appbinding
 				}
-				if appBinding.Spec.ClientConfig.Service != nil {
-					name = appBinding.Spec.ClientConfig.Service.Name
-					namespace = appBinding.Namespace
-					hostPort = appBinding.Spec.ClientConfig.Service.Port
-				}
+				//if appBinding.Spec.ClientConfig.Service != nil {
+				//	name = appBinding.Spec.ClientConfig.Service.Name
+				//	namespace = appBinding.Namespace
+				//	hostPort = appBinding.Spec.ClientConfig.Service.Port
+				//}
 				var hostname string
 				if appBinding.Spec.ClientConfig.URL == nil {
 					if appBinding.Spec.ClientConfig.Service != nil {
@@ -106,23 +108,29 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 				if db.UserName != "" {
 					dbinfo = dbinfo + fmt.Sprint(" user=", db.UserName)
 				}
+				if db.Password != "" {
+					dbinfo = dbinfo + fmt.Sprint(" password=", db.Password)
+				}
 				dbinfo = dbinfo + fmt.Sprintln("")
 			}
 		}
 
-		if pgbouncer.Spec.UserList.SecretName == "" {
+		if pgbouncer.Spec.UserList == nil {
 			log.Infoln("PgBouncer userlist was not provided")
 		}
 
 		if pgbouncer.Spec.ConnectionPool != nil {
 			pbConnectionPool := pgbouncer.Spec.ConnectionPool
 			admins = fmt.Sprintf("%s", pbAdminUser)
+
 			pbinfo = pbinfo + fmt.Sprintln("listen_port =", *pbConnectionPool.ListenPort)
 			pbinfo = pbinfo + fmt.Sprintln("listen_addr = ", pbConnectionPool.ListenAddress)
 			pbinfo = pbinfo + fmt.Sprintln("pool_mode = ", pbConnectionPool.PoolMode)
-			//TODO: add max connection and pool size
 			pbinfo = pbinfo + fmt.Sprintln("ignore_startup_parameters =", ignoredParmeter)
-			//TODO: change to int32 in apimachinery
+			if pbConnectionPool.IgnoreStartupParameters != "" {
+				pbinfo = pbinfo + fmt.Sprintln("ignore_startup_parameters =", ignoredParmeter,",",pbConnectionPool.IgnoreStartupParameters)
+			}
+
 			if pbConnectionPool.MaxClientConn != nil {
 				pbinfo = pbinfo + fmt.Sprintln("max_client_conn = ", *pbConnectionPool.MaxClientConn)
 			}
@@ -144,12 +152,23 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 			if pbConnectionPool.ReservePoolTimeout != nil {
 				pbinfo = pbinfo + fmt.Sprintln("reserve_pool_timeout = ", *pbConnectionPool.ReservePoolTimeout)
 			}
+			if pbConnectionPool.StatsPeriod != nil {
+				pbinfo = pbinfo + fmt.Sprintln("stats_period = ", *pbConnectionPool.StatsPeriod)
+			}
 
+			if pbConnectionPool.AuthType != "" {
+				pbinfo = pbinfo + fmt.Sprintln("auth_type = ", pbConnectionPool.AuthType)
+			}
+			if pbConnectionPool.AuthUser != "" {
+				pbinfo = pbinfo + fmt.Sprintln("auth_user = ", pbConnectionPool.AuthUser)
+			}
 			adminList := pgbouncer.Spec.ConnectionPool.AdminUsers
 			for _, adminListItem := range adminList {
 				admins = fmt.Sprintf("%s,%s", admins, adminListItem)
 			}
-			pbinfo = pbinfo + fmt.Sprintln("admin_users = ", admins)
+			if pbConnectionPool.AuthType != "any" {
+				pbinfo = pbinfo + fmt.Sprintln("admin_users = ", admins)
+			}
 		}
 		pgbouncerData := fmt.Sprintln(dbinfo)
 		pgbouncerData = pgbouncerData + pbinfo

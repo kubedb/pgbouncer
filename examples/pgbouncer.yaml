@@ -11,6 +11,8 @@ spec:
     databaseName: "postgres"
     appBindingName: "quick-postgress"
     appBindingNamespace: "demo"
+    username: "postgres"
+    password: "Ss9sL6xFAAdEKu4D"
   - alias: "postgres2"
     databaseName: "tmpdb"
     appBindingName: "quick-postgress"
@@ -18,6 +20,7 @@ spec:
     maxClientConn: 20
     reservePoolSize: 5
     listenPort: 5432
+    authType: "any"
     adminUsers:
     - admin
     - admin1
@@ -25,4 +28,9 @@ spec:
     secretName: db-user-pass
     secretNamespace: demo
   monitor:
-    agent: prometheus.io/builtin
+    agent: prometheus.io/coreos-operator
+    prometheus:
+      namespace: monitoring
+      labels:
+        k8s-app: prometheus
+      interval: 10s

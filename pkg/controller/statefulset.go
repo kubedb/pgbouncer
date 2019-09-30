@@ -274,7 +274,7 @@ func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pg
 			Name: "exporter",
 			//TODO: decide what to do with Args
 			Args: append([]string{
-				fmt.Sprintf("--web.listen-address=:%d",api.PrometheusExporterPortNumber),
+				fmt.Sprintf("--web.listen-address=:%d", api.PrometheusExporterPortNumber),
 			}, monitorArgs...),
 			Image:           pgbouncerVersion.Spec.Exporter.Image,
 			ImagePullPolicy: core.PullIfNotPresent,

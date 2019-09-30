@@ -50,7 +50,7 @@ func (i *Invocation) PgBouncer() *api.PgBouncer {
 				},
 			},
 
-			UserList: api.UserList{
+			UserList: &api.UserList{
 				SecretName:      PgBouncerUserListSecret,
 				SecretNamespace: i.namespace,
 			},
