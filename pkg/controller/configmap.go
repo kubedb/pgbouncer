@@ -166,9 +166,7 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 			for _, adminListItem := range adminList {
 				admins = fmt.Sprintf("%s,%s", admins, adminListItem)
 			}
-			if pbConnectionPool.AuthType != "any" {
-				pbinfo = pbinfo + fmt.Sprintln("admin_users = ", admins)
-			}
+			pbinfo = pbinfo + fmt.Sprintln("admin_users = ", admins)
 		}
 		pgbouncerData := fmt.Sprintln(dbinfo)
 		pgbouncerData = pgbouncerData + pbinfo
