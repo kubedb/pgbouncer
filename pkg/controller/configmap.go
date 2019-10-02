@@ -69,6 +69,84 @@ admin_users = pgbouncer {{range .AdminUsers }},{{.}}{{end}}
 `))
 )
 
+func (c *Controller) generateConfig(pgbouncer *api.PgBouncer) (string, error) {
+	var buf bytes.Buffer
+	buf.WriteString("[databases]\n")
+	if pgbouncer.Spec.Databases != nil {
+		for _, db := range pgbouncer.Spec.Databases {
+			var hostPort= int32(DefaultHostPort)
+			name := db.DatabaseRef.Name
+			namespace := pgbouncer.GetNamespace()
+
+			appBinding, err := c.AppCatalogClient.AppcatalogV1alpha1().AppBindings(namespace).Get(name, metav1.GetOptions{})
+			if err != nil {
+				if kerr.IsNotFound(err) {
+					log.Warning(err)
+				} else {
+					log.Error(err)
+				}
+				continue //Dont add pgbouncer databse base for this non existent appbinding
+			}
+			//if appBinding.Spec.ClientConfig.Service != nil {
+			//	name = appBinding.Spec.ClientConfig.Service.Name
+			//	namespace = appBinding.Namespace
+			//	hostPort = appBinding.Spec.ClientConfig.Service.Port
+			//}
+			var hostname string
+			if appBinding.Spec.ClientConfig.URL == nil {
+				if appBinding.Spec.ClientConfig.Service != nil {
+					//urlString, err := appBinding.URL()
+					//if err != nil {
+					//	log.Errorln(err)
+					//}
+					//parsedURL, err := pq.ParseURL(urlString)
+					//if err != nil {
+					//	log.Errorln(err)
+					//}
+					//println(":::Parsed URL= ", parsedURL)
+					//parsedURL = strings.ReplaceAll(parsedURL, " sslmode=disable","")
+					//dbinfo = dbinfo +fmt.Sprintln(db.Alias +" = " + parsedURL +" dbname="+db.DbName )
+
+					hostname = appBinding.Spec.ClientConfig.Service.Name + "." + namespace + ".svc"
+					hostPort = appBinding.Spec.ClientConfig.Service.Port
+					buf.WriteString(fmt.Sprint(db.Alias, "= host=", hostname, " port=", hostPort, " dbname=", db.DatabaseName))
+					//dbinfo = dbinfo +fmt.Sprintln(db.Alias +"x = host=" + hostname +" port="+strconv.Itoa(int(hostPort))+" dbname="+db.DbName )
+				}
+			} else {
+				//Reminder URL should contain host=localhost port=5432
+				buf.WriteString(fmt.Sprint(db.Alias + " = " + *(appBinding.Spec.ClientConfig.URL) + " dbname=" + db.DatabaseName))
+			}
+			if db.UserName != "" {
+				buf.WriteString(fmt.Sprint(" user=", db.UserName))
+			}
+			if db.Password != "" {
+				buf.WriteString(fmt.Sprint(" password=", db.Password))
+			}
+			buf.WriteRune('\n')
+		}
+	}
+
+	if pgbouncer.Spec.UserListSecretRef == nil {
+		log.Infoln("PgBouncer doesn't have a userlist")
+	}
+
+	buf.WriteString("\n[pgbouncer]\n")
+	buf.WriteString("logfile = /tmp/pgbouncer.log\n") // TODO: send log to stdout ?
+	buf.WriteString("pidfile = /tmp/pgbouncer.pid\n")
+
+	authFileLocation := filepath.Join(userListMountPath, c.getUserListFileName(pgbouncer))
+	if pgbouncer.Spec.ConnectionPool == nil || (pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any") {
+		buf.WriteString(fmt.Sprintln("auth_file = ", authFileLocation))
+	}
+	if pgbouncer.Spec.ConnectionPool != nil {
+		err := cfgtpl.Execute(&buf, pgbouncer.Spec.ConnectionPool)
+		if err != nil {
+			return "", err
+		}
+	}
+	return buf.String(), nil
+}
+
 func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.VerbType, error) {
 	configMapMeta := metav1.ObjectMeta{
 		Name:      pgbouncer.OffshootName(),
@@ -79,87 +157,16 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 		return kutil.VerbUnchanged, rerr
 	}
 
+	cfg, err := c.generateConfig(pgbouncer)
+	if err != nil {
+		return kutil.VerbUnchanged, rerr
+	}
+
 	cfgMap, vt, err := core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
 		in.Labels = pgbouncer.OffshootLabels()
 		core_util.EnsureOwnerReference(&in.ObjectMeta, ref)
-
-		var buf bytes.Buffer
-		buf.WriteString("[databases]\n")
-		if pgbouncer.Spec.Databases != nil {
-			for _, db := range pgbouncer.Spec.Databases {
-				var hostPort = int32(DefaultHostPort)
-				name := db.DatabaseRef.Name
-				namespace := pgbouncer.GetNamespace()
-
-				appBinding, err := c.AppCatalogClient.AppcatalogV1alpha1().AppBindings(namespace).Get(name, metav1.GetOptions{})
-				if err != nil {
-					if kerr.IsNotFound(err) {
-						log.Warning(err)
-					} else {
-						log.Error(err)
-					}
-					continue //Dont add pgbouncer databse base for this non existent appbinding
-				}
-				//if appBinding.Spec.ClientConfig.Service != nil {
-				//	name = appBinding.Spec.ClientConfig.Service.Name
-				//	namespace = appBinding.Namespace
-				//	hostPort = appBinding.Spec.ClientConfig.Service.Port
-				//}
-				var hostname string
-				if appBinding.Spec.ClientConfig.URL == nil {
-					if appBinding.Spec.ClientConfig.Service != nil {
-						//urlString, err := appBinding.URL()
-						//if err != nil {
-						//	log.Errorln(err)
-						//}
-						//parsedURL, err := pq.ParseURL(urlString)
-						//if err != nil {
-						//	log.Errorln(err)
-						//}
-						//println(":::Parsed URL= ", parsedURL)
-						//parsedURL = strings.ReplaceAll(parsedURL, " sslmode=disable","")
-						//dbinfo = dbinfo +fmt.Sprintln(db.Alias +" = " + parsedURL +" dbname="+db.DbName )
-
-						hostname = appBinding.Spec.ClientConfig.Service.Name + "." + namespace + ".svc"
-						hostPort = appBinding.Spec.ClientConfig.Service.Port
-						buf.WriteString(fmt.Sprint(db.Alias, "= host=", hostname, " port=", hostPort, " dbname=", db.DatabaseName))
-						//dbinfo = dbinfo +fmt.Sprintln(db.Alias +"x = host=" + hostname +" port="+strconv.Itoa(int(hostPort))+" dbname="+db.DbName )
-					}
-				} else {
-					//Reminder URL should contain host=localhost port=5432
-					buf.WriteString(fmt.Sprint(db.Alias + " = " + *(appBinding.Spec.ClientConfig.URL) + " dbname=" + db.DatabaseName))
-				}
-				if db.UserName != "" {
-					buf.WriteString(fmt.Sprint(" user=", db.UserName))
-				}
-				if db.Password != "" {
-					buf.WriteString(fmt.Sprint(" password=", db.Password))
-				}
-				buf.WriteRune('\n')
-			}
-		}
-
-		if pgbouncer.Spec.UserListSecretRef == nil {
-			log.Infoln("PgBouncer doesn't have a userlist")
-		}
-
-		buf.WriteString("\n[pgbouncer]\n")
-		buf.WriteString("logfile = /tmp/pgbouncer.log\n") // TODO: send log to stdout ?
-		buf.WriteString("pidfile = /tmp/pgbouncer.pid\n")
-
-		authFileLocation := filepath.Join(userListMountPath, c.getUserListFileName(pgbouncer))
-		if pgbouncer.Spec.ConnectionPool == nil || (pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any") {
-			buf.WriteString(fmt.Sprintln("auth_file = ", authFileLocation))
-		}
-		if pgbouncer.Spec.ConnectionPool != nil {
-			err := cfgtpl.Execute(&buf, pgbouncer.Spec.ConnectionPool)
-			if err != nil {
-				panic(err)
-			}
-		}
-
 		in.Data = map[string]string{
-			"pgbouncer.ini": buf.String(),
+			"pgbouncer.ini": cfg,
 		}
 		return in
 	})
