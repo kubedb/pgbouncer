@@ -98,7 +98,7 @@ func (c *Controller) manageAppBindingEvent(key string) error {
 		return err
 	}
 	for _, pgBouncer := range pgBouncerList.Items {
-		if pgBouncer.GetNamespace() == appBindingInfo[namespaceKey]{
+		if pgBouncer.GetNamespace() == appBindingInfo[namespaceKey] {
 			err := c.checkAppBindingsInPgBouncerDatabases(appBindingInfo, &pgBouncer)
 			if err != nil {
 				log.Warning(err)

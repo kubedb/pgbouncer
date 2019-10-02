@@ -54,7 +54,7 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 		pbinfo = pbinfo + fmt.Sprintln("pidfile = /tmp/pgbouncer.pid")
 
 		authFileLocation := filepath.Join(userListMountPath, c.getUserListFileName(pgbouncer))
-		if pgbouncer.Spec.ConnectionPool == nil || (pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any"){
+		if pgbouncer.Spec.ConnectionPool == nil || (pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any") {
 			pbinfo = pbinfo + fmt.Sprintln("auth_file = ", authFileLocation)
 		}
 
@@ -129,7 +129,7 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 			pbinfo = pbinfo + fmt.Sprintln("pool_mode = ", pbConnectionPool.PoolMode)
 			pbinfo = pbinfo + fmt.Sprintln("ignore_startup_parameters =", ignoredParmeter)
 			if pbConnectionPool.IgnoreStartupParameters != "" {
-				pbinfo = pbinfo + fmt.Sprintln("ignore_startup_parameters =", ignoredParmeter,",",pbConnectionPool.IgnoreStartupParameters)
+				pbinfo = pbinfo + fmt.Sprintln("ignore_startup_parameters =", ignoredParmeter, ",", pbConnectionPool.IgnoreStartupParameters)
 			}
 
 			if pbConnectionPool.MaxClientConnections != nil {

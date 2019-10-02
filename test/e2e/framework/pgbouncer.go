@@ -7,9 +7,11 @@ import (
 	"github.com/appscode/go/crypto/rand"
 	"github.com/appscode/go/types"
 	. "github.com/onsi/gomega"
+	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	appcat "kmodules.xyz/custom-resources/apis/appcatalog/v1alpha1"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 )
@@ -37,10 +39,11 @@ func (i *Invocation) PgBouncer() *api.PgBouncer {
 			Replicas: types.Int32P(1),
 			Databases: []api.Databases{
 				{
-					Alias:               api.ResourceSingularPostgres,
-					DbName:              api.ResourceSingularPostgres,
-					AppBindingNamespace: i.namespace,
-					AppBindingName:      PostgresName,
+					Alias:        api.ResourceSingularPostgres,
+					DatabaseName: api.ResourceSingularPostgres,
+					DatabaseRef: appcat.AppReference{
+						Name: PostgresName,
+					},
 				},
 			},
 
@@ -50,9 +53,8 @@ func (i *Invocation) PgBouncer() *api.PgBouncer {
 				},
 			},
 
-			UserList: &api.UserList{
-				SecretName:      PgBouncerUserListSecret,
-				SecretNamespace: i.namespace,
+			UserListSecretRef: &core.LocalObjectReference{
+				Name: PgBouncerUserListSecret,
 			},
 		},
 	}

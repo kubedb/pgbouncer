@@ -307,11 +307,12 @@ func (c *Controller) manageStatService(pgbouncer *api.PgBouncer) error {
 	return nil //if no err
 }
 func (c *Controller) managePatchedUserList(pgbouncer *api.PgBouncer) error {
-	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name
-	pbSecretNamespace := pgbouncer.GetNamespace()
-	if pbSecretName == "" && pbSecretNamespace == "" {
+	if pgbouncer.Spec.UserListSecretRef == nil{
 		return nil
 	}
+	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name
+	pbSecretNamespace := pgbouncer.GetNamespace()
+
 	sec, err := c.Client.CoreV1().Secrets(pbSecretNamespace).Get(pbSecretName, metav1.GetOptions{})
 	if err != nil {
 		if kerr.IsNotFound(err) {

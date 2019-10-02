@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	defaultListenPort     = int32(5432)
-	DefaultListenAddress  = "*"
-	defaultPoolMode       = "session"
+	defaultListenPort    = int32(5432)
+	DefaultListenAddress = "*"
+	defaultPoolMode      = "session"
 )
 
 type PgBouncerMutator struct {
@@ -138,4 +138,3 @@ func setMonitoringPort(pgbouncer *api.PgBouncer) {
 		}
 	}
 }
-

@@ -3,6 +3,9 @@ package framework
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/appscode/go/log"
 	shell "github.com/codeskyblue/go-sh"
 	"github.com/go-xorm/xorm"
@@ -12,10 +15,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	kutil "kmodules.xyz/client-go"
 	"kmodules.xyz/client-go/tools/portforward"
+	appcat "kmodules.xyz/custom-resources/apis/appcatalog/v1alpha1"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/pgbouncer/pkg/controller"
-	"strings"
-	"time"
 )
 
 const (
@@ -248,9 +250,11 @@ func (f *Framework) CreateUserAndDatabaseViaPgBouncer(meta metav1.ObjectMeta) er
 	//Add database info to pgbouncer
 	_, err = f.PatchPgBouncer(meta, func(in *api.PgBouncer) *api.PgBouncer {
 		tmpDB := api.Databases{
-			Alias:          testDB,
-			DbName:         testDB,
-			AppBindingName: PostgresName,
+			Alias:        testDB,
+			DatabaseName: testDB,
+			DatabaseRef: appcat.AppReference{
+				Name: PostgresName,
+			},
 		}
 		in.Spec.Databases = append(in.Spec.Databases, tmpDB)
 		return in

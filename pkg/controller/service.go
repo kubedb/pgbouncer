@@ -113,6 +113,12 @@ func (c *Controller) createService(pgbouncer *api.PgBouncer) (kutil.VerbType, er
 //	}
 //}
 func upsertServicePort(in *core.Service, pgbouncer *api.PgBouncer) []core.ServicePort {
+	if pgbouncer.Spec.ConnectionPool == nil {
+		return ofst.MergeServicePorts(
+			core_util.MergeServicePorts(in.Spec.Ports, []core.ServicePort{}),
+			pgbouncer.Spec.ServiceTemplate.Spec.Ports,
+		)
+	}
 	defaultDBPort := core.ServicePort{
 		Name:       PgBouncerPortName,
 		Port:       *pgbouncer.Spec.ConnectionPool.Port,

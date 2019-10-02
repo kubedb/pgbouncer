@@ -92,7 +92,7 @@ func (c *Controller) ensureStatefulSet(
 		}
 		volumeMounts = append(volumeMounts, configMapVolumeMount)
 
-		if pgbouncer.Spec.UserListSecretRef.Name != "" { //Add secret (user list file) as volume
+		if pgbouncer.Spec.UserListSecretRef != nil && pgbouncer.Spec.UserListSecretRef.Name != "" {
 			secretVolume, secretVolumeMount, err := c.getVolumeAndVoulumeMountForUserList(pgbouncer)
 			if err == nil {
 				volumes = append(volumes, *secretVolume)

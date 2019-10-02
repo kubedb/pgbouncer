@@ -36,7 +36,7 @@ func (c *Controller) manageUserSecretEvent(key string) error {
 	}
 	if !exists {
 		log.Debugf("PgBouncer Secret %s deleted.", key)
-
+		//TODO: ensure that we have a placeholder secret that has kubedb as a user in the userlist
 	} else {
 		log.Debugf("Updates for PgBouncer Secret %s received.", key)
 	}
@@ -57,6 +57,9 @@ func (c *Controller) ensureUserListInSecret(secretInfo map[string]string, pgboun
 	if pgbouncer == nil {
 		return errors.New("cant sync secret with pgbouncer == nil")
 	}
+	if pgbouncer.Spec.UserListSecretRef == nil {
+		return nil
+	}
 	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name
 	pbSecretNamespace := pgbouncer.GetNamespace()
 
@@ -66,8 +69,6 @@ func (c *Controller) ensureUserListInSecret(secretInfo map[string]string, pgboun
 		if err != nil {
 			return err
 		}
-		//TODO: ensure that changes to secrets result in secret being updated in pod (No need to RELOAD)
-		//TODO: ensure that we have kubedb as a user in the userlist
 		c.ensureUserlistHasDefaultAdmin(pgbouncer, secret)
 	}
 
@@ -98,11 +99,12 @@ func (c *Controller) ensureUserlistHasDefaultAdmin(pgbouncer *api.PgBouncer, sec
 }
 
 func (c *Controller) getSecretKeyValuePair(pgbouncer *api.PgBouncer) (key, value string, err error) {
-	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name
-	pbSecretNamespace := pgbouncer.GetNamespace()
-	if pbSecretName == "" && pbSecretNamespace == "" {
+	if pgbouncer.Spec.UserListSecretRef != nil{
 		return "", "", errors.New("no secret has been defined yet")
 	}
+	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name
+	pbSecretNamespace := pgbouncer.GetNamespace()
+
 	sec, err := c.Client.CoreV1().Secrets(pbSecretNamespace).Get(pbSecretName, metav1.GetOptions{})
 	if err != nil {
 		//secret has not been created yet, which is fine. We have watcher to take action when its created
@@ -119,11 +121,12 @@ func (c *Controller) getSecretKeyValuePair(pgbouncer *api.PgBouncer) (key, value
 }
 
 func (c *Controller) getSecretKey(pgbouncer *api.PgBouncer) (key string, err error) {
-	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name
-	pbSecretNamespace := pgbouncer.GetNamespace()
-	if pbSecretName == "" && pbSecretNamespace == "" {
+	if pgbouncer.Spec.UserListSecretRef == nil {
 		return "", errors.New("no secret has been defined yet")
 	}
+	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name
+	pbSecretNamespace := pgbouncer.GetNamespace()
+
 	sec, err := c.Client.CoreV1().Secrets(pbSecretNamespace).Get(pbSecretName, metav1.GetOptions{})
 	if err != nil {
 		//secret has not been created yet, which is fine. We have watcher to take action when its created

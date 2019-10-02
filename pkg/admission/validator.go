@@ -134,8 +134,10 @@ func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbo
 	if strictValidation {
 		// Check if usrlist is absent.
 		if pgbouncer.Spec.UserListSecretRef != nil && pgbouncer.Spec.UserListSecretRef.Name != "" {
-			if _, err := client.CoreV1().Secrets(pgbouncer.GetNamespace()).Get(pgbouncer.Spec.UserListSecretRef.Name, metav1.GetOptions{}); err != nil {
-				return err
+			if pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any"{
+				if _, err := client.CoreV1().Secrets(pgbouncer.GetNamespace()).Get(pgbouncer.Spec.UserListSecretRef.Name, metav1.GetOptions{}); err != nil {
+					return err
+				}
 			}
 		}
 
