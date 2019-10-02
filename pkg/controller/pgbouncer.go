@@ -307,8 +307,8 @@ func (c *Controller) manageStatService(pgbouncer *api.PgBouncer) error {
 	return nil //if no err
 }
 func (c *Controller) managePatchedUserList(pgbouncer *api.PgBouncer) error {
-	pbSecretName := pgbouncer.Spec.UserList.SecretName
-	pbSecretNamespace := pgbouncer.Spec.UserList.SecretNamespace
+	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name
+	pbSecretNamespace := pgbouncer.GetNamespace()
 	if pbSecretName == "" && pbSecretNamespace == "" {
 		return nil
 	}
@@ -326,7 +326,7 @@ func (c *Controller) managePatchedUserList(pgbouncer *api.PgBouncer) error {
 }
 
 func (c *Controller) getVolumeAndVoulumeMountForUserList(pgbouncer *api.PgBouncer) (*core.Volume, *core.VolumeMount, error) {
-	_, err := c.Client.CoreV1().Secrets(pgbouncer.Spec.UserList.SecretNamespace).Get(pgbouncer.Spec.UserList.SecretName, metav1.GetOptions{})
+	_, err := c.Client.CoreV1().Secrets(pgbouncer.GetNamespace()).Get(pgbouncer.Spec.UserListSecretRef.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -334,7 +334,7 @@ func (c *Controller) getVolumeAndVoulumeMountForUserList(pgbouncer *api.PgBounce
 		Name: "userlist",
 		VolumeSource: core.VolumeSource{
 			Secret: &core.SecretVolumeSource{
-				SecretName: pgbouncer.Spec.UserList.SecretName,
+				SecretName: pgbouncer.Spec.UserListSecretRef.Name,
 			},
 		},
 	}

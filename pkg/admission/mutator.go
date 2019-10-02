@@ -6,7 +6,6 @@ import (
 	"github.com/appscode/go/log"
 	"github.com/appscode/go/types"
 	admission "k8s.io/api/admission/v1beta1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
@@ -20,7 +19,7 @@ import (
 
 const (
 	defaultListenPort     = int32(5432)
-	defaultListenAddress  = "*"
+	DefaultListenAddress  = "*"
 	defaultPoolMode       = "session"
 )
 
@@ -81,9 +80,6 @@ func (a *PgBouncerMutator) Admit(req *admission.AdmissionRequest) *admission.Adm
 	if err != nil {
 		return hookapi.StatusBadRequest(err)
 	}
-	if err := a.CheckSecretAvailable(obj.(*api.PgBouncer).DeepCopy()); err != nil {
-		return hookapi.StatusForbidden(err)
-	}
 
 	dbMod, err := setDefaultValues(a.client, a.extClient, obj.(*api.PgBouncer).DeepCopy())
 	if err != nil {
@@ -113,28 +109,13 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbou
 	//TODO: Make sure image an image path is set
 
 	if pgbouncer.Spec.ConnectionPool != nil {
-		if pgbouncer.Spec.ConnectionPool.ListenPort == nil {
-			pgbouncer.Spec.ConnectionPool.ListenPort = types.Int32P(defaultListenPort)
-		}
-		if pgbouncer.Spec.ConnectionPool.ListenAddress == "" {
-			pgbouncer.Spec.ConnectionPool.ListenAddress = defaultListenAddress
+		if pgbouncer.Spec.ConnectionPool.Port == nil {
+			pgbouncer.Spec.ConnectionPool.Port = types.Int32P(defaultListenPort)
 		}
 		if pgbouncer.Spec.ConnectionPool.PoolMode == "" {
 			pgbouncer.Spec.ConnectionPool.PoolMode = defaultPoolMode
 		}
 	}
-	//Set default namespace for unspecified namespaces
-	if pgbouncer.Spec.Databases != nil {
-		for i, db := range pgbouncer.Spec.Databases {
-			if db.AppBindingNamespace == "" {
-				pgbouncer.Spec.Databases[i].AppBindingNamespace = pgbouncer.Namespace
-			}
-		}
-	}
-	if pgbouncer.Spec.UserList != nil && pgbouncer.Spec.UserList.SecretNamespace == "" {
-		pgbouncer.Spec.UserList.SecretNamespace = pgbouncer.Namespace
-	}
-	//TODO: refuse pgbouncer without secret
 	pgbouncer.SetDefaults()
 
 	// If monitoring spec is given without port,
@@ -158,10 +139,3 @@ func setMonitoringPort(pgbouncer *api.PgBouncer) {
 	}
 }
 
-func (a *PgBouncerMutator) CheckSecretAvailable(pgbouncer *api.PgBouncer) error {
-	if pgbouncer.Spec.UserList == nil  {
-		return nil
-	}
-	_, err := a.client.CoreV1().Secrets(pgbouncer.Spec.UserList.SecretNamespace).Get(pgbouncer.Spec.UserList.SecretName, v1.GetOptions{})
-	return err
-}

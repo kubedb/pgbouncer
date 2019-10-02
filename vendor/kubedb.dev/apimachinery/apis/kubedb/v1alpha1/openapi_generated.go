@@ -358,7 +358,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.ElasticsearchNode":              schema_apimachinery_apis_kubedb_v1alpha1_ElasticsearchNode(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.ElasticsearchSpec":              schema_apimachinery_apis_kubedb_v1alpha1_ElasticsearchSpec(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.ElasticsearchStatus":            schema_apimachinery_apis_kubedb_v1alpha1_ElasticsearchStatus(ref),
-		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.ElasticsearchSummary":           schema_apimachinery_apis_kubedb_v1alpha1_ElasticsearchSummary(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.Etcd":                           schema_apimachinery_apis_kubedb_v1alpha1_Etcd(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.EtcdList":                       schema_apimachinery_apis_kubedb_v1alpha1_EtcdList(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.EtcdSpec":                       schema_apimachinery_apis_kubedb_v1alpha1_EtcdSpec(ref),
@@ -403,11 +402,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.Postgres":                       schema_apimachinery_apis_kubedb_v1alpha1_Postgres(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.PostgresArchiverSpec":           schema_apimachinery_apis_kubedb_v1alpha1_PostgresArchiverSpec(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.PostgresList":                   schema_apimachinery_apis_kubedb_v1alpha1_PostgresList(ref),
-		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.PostgresSchemaInfo":             schema_apimachinery_apis_kubedb_v1alpha1_PostgresSchemaInfo(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.PostgresSpec":                   schema_apimachinery_apis_kubedb_v1alpha1_PostgresSpec(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.PostgresStatus":                 schema_apimachinery_apis_kubedb_v1alpha1_PostgresStatus(ref),
-		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.PostgresSummary":                schema_apimachinery_apis_kubedb_v1alpha1_PostgresSummary(ref),
-		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.PostgresTableInfo":              schema_apimachinery_apis_kubedb_v1alpha1_PostgresTableInfo(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.PostgresWALSourceSpec":          schema_apimachinery_apis_kubedb_v1alpha1_PostgresWALSourceSpec(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.RecoveryTarget":                 schema_apimachinery_apis_kubedb_v1alpha1_RecoveryTarget(ref),
 		"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.Redis":                          schema_apimachinery_apis_kubedb_v1alpha1_Redis(ref),
@@ -15813,18 +15809,11 @@ func schema_apimachinery_apis_kubedb_v1alpha1_ConnectionPoolConfig(ref common.Re
 			SchemaProps: spec.SchemaProps{
 				Type: []string{"object"},
 				Properties: map[string]spec.Schema{
-					"listenPort": {
+					"port": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ListenPort is the port number on which PgBouncer listens to clients. Default: 5432.",
+							Description: "Port is the port number on which PgBouncer listens to clients. Default: 5432.",
 							Type:        []string{"integer"},
 							Format:      "int32",
-						},
-					},
-					"listenAddress": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ListenAddress is the address from which PgBouncer listens to clients. Default: all addresses (*).",
-							Type:        []string{"string"},
-							Format:      "",
 						},
 					},
 					"poolMode": {
@@ -15834,9 +15823,9 @@ func schema_apimachinery_apis_kubedb_v1alpha1_ConnectionPoolConfig(ref common.Re
 							Format:      "",
 						},
 					},
-					"maxClientConn": {
+					"maxClientConnections": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxClientConn is the maximum number of allowed client connections. Default: 100.",
+							Description: "MaxClientConnections is the maximum number of allowed client connections. Default: 100.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -15862,16 +15851,16 @@ func schema_apimachinery_apis_kubedb_v1alpha1_ConnectionPoolConfig(ref common.Re
 							Format:      "int32",
 						},
 					},
-					"reservePoolTimeout": {
+					"reservePoolTimeoutSeconds": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ReservePoolTimeout is the number of seconds in which if a client has not been serviced, pgbouncer enables use of additional connections from reserve pool. 0 disables. Default: 5.0",
+							Description: "ReservePoolTimeoutSeconds is the number of seconds in which if a client has not been serviced, pgbouncer enables use of additional connections from reserve pool. 0 disables. Default: 5.0",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
 					},
-					"maxDbConnections": {
+					"maxDBConnections": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxDbConnections is the maximum number of connections allowed per-database. Default: unlimited.",
+							Description: "MaxDBConnections is the maximum number of connections allowed per-database. Default: unlimited.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -15883,9 +15872,9 @@ func schema_apimachinery_apis_kubedb_v1alpha1_ConnectionPoolConfig(ref common.Re
 							Format:      "int32",
 						},
 					},
-					"statsPeriod": {
+					"statsPeriodSeconds": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MaxUserConnections is the maximum number of users allowed per-database. Default: unlimited.",
+							Description: "StatsPeriodSeconds sets how often the averages shown in various SHOW commands are updated and how often aggregated statistics are written to the log",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -15920,7 +15909,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_ConnectionPoolConfig(ref common.Re
 					},
 					"ignoreStartupParameters": {
 						SchemaProps: spec.SchemaProps{
-							Description: "IgnoreStartupParameters specifies comma-seperated statup parameters that pgbouncer knows are handled by admin and it can ignore them",
+							Description: "IgnoreStartupParameters specifies comma-separated startup parameters that pgbouncer knows are handled by admin and it can ignore them",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -15944,23 +15933,15 @@ func schema_apimachinery_apis_kubedb_v1alpha1_Databases(ref common.ReferenceCall
 							Format:      "",
 						},
 					},
+					"databaseRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DatabaseRef specifies the database appbinding reference in any namespace",
+							Ref:         ref("kmodules.xyz/custom-resources/apis/appcatalog/v1alpha1.AppReference"),
+						},
+					},
 					"databaseName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "DbName is the name of the target database inside a Postgres instance",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"appBindingName": {
-						SchemaProps: spec.SchemaProps{
-							Description: "AppBindingName references the Postgres instance where the target database is located",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"appBindingNamespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "AppBindingNamespace is the namespace of AppBindingName if left empty, pgBouncer namespace is assigned. Use \"default\" for default namespace.",
+							Description: "DatabaseName is the name of the target database inside a Postgres instance",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -15980,9 +15961,11 @@ func schema_apimachinery_apis_kubedb_v1alpha1_Databases(ref common.ReferenceCall
 						},
 					},
 				},
-				Required: []string{"alias", "databaseName", "appBindingName"},
+				Required: []string{"alias", "databaseRef", "databaseName"},
 			},
 		},
+		Dependencies: []string{
+			"kmodules.xyz/custom-resources/apis/appcatalog/v1alpha1.AppReference"},
 	}
 }
 
@@ -16348,9 +16331,16 @@ func schema_apimachinery_apis_kubedb_v1alpha1_ElasticsearchSpec(ref common.Refer
 							Ref:         ref("k8s.io/api/core/v1.SecretVolumeSource"),
 						},
 					},
+					"disableSecurity": {
+						SchemaProps: spec.SchemaProps{
+							Description: "disable security of authPlugin (ie, xpack or searchguard). It disables authentication security of user. If unset, default is false",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"authPlugin": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Authentication plugin used by Elasticsearch cluster. If unset, defaults to SearchGuard.",
+							Description: "Authentication plugin used by Elasticsearch cluster. If unset, defaults to SearchGuard. Deprecated: Use elasticsearchVersion.Spec.AuthPlugin instead",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -16467,46 +16457,6 @@ func schema_apimachinery_apis_kubedb_v1alpha1_ElasticsearchStatus(ref common.Ref
 		},
 		Dependencies: []string{
 			"github.com/appscode/go/encoding/json/types.IntHash"},
-	}
-}
-
-func schema_apimachinery_apis_kubedb_v1alpha1_ElasticsearchSummary(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Following structure is used for audit summary report",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"idCount": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Allows: true,
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"integer"},
-										Format: "int64",
-									},
-								},
-							},
-						},
-					},
-					"mapping": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"object"},
-							Format: "",
-						},
-					},
-					"setting": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"object"},
-							Format: "",
-						},
-					},
-				},
-				Required: []string{"idCount", "mapping", "setting"},
-			},
-		},
 	}
 }
 
@@ -18455,10 +18405,10 @@ func schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerSpec(ref common.Reference
 							Ref:         ref("kubedb.dev/apimachinery/apis/kubedb/v1alpha1.ConnectionPoolConfig"),
 						},
 					},
-					"userList": {
+					"userListSecretRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "UserList keeps a list of pgbouncer user's secrets",
-							Ref:         ref("kubedb.dev/apimachinery/apis/kubedb/v1alpha1.UserList"),
+							Description: "UserListSecretRef is a secret with a list of PgBouncer user and passwords",
+							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
 						},
 					},
 					"monitor": {
@@ -18472,7 +18422,7 @@ func schema_apimachinery_apis_kubedb_v1alpha1_PgBouncerSpec(ref common.Reference
 			},
 		},
 		Dependencies: []string{
-			"kmodules.xyz/monitoring-agent-api/api/v1.AgentSpec", "kmodules.xyz/offshoot-api/api/v1.PodTemplateSpec", "kmodules.xyz/offshoot-api/api/v1.ServiceTemplateSpec", "kubedb.dev/apimachinery/apis/kubedb/v1alpha1.ConnectionPoolConfig", "kubedb.dev/apimachinery/apis/kubedb/v1alpha1.Databases", "kubedb.dev/apimachinery/apis/kubedb/v1alpha1.UserList"},
+			"k8s.io/api/core/v1.LocalObjectReference", "kmodules.xyz/monitoring-agent-api/api/v1.AgentSpec", "kmodules.xyz/offshoot-api/api/v1.PodTemplateSpec", "kmodules.xyz/offshoot-api/api/v1.ServiceTemplateSpec", "kubedb.dev/apimachinery/apis/kubedb/v1alpha1.ConnectionPoolConfig", "kubedb.dev/apimachinery/apis/kubedb/v1alpha1.Databases"},
 	}
 }
 
@@ -18615,34 +18565,6 @@ func schema_apimachinery_apis_kubedb_v1alpha1_PostgresList(ref common.ReferenceC
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta", "kubedb.dev/apimachinery/apis/kubedb/v1alpha1.Postgres"},
-	}
-}
-
-func schema_apimachinery_apis_kubedb_v1alpha1_PostgresSchemaInfo(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"table": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Allows: true,
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("kubedb.dev/apimachinery/apis/kubedb/v1alpha1.PostgresTableInfo"),
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"table"},
-			},
-		},
-		Dependencies: []string{
-			"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.PostgresTableInfo"},
 	}
 }
 
@@ -18804,66 +18726,6 @@ func schema_apimachinery_apis_kubedb_v1alpha1_PostgresStatus(ref common.Referenc
 		},
 		Dependencies: []string{
 			"github.com/appscode/go/encoding/json/types.IntHash"},
-	}
-}
-
-func schema_apimachinery_apis_kubedb_v1alpha1_PostgresSummary(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"schema": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Allows: true,
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("kubedb.dev/apimachinery/apis/kubedb/v1alpha1.PostgresSchemaInfo"),
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"schema"},
-			},
-		},
-		Dependencies: []string{
-			"kubedb.dev/apimachinery/apis/kubedb/v1alpha1.PostgresSchemaInfo"},
-	}
-}
-
-func schema_apimachinery_apis_kubedb_v1alpha1_PostgresTableInfo(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Following structures are used for audit summary report",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"totalRow": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int64",
-						},
-					},
-					"maxId": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int64",
-						},
-					},
-					"nextId": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"integer"},
-							Format: "int64",
-						},
-					},
-				},
-				Required: []string{"totalRow", "maxId", "nextId"},
-			},
-		},
 	}
 }
 

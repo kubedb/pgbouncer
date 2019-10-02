@@ -57,8 +57,8 @@ func (c *Controller) ensureUserListInSecret(secretInfo map[string]string, pgboun
 	if pgbouncer == nil {
 		return errors.New("cant sync secret with pgbouncer == nil")
 	}
-	pbSecretName := pgbouncer.Spec.UserList.SecretName
-	pbSecretNamespace := pgbouncer.Spec.UserList.SecretNamespace
+	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name
+	pbSecretNamespace := pgbouncer.GetNamespace()
 
 	if pbSecretNamespace == secretInfo[namespaceKey] && pbSecretName == secretInfo[nameKey] {
 		log.Infof("secret %s update found for PgBouncer: %s", secretInfo[nameKey], pgbouncer.Name)
@@ -98,8 +98,8 @@ func (c *Controller) ensureUserlistHasDefaultAdmin(pgbouncer *api.PgBouncer, sec
 }
 
 func (c *Controller) getSecretKeyValuePair(pgbouncer *api.PgBouncer) (key, value string, err error) {
-	pbSecretName := pgbouncer.Spec.UserList.SecretName
-	pbSecretNamespace := pgbouncer.Spec.UserList.SecretNamespace
+	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name
+	pbSecretNamespace := pgbouncer.GetNamespace()
 	if pbSecretName == "" && pbSecretNamespace == "" {
 		return "", "", errors.New("no secret has been defined yet")
 	}
@@ -119,8 +119,8 @@ func (c *Controller) getSecretKeyValuePair(pgbouncer *api.PgBouncer) (key, value
 }
 
 func (c *Controller) getSecretKey(pgbouncer *api.PgBouncer) (key string, err error) {
-	pbSecretName := pgbouncer.Spec.UserList.SecretName
-	pbSecretNamespace := pgbouncer.Spec.UserList.SecretNamespace
+	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name
+	pbSecretNamespace := pgbouncer.GetNamespace()
 	if pbSecretName == "" && pbSecretNamespace == "" {
 		return "", errors.New("no secret has been defined yet")
 	}

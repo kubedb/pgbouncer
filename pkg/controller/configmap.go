@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+	"kubedb.dev/pgbouncer/pkg/admission"
 	"path/filepath"
 	"time"
 
@@ -64,8 +65,8 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 		if pgbouncer.Spec.Databases != nil {
 			for _, db := range pgbouncer.Spec.Databases {
 				var hostPort = int32(DefaultHostPort)
-				name := db.AppBindingName
-				namespace := db.AppBindingNamespace
+				name := db.DatabaseRef.Name
+				namespace := pgbouncer.GetNamespace()
 
 				appBinding, err := c.AppCatalogClient.AppcatalogV1alpha1().AppBindings(namespace).Get(name, metav1.GetOptions{})
 				if err != nil {
@@ -98,12 +99,12 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 
 						hostname = appBinding.Spec.ClientConfig.Service.Name + "." + namespace + ".svc"
 						hostPort = appBinding.Spec.ClientConfig.Service.Port
-						dbinfo = dbinfo + fmt.Sprint(db.Alias, "= host=", hostname, " port=", hostPort, " dbname=", db.DbName)
+						dbinfo = dbinfo + fmt.Sprint(db.Alias, "= host=", hostname, " port=", hostPort, " dbname=", db.DatabaseName)
 						//dbinfo = dbinfo +fmt.Sprintln(db.Alias +"x = host=" + hostname +" port="+strconv.Itoa(int(hostPort))+" dbname="+db.DbName )
 					}
 				} else {
 					//Reminder URL should contain host=localhost port=5432
-					dbinfo = dbinfo + fmt.Sprint(db.Alias+" = "+*(appBinding.Spec.ClientConfig.URL)+" dbname="+db.DbName)
+					dbinfo = dbinfo + fmt.Sprint(db.Alias+" = "+*(appBinding.Spec.ClientConfig.URL)+" dbname="+db.DatabaseName)
 				}
 				if db.UserName != "" {
 					dbinfo = dbinfo + fmt.Sprint(" user=", db.UserName)
@@ -115,27 +116,27 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 			}
 		}
 
-		if pgbouncer.Spec.UserList == nil {
-			log.Infoln("PgBouncer userlist was not provided")
+		if pgbouncer.Spec.UserListSecretRef == nil {
+			log.Infoln("PgBouncer doesnt have a userlist")
 		}
 
 		if pgbouncer.Spec.ConnectionPool != nil {
 			pbConnectionPool := pgbouncer.Spec.ConnectionPool
 			admins = fmt.Sprintf("%s", pbAdminUser)
 
-			pbinfo = pbinfo + fmt.Sprintln("listen_port =", *pbConnectionPool.ListenPort)
-			pbinfo = pbinfo + fmt.Sprintln("listen_addr = ", pbConnectionPool.ListenAddress)
+			pbinfo = pbinfo + fmt.Sprintln("listen_port =", *pbConnectionPool.Port)
+			pbinfo = pbinfo + fmt.Sprintln("listen_addr = ", admission.DefaultListenAddress)
 			pbinfo = pbinfo + fmt.Sprintln("pool_mode = ", pbConnectionPool.PoolMode)
 			pbinfo = pbinfo + fmt.Sprintln("ignore_startup_parameters =", ignoredParmeter)
 			if pbConnectionPool.IgnoreStartupParameters != "" {
 				pbinfo = pbinfo + fmt.Sprintln("ignore_startup_parameters =", ignoredParmeter,",",pbConnectionPool.IgnoreStartupParameters)
 			}
 
-			if pbConnectionPool.MaxClientConn != nil {
-				pbinfo = pbinfo + fmt.Sprintln("max_client_conn = ", *pbConnectionPool.MaxClientConn)
+			if pbConnectionPool.MaxClientConnections != nil {
+				pbinfo = pbinfo + fmt.Sprintln("max_client_conn = ", *pbConnectionPool.MaxClientConnections)
 			}
-			if pbConnectionPool.MaxDbConnections != nil {
-				pbinfo = pbinfo + fmt.Sprintln("max_db_connections = ", *pbConnectionPool.MaxDbConnections)
+			if pbConnectionPool.MaxDBConnections != nil {
+				pbinfo = pbinfo + fmt.Sprintln("max_db_connections = ", *pbConnectionPool.MaxDBConnections)
 			}
 			if pbConnectionPool.MaxUserConnections != nil {
 				pbinfo = pbinfo + fmt.Sprintln("max_user_connections = ", *pbConnectionPool.MaxUserConnections)
@@ -149,11 +150,11 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 			if pbConnectionPool.ReservePoolSize != nil {
 				pbinfo = pbinfo + fmt.Sprintln("reserve_pool_size = ", *pbConnectionPool.ReservePoolSize)
 			}
-			if pbConnectionPool.ReservePoolTimeout != nil {
-				pbinfo = pbinfo + fmt.Sprintln("reserve_pool_timeout = ", *pbConnectionPool.ReservePoolTimeout)
+			if pbConnectionPool.ReservePoolTimeoutSeconds != nil {
+				pbinfo = pbinfo + fmt.Sprintln("reserve_pool_timeout = ", *pbConnectionPool.ReservePoolTimeoutSeconds)
 			}
-			if pbConnectionPool.StatsPeriod != nil {
-				pbinfo = pbinfo + fmt.Sprintln("stats_period = ", *pbConnectionPool.StatsPeriod)
+			if pbConnectionPool.StatsPeriodSeconds != nil {
+				pbinfo = pbinfo + fmt.Sprintln("stats_period = ", *pbConnectionPool.StatsPeriodSeconds)
 			}
 
 			if pbConnectionPool.AuthType != "" {
@@ -228,7 +229,7 @@ func (c *Controller) waitUntilPatchedConfigMapReady(pgbouncer *api.PgBouncer, ne
 }
 
 func (c *Controller) reloadPgBouncer(bouncer *api.PgBouncer) error {
-	localPort := *bouncer.Spec.ConnectionPool.ListenPort
+	localPort := *bouncer.Spec.ConnectionPool.Port
 
 	pod, err := c.getPgBouncerPod(bouncer)
 	if err != nil {
@@ -293,17 +294,12 @@ func (c *Controller) getUserListCmd(bouncer *api.PgBouncer) ([]string, error) {
 }
 
 func (c *Controller) getUserListFileName(bouncer *api.PgBouncer) (filename string) {
-	if bouncer.Spec.UserList.SecretName == "" {
+	if bouncer.Spec.UserListSecretRef == nil {
 		return ""
 	}
-	var ns string
-	if bouncer.Spec.UserList.SecretNamespace != "" {
-		ns = bouncer.Spec.UserList.SecretNamespace
-	} else {
-		ns = bouncer.Namespace
+	var ns = bouncer.Namespace
 
-	}
-	sec, err := c.Client.CoreV1().Secrets(ns).Get(bouncer.Spec.UserList.SecretName, metav1.GetOptions{})
+	sec, err := c.Client.CoreV1().Secrets(ns).Get(bouncer.Spec.UserListSecretRef.Name, metav1.GetOptions{})
 	if err != nil {
 		log.Infoln(err)
 		return ""

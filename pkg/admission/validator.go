@@ -132,8 +132,9 @@ func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbo
 	}
 
 	if strictValidation {
-		if pgbouncer.Spec.UserList != nil && pgbouncer.Spec.UserList.SecretName != "" {
-			if _, err := client.CoreV1().Secrets(pgbouncer.Spec.UserList.SecretNamespace).Get(pgbouncer.Spec.UserList.SecretName, metav1.GetOptions{}); err != nil {
+		// Check if usrlist is absent.
+		if pgbouncer.Spec.UserListSecretRef != nil && pgbouncer.Spec.UserListSecretRef.Name != "" {
+			if _, err := client.CoreV1().Secrets(pgbouncer.GetNamespace()).Get(pgbouncer.Spec.UserListSecretRef.Name, metav1.GetOptions{}); err != nil {
 				return err
 			}
 		}

@@ -92,14 +92,14 @@ func (c *Controller) ensureStatefulSet(
 		}
 		volumeMounts = append(volumeMounts, configMapVolumeMount)
 
-		if pgbouncer.Spec.UserList.SecretName != "" { //Add secret (user list file) as volume
+		if pgbouncer.Spec.UserListSecretRef.Name != "" { //Add secret (user list file) as volume
 			secretVolume, secretVolumeMount, err := c.getVolumeAndVoulumeMountForUserList(pgbouncer)
 			if err == nil {
 				volumes = append(volumes, *secretVolume)
 				//Add to volumeMounts to mount the volume
 				volumeMounts = append(volumeMounts, *secretVolumeMount)
 			} else if kerr.IsNotFound(err) {
-				log.Infoln("UserList secret " + pgbouncer.Spec.UserList.SecretNamespace + "/" + pgbouncer.Spec.UserList.SecretName + " is not available")
+				log.Infoln("UserList secret " + pgbouncer.GetNamespace() + "/" + pgbouncer.Spec.UserListSecretRef.Name + " is not available")
 			}
 			//We are not concerned about other errors
 		}
@@ -247,7 +247,7 @@ func upsertPort(statefulSet *apps.StatefulSet, pgbouncer *api.PgBouncer) *apps.S
 		portList := []core.ContainerPort{
 			{
 				Name:          PgBouncerPortName,
-				ContainerPort: *pgbouncer.Spec.ConnectionPool.ListenPort,
+				ContainerPort: *pgbouncer.Spec.ConnectionPool.Port,
 				Protocol:      core.ProtocolTCP,
 			},
 		}
@@ -293,7 +293,7 @@ func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pg
 		envList := []core.EnvVar{
 			{
 				Name:  "DATA_SOURCE_NAME",
-				Value: fmt.Sprintf("postgres://pgbouncer:@localhost:%d?sslmode=disable", *pgbouncer.Spec.ConnectionPool.ListenPort),
+				Value: fmt.Sprintf("postgres://pgbouncer:@localhost:%d?sslmode=disable", *pgbouncer.Spec.ConnectionPool.Port),
 			},
 			{
 				Name:  "PGPASSWORD",

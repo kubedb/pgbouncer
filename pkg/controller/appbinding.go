@@ -98,17 +98,19 @@ func (c *Controller) manageAppBindingEvent(key string) error {
 		return err
 	}
 	for _, pgBouncer := range pgBouncerList.Items {
-		err := c.checkAppBindingsInPgBouncer(appBindingInfo, &pgBouncer)
-		if err != nil {
-			log.Warning(err)
+		if pgBouncer.GetNamespace() == appBindingInfo[namespaceKey]{
+			err := c.checkAppBindingsInPgBouncerDatabases(appBindingInfo, &pgBouncer)
+			if err != nil {
+				log.Warning(err)
+			}
 		}
 	}
 	return nil
 }
-func (c *Controller) checkAppBindingsInPgBouncer(appBindingInfo map[string]string, pgbouncer *api.PgBouncer) error {
+func (c *Controller) checkAppBindingsInPgBouncerDatabases(appBindingInfo map[string]string, pgbouncer *api.PgBouncer) error {
 	if pgbouncer.Spec.Databases != nil && len(pgbouncer.Spec.Databases) > 0 {
 		for _, db := range pgbouncer.Spec.Databases {
-			if db.AppBindingName == appBindingInfo[nameKey] && db.AppBindingNamespace == appBindingInfo[namespaceKey] {
+			if db.DatabaseRef.Name == appBindingInfo[nameKey] {
 				log.Infoln("A matching appBinding is found.")
 				err := c.manageService(pgbouncer)
 				if err != nil {
