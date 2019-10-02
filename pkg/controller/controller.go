@@ -29,7 +29,6 @@ import (
 	kutildb "kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 	api_listers "kubedb.dev/apimachinery/client/listers/kubedb/v1alpha1"
 	amc "kubedb.dev/apimachinery/pkg/controller"
-	snapc "kubedb.dev/apimachinery/pkg/controller/snapshot"
 	"kubedb.dev/apimachinery/pkg/eventer"
 )
 
@@ -39,8 +38,6 @@ type Controller struct {
 
 	// Prometheus client
 	promClient pcm.MonitoringV1Interface
-	// Cron Controller
-	cronController snapc.CronControllerInterface
 	// Event Recorder
 	recorder record.EventRecorder
 	// labelselector for event-handler of Snapshot, Dormant and Job
@@ -78,7 +75,6 @@ func New(
 	dc dynamic.Interface,
 	appCatalogClient appcat_cs.Interface,
 	promClient pcm.MonitoringV1Interface,
-	cronController snapc.CronControllerInterface,
 	opt amc.Config,
 	recorder record.EventRecorder,
 ) *Controller {
@@ -91,10 +87,9 @@ func New(
 			DynamicClient:    dc,
 			AppCatalogClient: appCatalogClient,
 		},
-		Config:         opt,
-		promClient:     promClient,
-		cronController: cronController,
-		recorder:       recorder,
+		Config:     opt,
+		promClient: promClient,
+		recorder:   recorder,
 		selector: labels.SelectorFromSet(map[string]string{
 			api.LabelDatabaseKind: api.ResourceKindPgBouncer,
 		}),
@@ -107,7 +102,6 @@ func (c *Controller) EnsureCustomResourceDefinitions() error {
 	crds := []*crd_api.CustomResourceDefinition{
 		api.PgBouncer{}.CustomResourceDefinition(),
 		catalog.PgBouncerVersion{}.CustomResourceDefinition(),
-		//authorization.DatabaseAccessRequest{}.CustomResourceDefinition(),
 		appcat_util.AppBinding{}.CustomResourceDefinition(),
 	}
 	log.Infoln("Ensured CustomResourceDefinitions")

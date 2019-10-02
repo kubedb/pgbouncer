@@ -97,7 +97,7 @@ func (c *PgBouncerServerConfig) Complete() CompletedConfig {
 
 // New returns a new instance of PgBouncerServer from the given config.
 func (c completedConfig) New() (*PgBouncerServer, error) {
-	genericServer, err := c.GenericConfig.New("pack-server", genericapiserver.NewEmptyDelegate()) // completion is done in Complete, no need for a second time
+	genericServer, err := c.GenericConfig.New("pgbouncer-operator", genericapiserver.NewEmptyDelegate()) // completion is done in Complete, no need for a second time
 	if err != nil {
 		return nil, err
 	}

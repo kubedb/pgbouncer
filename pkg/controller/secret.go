@@ -99,7 +99,7 @@ func (c *Controller) ensureUserlistHasDefaultAdmin(pgbouncer *api.PgBouncer, sec
 }
 
 func (c *Controller) getSecretKeyValuePair(pgbouncer *api.PgBouncer) (key, value string, err error) {
-	if pgbouncer.Spec.UserListSecretRef != nil{
+	if pgbouncer.Spec.UserListSecretRef != nil {
 		return "", "", errors.New("no secret has been defined yet")
 	}
 	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name

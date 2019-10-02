@@ -4,18 +4,13 @@ go 1.12
 
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.4.12 // indirect
-	github.com/Azure/azure-pipeline-go v0.1.9 // indirect
-	github.com/Azure/azure-storage-blob-go v0.6.0 // indirect
 	github.com/appscode/go v0.0.0-20190920081029-7b75ec783e2e
 	github.com/aws/aws-sdk-go v1.20.20
 	github.com/codeskyblue/go-sh v0.0.0-20190412065543-76bd3d59ff27
 	github.com/coreos/prometheus-operator v0.30.1
-	github.com/go-ini/ini v1.25.4 // indirect
 	github.com/go-openapi/spec v0.19.2 // indirect
 	github.com/go-openapi/swag v0.19.4 // indirect
 	github.com/go-xorm/xorm v0.7.3
-	github.com/golang/snappy v0.0.1 // indirect
-	github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/lib/pq v1.1.0

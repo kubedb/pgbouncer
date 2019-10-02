@@ -24,7 +24,6 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 		return err
 	}
 
-	println("===CRD CREATE/UPDATE EVENT===", pgbouncer.Name)
 	if err := c.manageInitialPhase(pgbouncer); err != nil {
 		return err
 	}
@@ -307,7 +306,7 @@ func (c *Controller) manageStatService(pgbouncer *api.PgBouncer) error {
 	return nil //if no err
 }
 func (c *Controller) managePatchedUserList(pgbouncer *api.PgBouncer) error {
-	if pgbouncer.Spec.UserListSecretRef == nil{
+	if pgbouncer.Spec.UserListSecretRef == nil {
 		return nil
 	}
 	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name

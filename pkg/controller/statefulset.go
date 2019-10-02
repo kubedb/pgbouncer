@@ -295,10 +295,6 @@ func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pg
 				Name:  "DATA_SOURCE_NAME",
 				Value: fmt.Sprintf("postgres://pgbouncer:@localhost:%d?sslmode=disable", *pgbouncer.Spec.ConnectionPool.Port),
 			},
-			{
-				Name:  "PGPASSWORD",
-				Value: "kubedb",
-			},
 		}
 
 		container.Env = core_util.UpsertEnvVars(container.Env, envList...)

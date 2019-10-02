@@ -107,6 +107,7 @@ func (c *Controller) manageAppBindingEvent(key string) error {
 	}
 	return nil
 }
+
 func (c *Controller) checkAppBindingsInPgBouncerDatabases(appBindingInfo map[string]string, pgbouncer *api.PgBouncer) error {
 	if pgbouncer.Spec.Databases != nil && len(pgbouncer.Spec.Databases) > 0 {
 		for _, db := range pgbouncer.Spec.Databases {

@@ -1,9 +1,10 @@
 package controller
 
 import (
+	"bytes"
 	"fmt"
-	"kubedb.dev/pgbouncer/pkg/admission"
 	"path/filepath"
+	"text/template"
 	"time"
 
 	"github.com/appscode/go/log"
@@ -19,7 +20,6 @@ import (
 	core_util "kmodules.xyz/client-go/core/v1"
 	"kmodules.xyz/client-go/tools/exec"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
-	le "kubedb.dev/pgbouncer/pkg/leader_election"
 )
 
 const (
@@ -30,12 +30,44 @@ const (
 	ignoredParmeter  = "extra_float_digits"
 )
 
-func (c *Controller) deleteLeaderLockConfigMap(meta metav1.ObjectMeta) error {
-	if err := c.Client.CoreV1().ConfigMaps(meta.Namespace).Delete(le.GetLeaderLockName(meta.Name), nil); !kerr.IsNotFound(err) {
-		return err
-	}
-	return nil
-}
+var (
+	cfgtpl = template.Must(template.New("cfg").Parse(`listen_port = {{ .Port }}
+listen_addr = *
+pool_mode = {{ .PoolMode }}
+ignore_startup_parameters = extra_float_digits{{ if .IgnoreStartupParameters }}, {{.IgnoreStartupParameters}}{{ end }}
+{{ if .MaxClientConnections  }}
+max_client_conn = {{ .MaxClientConnections }}
+{{ end }}
+{{ if .MaxDBConnections  }}
+max_db_connections = {{ .MaxDBConnections }}
+{{ end }}
+{{ if .MaxUserConnections  }}
+max_user_connections = {{ .MaxUserConnections }}
+{{ end }}
+{{ if .MinPoolSize  }}
+min_pool_size = {{ .MinPoolSize }}
+{{ end }}
+{{ if .DefaultPoolSize  }}
+default_pool_size = {{ .DefaultPoolSize }}
+{{ end }}
+{{ if .ReservePoolSize  }}
+reserve_pool_size = {{ .ReservePoolSize }}
+{{ end }}
+{{ if .ReservePoolTimeoutSeconds  }}
+reserve_pool_timeout = {{ .ReservePoolTimeoutSeconds }}
+{{ end }}
+{{ if .StatsPeriodSeconds  }}
+stats_period = {{ .StatsPeriodSeconds }}
+{{ end }}
+{{ if .AuthType }}
+auth_type = {{ .AuthType }}
+{{ end }}
+{{ if .AuthUser }}
+auth_user = {{ .AuthUser }}
+{{ end }}
+admin_users = pgbouncer {{range .AdminUsers }},{{.}}{{end}}
+`))
+)
 
 func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.VerbType, error) {
 	configMapMeta := metav1.ObjectMeta{
@@ -48,20 +80,11 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 	}
 
 	cfgMap, vt, err := core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
-		var dbinfo = fmt.Sprintln("[databases]")
-		var pbinfo = fmt.Sprintln("[pgbouncer]")
-		pbinfo = pbinfo + fmt.Sprintln("logfile = /tmp/pgbouncer.log")
-		pbinfo = pbinfo + fmt.Sprintln("pidfile = /tmp/pgbouncer.pid")
-
-		authFileLocation := filepath.Join(userListMountPath, c.getUserListFileName(pgbouncer))
-		if pgbouncer.Spec.ConnectionPool == nil || (pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any") {
-			pbinfo = pbinfo + fmt.Sprintln("auth_file = ", authFileLocation)
-		}
-
-		var admins string
-
 		in.Labels = pgbouncer.OffshootLabels()
 		core_util.EnsureOwnerReference(&in.ObjectMeta, ref)
+
+		var buf bytes.Buffer
+		buf.WriteString("[databases]\n")
 		if pgbouncer.Spec.Databases != nil {
 			for _, db := range pgbouncer.Spec.Databases {
 				var hostPort = int32(DefaultHostPort)
@@ -99,81 +122,44 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 
 						hostname = appBinding.Spec.ClientConfig.Service.Name + "." + namespace + ".svc"
 						hostPort = appBinding.Spec.ClientConfig.Service.Port
-						dbinfo = dbinfo + fmt.Sprint(db.Alias, "= host=", hostname, " port=", hostPort, " dbname=", db.DatabaseName)
+						buf.WriteString(fmt.Sprint(db.Alias, "= host=", hostname, " port=", hostPort, " dbname=", db.DatabaseName))
 						//dbinfo = dbinfo +fmt.Sprintln(db.Alias +"x = host=" + hostname +" port="+strconv.Itoa(int(hostPort))+" dbname="+db.DbName )
 					}
 				} else {
 					//Reminder URL should contain host=localhost port=5432
-					dbinfo = dbinfo + fmt.Sprint(db.Alias+" = "+*(appBinding.Spec.ClientConfig.URL)+" dbname="+db.DatabaseName)
+					buf.WriteString(fmt.Sprint(db.Alias + " = " + *(appBinding.Spec.ClientConfig.URL) + " dbname=" + db.DatabaseName))
 				}
 				if db.UserName != "" {
-					dbinfo = dbinfo + fmt.Sprint(" user=", db.UserName)
+					buf.WriteString(fmt.Sprint(" user=", db.UserName))
 				}
 				if db.Password != "" {
-					dbinfo = dbinfo + fmt.Sprint(" password=", db.Password)
+					buf.WriteString(fmt.Sprint(" password=", db.Password))
 				}
-				dbinfo = dbinfo + fmt.Sprintln("")
+				buf.WriteRune('\n')
 			}
 		}
 
 		if pgbouncer.Spec.UserListSecretRef == nil {
-			log.Infoln("PgBouncer doesnt have a userlist")
+			log.Infoln("PgBouncer doesn't have a userlist")
 		}
 
+		buf.WriteString("\n[pgbouncer]\n")
+		buf.WriteString("logfile = /tmp/pgbouncer.log\n") // TODO: send log to stdout ?
+		buf.WriteString("pidfile = /tmp/pgbouncer.pid\n")
+
+		authFileLocation := filepath.Join(userListMountPath, c.getUserListFileName(pgbouncer))
+		if pgbouncer.Spec.ConnectionPool == nil || (pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any") {
+			buf.WriteString(fmt.Sprintln("auth_file = ", authFileLocation))
+		}
 		if pgbouncer.Spec.ConnectionPool != nil {
-			pbConnectionPool := pgbouncer.Spec.ConnectionPool
-			admins = fmt.Sprintf("%s", pbAdminUser)
-
-			pbinfo = pbinfo + fmt.Sprintln("listen_port =", *pbConnectionPool.Port)
-			pbinfo = pbinfo + fmt.Sprintln("listen_addr = ", admission.DefaultListenAddress)
-			pbinfo = pbinfo + fmt.Sprintln("pool_mode = ", pbConnectionPool.PoolMode)
-			pbinfo = pbinfo + fmt.Sprintln("ignore_startup_parameters =", ignoredParmeter)
-			if pbConnectionPool.IgnoreStartupParameters != "" {
-				pbinfo = pbinfo + fmt.Sprintln("ignore_startup_parameters =", ignoredParmeter, ",", pbConnectionPool.IgnoreStartupParameters)
+			err := cfgtpl.Execute(&buf, pgbouncer.Spec.ConnectionPool)
+			if err != nil {
+				panic(err)
 			}
-
-			if pbConnectionPool.MaxClientConnections != nil {
-				pbinfo = pbinfo + fmt.Sprintln("max_client_conn = ", *pbConnectionPool.MaxClientConnections)
-			}
-			if pbConnectionPool.MaxDBConnections != nil {
-				pbinfo = pbinfo + fmt.Sprintln("max_db_connections = ", *pbConnectionPool.MaxDBConnections)
-			}
-			if pbConnectionPool.MaxUserConnections != nil {
-				pbinfo = pbinfo + fmt.Sprintln("max_user_connections = ", *pbConnectionPool.MaxUserConnections)
-			}
-			if pbConnectionPool.MinPoolSize != nil {
-				pbinfo = pbinfo + fmt.Sprintln("min_pool_size = ", *pbConnectionPool.MinPoolSize)
-			}
-			if pbConnectionPool.DefaultPoolSize != nil {
-				pbinfo = pbinfo + fmt.Sprintln("default_pool_size = ", *pbConnectionPool.DefaultPoolSize)
-			}
-			if pbConnectionPool.ReservePoolSize != nil {
-				pbinfo = pbinfo + fmt.Sprintln("reserve_pool_size = ", *pbConnectionPool.ReservePoolSize)
-			}
-			if pbConnectionPool.ReservePoolTimeoutSeconds != nil {
-				pbinfo = pbinfo + fmt.Sprintln("reserve_pool_timeout = ", *pbConnectionPool.ReservePoolTimeoutSeconds)
-			}
-			if pbConnectionPool.StatsPeriodSeconds != nil {
-				pbinfo = pbinfo + fmt.Sprintln("stats_period = ", *pbConnectionPool.StatsPeriodSeconds)
-			}
-
-			if pbConnectionPool.AuthType != "" {
-				pbinfo = pbinfo + fmt.Sprintln("auth_type = ", pbConnectionPool.AuthType)
-			}
-			if pbConnectionPool.AuthUser != "" {
-				pbinfo = pbinfo + fmt.Sprintln("auth_user = ", pbConnectionPool.AuthUser)
-			}
-			adminList := pgbouncer.Spec.ConnectionPool.AdminUsers
-			for _, adminListItem := range adminList {
-				admins = fmt.Sprintf("%s,%s", admins, adminListItem)
-			}
-			pbinfo = pbinfo + fmt.Sprintln("admin_users = ", admins)
 		}
-		pgbouncerData := fmt.Sprintln(dbinfo)
-		pgbouncerData = pgbouncerData + pbinfo
 
 		in.Data = map[string]string{
-			"pgbouncer.ini": pgbouncerData,
+			"pgbouncer.ini": buf.String(),
 		}
 		return in
 	})
