@@ -53,13 +53,6 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 		return err
 	}
 
-	// ensure appbinding before ensuring Restic scheduler and restore
-	//_, err = c.ensureAppBinding(pgbouncer)
-	//if err != nil {
-	//	log.Errorln(err)
-	//	return err
-	//}
-
 	if err := c.manageMonitor(pgbouncer); err != nil {
 		c.recorder.Eventf(
 			pgbouncer,
@@ -75,8 +68,6 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 	if err := c.manageFinalPhase(pgbouncer); err != nil {
 		return err
 	}
-
-	//println("Setting annotations")
 	//c.UpsertDatabaseAnnotation(pgbouncer.GetObjectMeta(),)
 	return nil
 }

@@ -42,7 +42,6 @@ func (a *PgBouncerMutator) Resource() (plural schema.GroupVersionResource, singu
 }
 
 func (a *PgBouncerMutator) Initialize(config *rest.Config, stopCh <-chan struct{}) error {
-	log.Infoln("Mutator.go >>>  Initialize ====")
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -100,8 +99,6 @@ func (a *PgBouncerMutator) Admit(req *admission.AdmissionRequest) *admission.Adm
 
 // setDefaultValues provides the defaulting that is performed in mutating stage of creating/updating a PgBouncer database
 func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbouncer *api.PgBouncer) (runtime.Object, error) {
-	log.Infoln("Mutator.go >>>  setDefaultValues ====")
-
 	if pgbouncer.Spec.Replicas == nil {
 		pgbouncer.Spec.Replicas = types.Int32P(1)
 	}

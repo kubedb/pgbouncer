@@ -44,7 +44,6 @@ func (a *PgBouncerValidator) Resource() (plural schema.GroupVersionResource, sin
 }
 
 func (a *PgBouncerValidator) Initialize(config *rest.Config, stopCh <-chan struct{}) error {
-	log.Infoln("Validator.go >>>  Initialize ====")
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
@@ -84,7 +83,7 @@ func (pbValidator *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *a
 			// req.Object.Raw = nil, so read from kubernetes
 			obj, err := pbValidator.extClient.KubedbV1alpha1().PgBouncers(req.Namespace).Get(req.Name, metav1.GetOptions{})
 			if kerr.IsNotFound(err) {
-				println("obj ", obj.Name, " already deleted")
+				log.Infoln("obj ", obj.Name, " already deleted")
 			}
 			if err != nil && !kerr.IsNotFound(err) {
 				return hookapi.StatusInternalServerError(err)
@@ -115,7 +114,6 @@ func (pbValidator *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *a
 			return hookapi.StatusForbidden(err)
 		}
 	}
-	log.Infoln(">>>Validation successful")
 	status.Allowed = true
 	return status
 }
@@ -156,11 +154,9 @@ func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbo
 }
 
 func validateUpdate(obj, oldObj runtime.Object, kind string) error {
-	log.Infoln("Validator.go >>>  ValidateUpdate ====")
 	preconditions := getPreconditionFunc()
 	_, err := meta_util.CreateStrategicPatch(oldObj, obj, preconditions...)
 	if err != nil {
-		println(">>>PreConditions failed")
 		if mergepatch.IsPreconditionFailed(err) {
 			return fmt.Errorf("%v.%v", err, preconditionFailedError(kind))
 		}
@@ -170,7 +166,6 @@ func validateUpdate(obj, oldObj runtime.Object, kind string) error {
 }
 
 func getPreconditionFunc() []mergepatch.PreconditionFunc {
-	log.Infoln("Validator.go >>>  getPreconditionFunc ====")
 	preconditions := []mergepatch.PreconditionFunc{
 		mergepatch.RequireKeyUnchanged("apiVersion"),
 		mergepatch.RequireKeyUnchanged("kind"),

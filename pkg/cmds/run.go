@@ -3,7 +3,6 @@ package cmds
 import (
 	"io"
 
-	"github.com/appscode/go/log"
 	"github.com/spf13/cobra"
 	"kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/cli"
@@ -21,7 +20,6 @@ func NewCmdRun(version string, out, errOut io.Writer, stopCh <-chan struct{}) *c
 			cli.SendPeriodicAnalytics(c, version)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Infoln("Starting pgbouncer-server...")
 
 			if err := o.Complete(); err != nil {
 				return err

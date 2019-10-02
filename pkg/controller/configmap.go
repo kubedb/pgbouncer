@@ -208,12 +208,11 @@ func (c *Controller) waitUntilPatchedConfigMapReady(pgbouncer *api.PgBouncer, ne
 		log.Warning("Pods not ready")
 		return nil
 	}
-	println("Waiting for updated configurations to synchronize")
+	log.Infoln("Waiting for updated configurations to synchronize")
 	return wait.PollImmediate(PbRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
-		println("_")
 		if pgbouncerConfig, err := c.echoPgBouncerConfig(pgbouncer); err == nil {
 			if newCfgMap.Data["pgbouncer.ini"] == pgbouncerConfig {
-				println("Done!")
+				log.Infoln("configMap synchronized")
 				return true, nil
 			}
 		}

@@ -57,25 +57,21 @@ func (c *OperatorConfig) New() (*Controller, error) {
 	if err := ctrl.EnsureCustomResourceDefinitions(); err != nil {
 		return nil, err
 	}
-	println(">>>1")
+
 	if c.EnableMutatingWebhook {
-		println("EnableMutatingWebhook")
 		if err := reg_util.UpdateMutatingWebhookCABundle(c.ClientConfig, mutatingWebhookConfig); err != nil {
 			return nil, err
 		}
 	}
-	println(">>>2")
+
 	if c.EnableValidatingWebhook {
-		println("EnableValidatingWebhook")
 		if err := reg_util.UpdateValidatingWebhookCABundle(c.ClientConfig, validatingWebhookConfig); err != nil {
 			return nil, err
 		}
 	}
-	println(">>>3")
 
 	if err := ctrl.Init(); err != nil {
 		return nil, err
 	}
-	println(">>>4")
 	return ctrl, nil
 }

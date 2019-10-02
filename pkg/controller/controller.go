@@ -98,15 +98,12 @@ func New(
 
 // Ensuring Custom Resource Definitions
 func (c *Controller) EnsureCustomResourceDefinitions() error {
-	log.Infoln("Ensuring CustomResourceDefinition...")
 	crds := []*crd_api.CustomResourceDefinition{
 		api.PgBouncer{}.CustomResourceDefinition(),
 		catalog.PgBouncerVersion{}.CustomResourceDefinition(),
 		appcat_util.AppBinding{}.CustomResourceDefinition(),
 	}
-	log.Infoln("Ensured CustomResourceDefinitions")
 	err := apiext_util.RegisterCRDs(c.ApiExtKubeClient, crds)
-	println(" err  = ", err)
 	return err
 }
 
@@ -144,8 +141,6 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 // StartAndRunControllers starts InformetFactory and runs queue.worker
 func (c *Controller) StartAndRunControllers(stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
-
-	log.Infoln("Starting KubeDB controller")
 	c.KubeInformerFactory.Start(stopCh)
 	c.KubedbInformerFactory.Start(stopCh)
 	c.AppCatInformerFactory.Start(stopCh)
@@ -173,7 +168,6 @@ func (c *Controller) StartAndRunControllers(stopCh <-chan struct{}) {
 	c.RunControllers(stopCh)
 
 	<-stopCh
-	log.Infoln("Stopping KubeDB controller")
 }
 
 func (c *Controller) pushFailureEvent(pgbouncer *api.PgBouncer, reason string) {
