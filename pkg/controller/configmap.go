@@ -35,37 +35,37 @@ var (
 listen_addr = *
 pool_mode = {{ .PoolMode }}
 ignore_startup_parameters = extra_float_digits{{ if .IgnoreStartupParameters }}, {{.IgnoreStartupParameters}}{{ end }}
-{{ if .MaxClientConnections  }}
+{{- if .MaxClientConnections  }}
 max_client_conn = {{ .MaxClientConnections }}
-{{ end }}
-{{ if .MaxDBConnections  }}
+{{- end }}
+{{- if .MaxDBConnections  }}
 max_db_connections = {{ .MaxDBConnections }}
-{{ end }}
-{{ if .MaxUserConnections  }}
+{{- end }}
+{{- if .MaxUserConnections  }}
 max_user_connections = {{ .MaxUserConnections }}
-{{ end }}
-{{ if .MinPoolSize  }}
+{{- end }}
+{{- if .MinPoolSize  }}
 min_pool_size = {{ .MinPoolSize }}
-{{ end }}
-{{ if .DefaultPoolSize  }}
+{{- end }}
+{{- if .DefaultPoolSize  }}
 default_pool_size = {{ .DefaultPoolSize }}
-{{ end }}
-{{ if .ReservePoolSize  }}
+{{- end }}
+{{- if .ReservePoolSize  }}
 reserve_pool_size = {{ .ReservePoolSize }}
-{{ end }}
-{{ if .ReservePoolTimeoutSeconds  }}
+{{- end }}
+{{- if .ReservePoolTimeoutSeconds  }}
 reserve_pool_timeout = {{ .ReservePoolTimeoutSeconds }}
-{{ end }}
-{{ if .StatsPeriodSeconds  }}
+{{- end }}
+{{- if .StatsPeriodSeconds  }}
 stats_period = {{ .StatsPeriodSeconds }}
-{{ end }}
-{{ if .AuthType }}
+{{- end }}
+{{- if .AuthType }}
 auth_type = {{ .AuthType }}
-{{ end }}
-{{ if .AuthUser }}
+{{- end }}
+{{- if .AuthUser }}
 auth_user = {{ .AuthUser }}
-{{ end }}
-admin_users = pgbouncer {{range .AdminUsers }},{{.}}{{end}}
+{{- end }}
+admin_users = pgbouncer{{range .AdminUsers }},{{.}}{{end}}
 `))
 )
 

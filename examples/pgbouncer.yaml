@@ -27,9 +27,4 @@ spec:
   userListSecretRef:
     name: db-user-pass
   monitor:
-    agent: prometheus.io/coreos-operator
-    prometheus:
-      namespace: monitoring
-      labels:
-        k8s-app: prometheus
-      interval: 10s
+    agent: prometheus.io/builtin
