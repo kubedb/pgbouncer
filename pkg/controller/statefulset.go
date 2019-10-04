@@ -22,9 +22,10 @@ import (
 )
 
 const (
-	securityContextCode = int64(65535)
-	configMountPath     = "/etc/config"
-	userListMountPath   = "/var/run/pgbouncer/secrets"
+	securityContextCode       = int64(65535)
+	configMountPath           = "/etc/config"
+	userListMountPath         = "/var/run/pgbouncer/secret"
+	fallbackUserListMountPath = "/var/run/pgbouncer/fallback-secret"
 )
 
 func (c *Controller) ensureStatefulSet(
@@ -93,13 +94,19 @@ func (c *Controller) ensureStatefulSet(
 		volumeMounts = append(volumeMounts, configMapVolumeMount)
 
 		if pgbouncer.Spec.UserListSecretRef != nil && pgbouncer.Spec.UserListSecretRef.Name != "" {
-			secretVolume, secretVolumeMount, err := c.getVolumeAndVoulumeMountForUserList(pgbouncer)
+			secretVolume, secretVolumeMount, err := c.getVolumeAndVolumeMountForUserList(pgbouncer)
 			if err == nil {
 				volumes = append(volumes, *secretVolume)
 				//Add to volumeMounts to mount the volume
 				volumeMounts = append(volumeMounts, *secretVolumeMount)
 			} else if kerr.IsNotFound(err) {
-				log.Infoln("UserList secret " + pgbouncer.GetNamespace() + "/" + pgbouncer.Spec.UserListSecretRef.Name + " is not available")
+
+				log.Infoln("UserList secret " + pgbouncer.Spec.UserListSecretRef.Name + " is not available")
+				secretVolume, secretVolumeMount, err := c.getVolumeAndVolumeMountForFallBackUserList(pgbouncer)
+				if err == nil {
+					volumes = append(volumes, *secretVolume)
+					volumeMounts = append(volumeMounts, *secretVolumeMount)
+				}
 			}
 			//We are not concerned about other errors
 		}

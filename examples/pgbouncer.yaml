@@ -1,7 +1,7 @@
 apiVersion: kubedb.com/v1alpha1
 kind: PgBouncer
 metadata:
-  name: pgbouncer-server
+  name: pgbouncer-server-x
   namespace: demo
 spec:
   version: "1.11.0"
@@ -11,8 +11,6 @@ spec:
     databaseName: "postgres"
     databaseRef:
       name: "quick-postgress"
-    username: "postgres"
-    password: "Ss9sL6xFAAdEKu4D"
   - alias: "postgres2"
     databaseName: "tmpdb"
     databaseRef:
@@ -20,7 +18,6 @@ spec:
   connectionPool:
     maxClientConn: 20
     reservePoolSize: 5
-    authType: "any"
     adminUsers:
     - admin
     - admin1

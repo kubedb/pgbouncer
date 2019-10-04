@@ -121,7 +121,6 @@ func (pbValidator *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *a
 // ValidatePgBouncer checks if the object satisfies all the requirements.
 // It is not method of Interface, because it is referenced from controller package too.
 func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbouncer *api.PgBouncer, strictValidation bool) error {
-	log.Info("Validator.go >>>  ValidatePgBouncer ====")
 	if pgbouncer.Spec.Replicas == nil || *pgbouncer.Spec.Replicas < 1 {
 		return fmt.Errorf(`spec.replicas "%v" invalid. Value must be greater than zero`, pgbouncer.Spec.Replicas)
 	}
@@ -134,7 +133,7 @@ func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbo
 		if pgbouncer.Spec.UserListSecretRef != nil && pgbouncer.Spec.UserListSecretRef.Name != "" {
 			if pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any" {
 				if _, err := client.CoreV1().Secrets(pgbouncer.GetNamespace()).Get(pgbouncer.Spec.UserListSecretRef.Name, metav1.GetOptions{}); err != nil {
-					return err
+					log.Infoln("userlist secret " + pgbouncer.Spec.UserListSecretRef.Name + " not found, using fallback secret")
 				}
 			}
 		}

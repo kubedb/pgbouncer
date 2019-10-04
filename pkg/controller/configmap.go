@@ -74,7 +74,7 @@ func (c *Controller) generateConfig(pgbouncer *api.PgBouncer) (string, error) {
 	buf.WriteString("[databases]\n")
 	if pgbouncer.Spec.Databases != nil {
 		for _, db := range pgbouncer.Spec.Databases {
-			var hostPort= int32(DefaultHostPort)
+			var hostPort = int32(DefaultHostPort)
 			name := db.DatabaseRef.Name
 			namespace := pgbouncer.GetNamespace()
 
@@ -134,7 +134,12 @@ func (c *Controller) generateConfig(pgbouncer *api.PgBouncer) (string, error) {
 	buf.WriteString("logfile = /tmp/pgbouncer.log\n") // TODO: send log to stdout ?
 	buf.WriteString("pidfile = /tmp/pgbouncer.pid\n")
 
-	authFileLocation := filepath.Join(userListMountPath, c.getUserListFileName(pgbouncer))
+	secretFileName := c.getUserListFileName(pgbouncer)
+	if secretFileName == "" {
+		secretFileName = "userlist"
+	}
+	authFileLocation := filepath.Join(userListMountPath, secretFileName)
+	println("AuthFileName = ", secretFileName)
 	if pgbouncer.Spec.ConnectionPool == nil || (pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any") {
 		buf.WriteString(fmt.Sprintln("auth_file = ", authFileLocation))
 	}

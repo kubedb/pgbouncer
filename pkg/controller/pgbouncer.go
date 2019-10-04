@@ -2,7 +2,6 @@ package controller
 
 import (
 	"fmt"
-
 	"github.com/appscode/go/encoding/json/types"
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
@@ -38,6 +37,10 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 	}
 	// create or patch Service
 	if err := c.manageService(pgbouncer); err != nil {
+		return err
+	}
+	// create or patch Fallback Secret
+	if err := c.manageFallBackSecret(pgbouncer); err != nil {
 		return err
 	}
 	// create or patch ConfigMap
@@ -195,6 +198,31 @@ func (c *Controller) manageFinalPhase(pgbouncer *api.PgBouncer) error {
 	return nil //if no err
 }
 
+func (c *Controller) manageFallBackSecret(pgbouncer *api.PgBouncer) error {
+	sVerb, err := c.CreateOrPatchFallbackSecret(pgbouncer)
+	if err != nil {
+		return err
+	}
+
+	if sVerb == kutil.VerbCreated {
+		c.recorder.Event(
+			pgbouncer,
+			core.EventTypeNormal,
+			eventer.EventReasonSuccessful,
+			"Successfully created PgBouncer Fallback Secret",
+		)
+	} else if sVerb == kutil.VerbPatched {
+		c.recorder.Event(
+			pgbouncer,
+			core.EventTypeNormal,
+			eventer.EventReasonSuccessful,
+			"Successfully patched PgBouncer Fallback Secret",
+		)
+	}
+	log.Infoln("Fallback Secret ", sVerb)
+	return nil //if no err
+}
+
 func (c *Controller) manageConfigMap(pgbouncer *api.PgBouncer) error {
 	configMapVerb, err := c.ensureConfigMapFromCRD(pgbouncer)
 	if err != nil {
@@ -312,11 +340,11 @@ func (c *Controller) managePatchedUserList(pgbouncer *api.PgBouncer) error {
 		return err
 	}
 	//if secret is already there, then add default admin if necessary
-	c.ensureUserlistHasDefaultAdmin(pgbouncer, sec)
+	c.ensureUserListHasDefaultAdmin(pgbouncer, sec)
 	return nil //if no err
 }
 
-func (c *Controller) getVolumeAndVoulumeMountForUserList(pgbouncer *api.PgBouncer) (*core.Volume, *core.VolumeMount, error) {
+func (c *Controller) getVolumeAndVolumeMountForUserList(pgbouncer *api.PgBouncer) (*core.Volume, *core.VolumeMount, error) {
 	_, err := c.Client.CoreV1().Secrets(pgbouncer.GetNamespace()).Get(pgbouncer.Spec.UserListSecretRef.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, nil, err
@@ -338,6 +366,31 @@ func (c *Controller) getVolumeAndVoulumeMountForUserList(pgbouncer *api.PgBounce
 
 	return secretVolume, secretVolumeMount, nil //if no err
 }
+
+func (c *Controller) getVolumeAndVolumeMountForFallBackUserList(pgbouncer *api.PgBouncer) (*core.Volume, *core.VolumeMount, error) {
+	fSecret := c.GetFallbackSecretSpec(pgbouncer)
+	_, err := c.Client.CoreV1().Secrets(fSecret.Namespace).Get(fSecret.Name, metav1.GetOptions{})
+	if err != nil {
+		return nil, nil, err
+	}
+	secretVolume := &core.Volume{
+		Name: "fallback-userlist",
+		VolumeSource: core.VolumeSource{
+			Secret: &core.SecretVolumeSource{
+				SecretName: fSecret.Name,
+			},
+		},
+	}
+	//Add to volumeMounts to mount the vpilume
+	secretVolumeMount := &core.VolumeMount{
+		Name:      "fallback-userlist",
+		MountPath: userListMountPath,
+		ReadOnly:  true,
+	}
+
+	return secretVolume, secretVolumeMount, nil //if no err
+}
+
 func (c *Controller) manageTemPlate(pgbouncer *api.PgBouncer) error {
 
 	return nil //if no err
