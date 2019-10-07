@@ -15,7 +15,8 @@ const (
 	namespaceKey    = "namespace"
 	nameKey         = "name"
 	pbAdminUser     = "pgbouncer"
-	pbAdminPassword = "kubedb"
+	pbAdminPassword = "pb-password"
+	pbAdminData     = "pb-admin"
 )
 
 func (c *Controller) initWatcher() {

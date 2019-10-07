@@ -3,6 +3,8 @@ package controller
 import (
 	"errors"
 	"fmt"
+	"github.com/appscode/go/crypto/rand"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"strings"
 
 	"github.com/appscode/go/log"
@@ -13,6 +15,7 @@ import (
 	core_util "kmodules.xyz/client-go/core/v1"
 	meta_util "kmodules.xyz/client-go/meta"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 )
 
 func (c *Controller) manageUserSecretEvent(key string) error {
@@ -75,7 +78,7 @@ func (c *Controller) checkForPgBouncerSecret(pgbouncer *api.PgBouncer, secretInf
 		if err != nil {
 			return err
 		}
-		c.ensureUserListHasDefaultAdmin(pgbouncer, secret)
+		c.patchUserListWithDefaultAdmin(pgbouncer, secret)
 	}
 	//need to ensure statefulset to mount volume containing the list, and configmap to load userlist from that path
 	if err := c.manageStatefulSet(pgbouncer); err != nil {
@@ -88,10 +91,22 @@ func (c *Controller) checkForPgBouncerSecret(pgbouncer *api.PgBouncer, secretInf
 	return nil
 }
 
-func (c *Controller) ensureUserListHasDefaultAdmin(pgbouncer *api.PgBouncer, secret *core.Secret) {
+func (c *Controller) patchUserListWithDefaultAdmin(pgbouncer *api.PgBouncer, secret *core.Secret) {
 	for key, value := range secret.Data {
 		if key != "" && value != nil {
-			kubedbUserString := fmt.Sprintf(`"%s" "%s"`, pbAdminUser, pbAdminPassword)
+			adminSecretSpec := c.GetFallbackSecretSpec(pgbouncer)
+			err := c.waitUntilAdminSecretReady(pgbouncer, adminSecretSpec)
+			if err != nil {
+				log.Fatal(err)
+			}
+			adminSecret, err := c.Client.CoreV1().Secrets(adminSecretSpec.Namespace).Get(adminSecretSpec.Name,v1.GetOptions{})
+			if err != nil {
+				log.Fatal(err)
+			}
+			adminData := string(adminSecret.Data[pbAdminData])
+
+			println("==========adminSecret data  = ", string(adminSecret.Data[pbAdminData]))
+			kubedbUserString := fmt.Sprintf(`%s`, adminData)
 			if !strings.Contains(string(value), kubedbUserString) {
 				tmpData := fmt.Sprintln(string(value)) + kubedbUserString
 				secret.Data[key] = []byte(tmpData)
@@ -169,15 +184,38 @@ func (c *Controller) GetFallbackSecretSpec(pgbouncer *api.PgBouncer) *core.Secre
 }
 
 func (c *Controller) CreateOrPatchFallbackSecret(pgbouncer *api.PgBouncer) (kutil.VerbType, error) {
+	var pbPass = ""
 	secretSpec := c.GetFallbackSecretSpec(pgbouncer)
+	secret, err := c.Client.CoreV1().Secrets(secretSpec.Namespace).Get(secretSpec.Name, v1.GetOptions{})
+	if err == nil {
+		pbPass = string(secret.Data[pbAdminPassword])
+	}
+	if kerr.IsNotFound(err){
+		pbPass = rand.WithUniqSuffix(pbAdminUser)
+	}
+	println("........Pass = ", pbPass)
 	_, vt, err := core_util.CreateOrPatchSecret(c.Client, secretSpec.ObjectMeta, func(in *core.Secret) *core.Secret {
-		if _, ok := in.Data["userlist"]; !ok {
+		if _, ok := in.Data[pbAdminData]; !ok {
 			in.StringData = map[string]string{
-				"userlist": fmt.Sprintf(`"%s" "%s"`, pbAdminUser, pbAdminPassword),
+				pbAdminData:     fmt.Sprintf(`"%s" "%s"`, pbAdminUser, pbPass),
+				pbAdminPassword: pbPass,
 			}
 		}
 		return in
 	})
-
 	return vt, err
+}
+
+func (c *Controller) waitUntilAdminSecretReady(pgbouncer *api.PgBouncer, secret *core.Secret) error {
+	log.Infoln("Waiting for fallback Admin secret")
+	return wait.PollImmediate(kutil.RetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
+		_, err := c.Client.CoreV1().Secrets(secret.Namespace).Get(secret.Name, v1.GetOptions{})
+		if err == nil {
+			return true, nil
+		}
+		if kerr.IsNotFound(err){
+			return false, nil
+		}
+		return false, err
+	})
 }

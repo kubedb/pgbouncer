@@ -25,7 +25,6 @@ const (
 	securityContextCode       = int64(65535)
 	configMountPath           = "/etc/config"
 	userListMountPath         = "/var/run/pgbouncer/secret"
-	fallbackUserListMountPath = "/var/run/pgbouncer/fallback-secret"
 )
 
 func (c *Controller) ensureStatefulSet(
@@ -277,6 +276,14 @@ func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pg
 		if pgbouncer.Spec.Monitor != nil {
 			monitorArgs = pgbouncer.Spec.Monitor.Args
 		}
+
+		adminSecretSpec := c.GetFallbackSecretSpec(pgbouncer)
+		adminSecret, err := c.Client.CoreV1().Secrets(adminSecretSpec.Namespace).Get(adminSecretSpec.Name,metav1.GetOptions{})
+		if err != nil {
+			log.Infoln(err)
+		}
+		adminPassword := string(adminSecret.Data[pbAdminPassword])
+
 		container := core.Container{
 			Name: "exporter",
 			//TODO: decide what to do with Args
@@ -305,7 +312,7 @@ func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pg
 			//TODO: Provide user with the option to set the default admin(pgbouncer)'s password
 			{
 				Name:  "PGPASSWORD",
-				Value: "kubedb",
+				Value: adminPassword,
 			},
 		}
 

@@ -225,15 +225,15 @@ func (c *Controller) waitUntilPatchedConfigMapReady(pgbouncer *api.PgBouncer, ne
 	})
 }
 
-func (c *Controller) reloadPgBouncer(bouncer *api.PgBouncer) error {
-	localPort := *bouncer.Spec.ConnectionPool.Port
+func (c *Controller) reloadPgBouncer(pgbouncer *api.PgBouncer) error {
+	localPort := *pgbouncer.Spec.ConnectionPool.Port
 
-	pod, err := c.getPgBouncerPod(bouncer)
+	pod, err := c.getPgBouncerPod(pgbouncer)
 	if err != nil {
 		return err
 	}
 	options := []func(options *exec.Options){
-		exec.Command(c.reloadCmd(localPort)...),
+		exec.Command(c.reloadCmd(pgbouncer,localPort)...),
 	}
 
 	if _, err := exec.ExecIntoPod(c.ClientConfig, &pod, options...); err != nil {
@@ -273,9 +273,14 @@ func (c *Controller) getPgBouncerPod(bouncer *api.PgBouncer) (core.Pod, error) {
 	return pod, nil
 }
 
-func (c *Controller) reloadCmd(localPort int32) []string {
-
-	return []string{"env", fmt.Sprintf("PGPASSWORD=%s", pbAdminPassword), "psql", "--host=127.0.0.1", fmt.Sprintf("--port=%d", localPort), fmt.Sprintf("--username=%s", pbAdminUser), "pgbouncer", "--command=RELOAD"}
+func (c *Controller) reloadCmd(pgbouncer *api.PgBouncer,localPort int32) []string {
+	adminSecretSpec := c.GetFallbackSecretSpec(pgbouncer)
+	adminSecret, err := c.Client.CoreV1().Secrets(adminSecretSpec.Namespace).Get(adminSecretSpec.Name,metav1.GetOptions{})
+	if err != nil {
+		log.Infoln(err)
+	}
+	adminPassword := string(adminSecret.Data[pbAdminPassword])
+	return []string{"env", fmt.Sprintf("PGPASSWORD=%s", adminPassword), "psql", "--host=127.0.0.1", fmt.Sprintf("--port=%d", localPort), fmt.Sprintf("--username=%s", pbAdminUser), "pgbouncer", "--command=RELOAD"}
 }
 
 func (c *Controller) getPgBouncerConfigCmd() []string {

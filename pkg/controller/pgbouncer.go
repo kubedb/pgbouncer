@@ -31,16 +31,16 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 	if err := c.CreateGoverningService(governingService, pgbouncer.Namespace); err != nil {
 		return fmt.Errorf(`failed to create Service: "%v/%v". Reason: %v`, pgbouncer.Namespace, governingService, err)
 	}
-
-	if err := c.managePatchedUserList(pgbouncer); err != nil {
-		return err
-	}
 	// create or patch Service
 	if err := c.manageService(pgbouncer); err != nil {
 		return err
 	}
 	// create or patch Fallback Secret
 	if err := c.manageFallBackSecret(pgbouncer); err != nil {
+		return err
+	}
+	// patch user Secret
+	if err := c.managePatchedUserList(pgbouncer); err != nil {
 		return err
 	}
 	// create or patch ConfigMap
@@ -340,7 +340,7 @@ func (c *Controller) managePatchedUserList(pgbouncer *api.PgBouncer) error {
 		return err
 	}
 	//if secret is already there, then add default admin if necessary
-	c.ensureUserListHasDefaultAdmin(pgbouncer, sec)
+	c.patchUserListWithDefaultAdmin(pgbouncer, sec)
 	return nil //if no err
 }
 
