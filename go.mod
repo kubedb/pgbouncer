@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.4.12 // indirect
-	github.com/appscode/go v0.0.0-20190920081029-7b75ec783e2e
+	github.com/appscode/go v0.0.0-20191006073906-e3d193d493fc
 	github.com/aws/aws-sdk-go v1.20.20
 	github.com/codeskyblue/go-sh v0.0.0-20190412065543-76bd3d59ff27
 	github.com/coreos/prometheus-operator v0.30.1
@@ -12,7 +12,6 @@ require (
 	github.com/go-openapi/swag v0.19.4 // indirect
 	github.com/go-xorm/xorm v0.7.3
 	github.com/imdario/mergo v0.3.7 // indirect
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/lib/pq v1.1.0
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
@@ -29,19 +28,18 @@ require (
 	k8s.io/apiextensions-apiserver v0.0.0-20190516231611-bf6753f2aa24
 	k8s.io/apimachinery v0.0.0-20190508063446-a3da69d3723c
 	k8s.io/apiserver v0.0.0-20190516230822-f89599b3f645
-	k8s.io/cli-runtime v0.0.0-20190516231937-17bc0b7fcef5 // indirect
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/component-base v0.0.0-20190508223741-40efa6d42997 // indirect
 	k8s.io/klog v0.3.3 // indirect
 	k8s.io/kube-aggregator v0.0.0-20190508224022-f9852b6d3a84
 	k8s.io/kubernetes v1.14.4 // indirect
-	kmodules.xyz/client-go v0.0.0-20190808141354-bbb9e14f60ab
-	kmodules.xyz/custom-resources v0.0.0-20190808144301-114abf10dfe2
+	kmodules.xyz/client-go v0.0.0-20191006173540-91f8ee6b6b4b
+	kmodules.xyz/custom-resources v0.0.0-20190927035424-65fe358bb045
 	kmodules.xyz/monitoring-agent-api v0.0.0-20190808150221-601a4005b7f7
-	kmodules.xyz/offshoot-api v0.0.0-20190808152534-e3dc715f844b
+	kmodules.xyz/offshoot-api v0.0.0-20190901210649-de049192326c
 	kmodules.xyz/webhook-runtime v0.0.0-20190808145328-4186c470d56b
-	kubedb.dev/apimachinery v0.13.0-rc.0.0.20191002062003-1b2a09bf8564
-	stash.appscode.dev/stash v0.9.0-rc.0
+	kubedb.dev/apimachinery v0.13.0-rc.1
+	stash.appscode.dev/stash v0.9.0-rc.1.0.20191007102408-f5a271be821a
 )
 
 replace (
