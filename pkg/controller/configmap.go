@@ -28,6 +28,7 @@ const (
 	PbRetryInterval  = time.Second * 5
 	DefaultHostPort  = 5432
 	ignoredParmeter  = "extra_float_digits"
+	pbConfigFile     = "pgbouncer.ini"
 )
 
 var (
@@ -65,7 +66,7 @@ auth_type = {{ .AuthType }}
 {{- if .AuthUser }}
 auth_user = {{ .AuthUser }}
 {{- end }}
-admin_users = pgbouncer{{range .AdminUsers }},{{.}}{{end}}
+admin_users = kubedb{{range .AdminUsers }},{{.}}{{end}}
 `))
 )
 
@@ -136,7 +137,7 @@ func (c *Controller) generateConfig(pgbouncer *api.PgBouncer) (string, error) {
 
 	secretFileName := c.getUserListFileName(pgbouncer)
 	if secretFileName == "" {
-		secretFileName = "userlist"
+		secretFileName = pbAdminData
 	}
 	authFileLocation := filepath.Join(userListMountPath, secretFileName)
 	println("AuthFileName = ", secretFileName)
@@ -171,7 +172,7 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 		in.Labels = pgbouncer.OffshootLabels()
 		core_util.EnsureOwnerReference(&in.ObjectMeta, ref)
 		in.Data = map[string]string{
-			"pgbouncer.ini": cfg,
+			pbConfigFile: cfg,
 		}
 		return in
 	})
@@ -216,7 +217,7 @@ func (c *Controller) waitUntilPatchedConfigMapReady(pgbouncer *api.PgBouncer, ne
 	log.Infoln("Waiting for updated configurations to synchronize")
 	return wait.PollImmediate(PbRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
 		if pgbouncerConfig, err := c.echoPgBouncerConfig(pgbouncer); err == nil {
-			if newCfgMap.Data["pgbouncer.ini"] == pgbouncerConfig {
+			if newCfgMap.Data[pbConfigFile] == pgbouncerConfig {
 				log.Infoln("configMap synchronized")
 				return true, nil
 			}
@@ -284,15 +285,14 @@ func (c *Controller) reloadCmd(pgbouncer *api.PgBouncer,localPort int32) []strin
 }
 
 func (c *Controller) getPgBouncerConfigCmd() []string {
-	return []string{"cat", "/etc/config/pgbouncer.ini"}
+	return []string{"cat", fmt.Sprintf("%s/pgbouncer.ini",configMountPath)}
 }
 func (c *Controller) getUserListCmd(bouncer *api.PgBouncer) ([]string, error) {
-	//TODO: extract pgbouncer secrets's filename for userlist
 	secretFileName, err := c.getSecretKey(bouncer)
 	if err != nil {
 		return nil, err
 	}
-	return []string{"cat", fmt.Sprintf("/var/run/pgbouncer/secrets/%s", secretFileName)}, nil
+	return []string{"cat", fmt.Sprintf("%s/%s", userListMountPath,secretFileName)}, nil
 }
 
 func (c *Controller) getUserListFileName(bouncer *api.PgBouncer) (filename string) {

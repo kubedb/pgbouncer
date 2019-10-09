@@ -14,7 +14,8 @@ const (
 	publicNamespace = "kube-public"
 	namespaceKey    = "namespace"
 	nameKey         = "name"
-	pbAdminUser     = "pgbouncer"
+	pbAdminUser     = "kubedb"
+	pbAdminDatabase = "pgbouncer"
 	pbAdminPassword = "pb-password"
 	pbAdminData     = "pb-admin"
 )

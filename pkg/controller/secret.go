@@ -193,7 +193,6 @@ func (c *Controller) CreateOrPatchFallbackSecret(pgbouncer *api.PgBouncer) (kuti
 	if kerr.IsNotFound(err){
 		pbPass = rand.WithUniqSuffix(pbAdminUser)
 	}
-	println("........Pass = ", pbPass)
 	_, vt, err := core_util.CreateOrPatchSecret(c.Client, secretSpec.ObjectMeta, func(in *core.Secret) *core.Secret {
 		if _, ok := in.Data[pbAdminData]; !ok {
 			in.StringData = map[string]string{

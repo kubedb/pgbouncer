@@ -307,15 +307,11 @@ func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pg
 		envList := []core.EnvVar{
 			{
 				Name:  "DATA_SOURCE_NAME",
-				Value: fmt.Sprintf("postgres://pgbouncer:@localhost:%d?sslmode=disable", *pgbouncer.Spec.ConnectionPool.Port),
+				Value: fmt.Sprintf("postgres://%s:%s@localhost:%d/%s?sslmode=disable", pbAdminUser,adminPassword,*pgbouncer.Spec.ConnectionPool.Port,pbAdminDatabase),
 			},
-			//TODO: Provide user with the option to set the default admin(pgbouncer)'s password
-			{
-				Name:  "PGPASSWORD",
-				Value: adminPassword,
-			},
-		}
 
+			//format = "postgres://YourUserName:YourPassword@YourHost:5432/databseName";
+		}
 		container.Env = core_util.UpsertEnvVars(container.Env, envList...)
 		containers := statefulSet.Spec.Template.Spec.Containers
 		containers = core_util.UpsertContainer(containers, container)
