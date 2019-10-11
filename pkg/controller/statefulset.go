@@ -92,23 +92,25 @@ func (c *Controller) ensureStatefulSet(
 		}
 		volumeMounts = append(volumeMounts, configMapVolumeMount)
 
-		if pgbouncer.Spec.UserListSecretRef != nil && pgbouncer.Spec.UserListSecretRef.Name != "" {
-			secretVolume, secretVolumeMount, err := c.getVolumeAndVolumeMountForUserList(pgbouncer)
-			if err == nil {
-				volumes = append(volumes, *secretVolume)
-				//Add to volumeMounts to mount the volume
-				volumeMounts = append(volumeMounts, *secretVolumeMount)
-			} else if kerr.IsNotFound(err) {
-
-				log.Infoln("UserList secret " + pgbouncer.Spec.UserListSecretRef.Name + " is not available")
-				secretVolume, secretVolumeMount, err := c.getVolumeAndVolumeMountForFallBackUserList(pgbouncer)
-				if err == nil {
-					volumes = append(volumes, *secretVolume)
-					volumeMounts = append(volumeMounts, *secretVolumeMount)
-				}
-			}
-			//We are not concerned about other errors
+		//if pgbouncer.Spec.UserListSecretRef != nil && pgbouncer.Spec.UserListSecretRef.Name != "" {
+		//	secretVolume, secretVolumeMount, err := c.getVolumeAndVolumeMountForUserList(pgbouncer)
+		//	if err == nil {
+		//		volumes = append(volumes, *secretVolume)
+		//		//Add to volumeMounts to mount the volume
+		//		volumeMounts = append(volumeMounts, *secretVolumeMount)
+		//	} else if kerr.IsNotFound(err) {
+		//
+		//		log.Infoln("UserList secret " + pgbouncer.Spec.UserListSecretRef.Name + " is not available")
+		//
+		//	}
+		//	//We are not concerned about other errors
+		//}
+		secretVolume, secretVolumeMount, err := c.getVolumeAndVolumeMountForDefaultUserList(pgbouncer)
+		if err == nil {
+			volumes = append(volumes, *secretVolume)
+			volumeMounts = append(volumeMounts, *secretVolumeMount)
 		}
+
 		in.Spec.Template.Spec.InitContainers = core_util.UpsertContainers(in.Spec.Template.Spec.InitContainers, pgbouncer.Spec.PodTemplate.Spec.InitContainers)
 		in.Spec.Template.Spec.Containers = core_util.UpsertContainer(
 			in.Spec.Template.Spec.Containers,
@@ -277,7 +279,7 @@ func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pg
 			monitorArgs = pgbouncer.Spec.Monitor.Args
 		}
 
-		adminSecretSpec := c.GetFallbackSecretSpec(pgbouncer)
+		adminSecretSpec := c.GetDefaultSecretSpec(pgbouncer)
 		adminSecret, err := c.Client.CoreV1().Secrets(adminSecretSpec.Namespace).Get(adminSecretSpec.Name,metav1.GetOptions{})
 		if err != nil {
 			log.Infoln(err)

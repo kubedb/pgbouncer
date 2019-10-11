@@ -135,14 +135,17 @@ func (c *Controller) generateConfig(pgbouncer *api.PgBouncer) (string, error) {
 	buf.WriteString("logfile = /tmp/pgbouncer.log\n") // TODO: send log to stdout ?
 	buf.WriteString("pidfile = /tmp/pgbouncer.pid\n")
 
-	secretFileName := c.getUserListFileName(pgbouncer)
+	secretFileName, err := c.getUserListFileName(pgbouncer)
+	if err != nil {
+		return "", err
+	}
 	if secretFileName == "" {
 		secretFileName = pbAdminData
 	}
-	authFileLocation := filepath.Join(userListMountPath, secretFileName)
 	println("AuthFileName = ", secretFileName)
+
 	if pgbouncer.Spec.ConnectionPool == nil || (pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any") {
-		buf.WriteString(fmt.Sprintln("auth_file = ", authFileLocation))
+		buf.WriteString(fmt.Sprintln("auth_file = ", filepath.Join(userListMountPath, secretFileName)))
 	}
 	if pgbouncer.Spec.ConnectionPool != nil {
 		err := cfgtpl.Execute(&buf, pgbouncer.Spec.ConnectionPool)
@@ -275,7 +278,7 @@ func (c *Controller) getPgBouncerPod(bouncer *api.PgBouncer) (core.Pod, error) {
 }
 
 func (c *Controller) reloadCmd(pgbouncer *api.PgBouncer,localPort int32) []string {
-	adminSecretSpec := c.GetFallbackSecretSpec(pgbouncer)
+	adminSecretSpec := c.GetDefaultSecretSpec(pgbouncer)
 	adminSecret, err := c.Client.CoreV1().Secrets(adminSecretSpec.Namespace).Get(adminSecretSpec.Name,metav1.GetOptions{})
 	if err != nil {
 		log.Infoln(err)
@@ -295,23 +298,14 @@ func (c *Controller) getUserListCmd(bouncer *api.PgBouncer) ([]string, error) {
 	return []string{"cat", fmt.Sprintf("%s/%s", userListMountPath,secretFileName)}, nil
 }
 
-func (c *Controller) getUserListFileName(bouncer *api.PgBouncer) (filename string) {
-	if bouncer.Spec.UserListSecretRef == nil {
-		return ""
-	}
-	var ns = bouncer.Namespace
-
-	sec, err := c.Client.CoreV1().Secrets(ns).Get(bouncer.Spec.UserListSecretRef.Name, metav1.GetOptions{})
+func (c *Controller) getUserListFileName(pgbouncer *api.PgBouncer) (string, error) {
+	defaultSecretSpec := c.GetDefaultSecretSpec(pgbouncer)
+	defaultSecret, err := c.Client.CoreV1().Secrets(pgbouncer.Namespace).Get(defaultSecretSpec.Name,metav1.GetOptions{})
 	if err != nil {
-		log.Infoln(err)
-		return ""
+		return "", err
 	}
-	secStData := sec.Data
-	for key := range secStData {
-		if key != "" {
-			filename = key
-			break
-		}
+	if _, exists :=  defaultSecret.Data[pbUserData]; exists{
+		return pbUserData, nil
 	}
-	return filename
+	return pbAdminData, nil
 }

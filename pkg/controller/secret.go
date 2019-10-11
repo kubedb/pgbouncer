@@ -9,13 +9,11 @@ import (
 
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kutil "kmodules.xyz/client-go"
-	core_util "kmodules.xyz/client-go/core/v1"
-	meta_util "kmodules.xyz/client-go/meta"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
-	kerr "k8s.io/apimachinery/pkg/api/errors"
 )
 
 func (c *Controller) manageUserSecretEvent(key string) error {
@@ -65,66 +63,70 @@ func (c *Controller) checkForPgBouncerSecret(pgbouncer *api.PgBouncer, secretInf
 	//2a. There might be no secret associated with this pg bouncer
 	//2b. this might be a user provided secret
 
-	if fSecretSpec := c.GetFallbackSecretSpec(pgbouncer); fSecretSpec.Name == secretInfo[nameKey] {
+	if fSecretSpec := c.GetDefaultSecretSpec(pgbouncer); fSecretSpec.Name == secretInfo[nameKey] {
 		//its an event for fallback secret, which must always stay in kubedb provided form
-		if _, err := c.CreateOrPatchFallbackSecret(pgbouncer); err != nil {
+		println("====> Update for admin Secret")
+		if _, err := c.CreateOrPatchDefaultSecret(pgbouncer); err != nil {
 			return err
 		}
 	} else if pgbouncer.Spec.UserListSecretRef == nil || pgbouncer.Spec.UserListSecretRef.Name == "" {
 		return nil
-	} else if pgbouncer.Spec.UserListSecretRef.Name == secretInfo[nameKey] && secretExists {
+	} else if pgbouncer.Spec.UserListSecretRef.Name == secretInfo[nameKey] {
 		//ensure that default admin credentials are set
-		secret, err := c.Client.CoreV1().Secrets(secretInfo[namespaceKey]).Get(secretInfo[nameKey], v1.GetOptions{})
-		if err != nil {
+		// in case there is an update of the user provided secret
+		//ensure that the default secret is updated as well
+		println("====> Update for user Secret")
+		println("====> user Secret exists = ",secretExists)
+		if _, err := c.CreateOrPatchDefaultSecret(pgbouncer); err != nil {
 			return err
 		}
-		c.patchUserListWithDefaultAdmin(pgbouncer, secret)
 	}
 	//need to ensure statefulset to mount volume containing the list, and configmap to load userlist from that path
-	if err := c.manageStatefulSet(pgbouncer); err != nil {
-		return err
-	}
+	//if err := c.manageStatefulSet(pgbouncer); err != nil {
+	//	return err
+	//}
 	if err := c.manageConfigMap(pgbouncer); err != nil {
 		return err
 	}
+	println("Secret update managed")
 
 	return nil
 }
 
-func (c *Controller) patchUserListWithDefaultAdmin(pgbouncer *api.PgBouncer, secret *core.Secret) {
-	for key, value := range secret.Data {
-		if key != "" && value != nil {
-			adminSecretSpec := c.GetFallbackSecretSpec(pgbouncer)
-			err := c.waitUntilAdminSecretReady(pgbouncer, adminSecretSpec)
-			if err != nil {
-				log.Fatal(err)
-			}
-			adminSecret, err := c.Client.CoreV1().Secrets(adminSecretSpec.Namespace).Get(adminSecretSpec.Name,v1.GetOptions{})
-			if err != nil {
-				log.Fatal(err)
-			}
-			adminData := string(adminSecret.Data[pbAdminData])
-
-			println("==========adminSecret data  = ", string(adminSecret.Data[pbAdminData]))
-			kubedbUserString := fmt.Sprintf(`%s`, adminData)
-			if !strings.Contains(string(value), kubedbUserString) {
-				tmpData := fmt.Sprintln(string(value)) + kubedbUserString
-				secret.Data[key] = []byte(tmpData)
-				_, vt, err := core_util.CreateOrPatchSecret(c.Client, secret.ObjectMeta, func(in *core.Secret) *core.Secret {
-					in = secret
-					return in
-				}, false)
-				if err != nil {
-					log.Infoln("error patching secret with modified file, err = ", err)
-				}
-				if vt == kutil.VerbPatched {
-					log.Infoln("secret patched with kubedb as an admin")
-				}
-			}
-			break
-		}
-	}
-}
+//func (c *Controller) patchUserListWithDefaultAdmin(pgbouncer *api.PgBouncer, secret *core.Secret) {
+//	for key, value := range secret.Data {
+//		if key != "" && value != nil {
+//			adminSecretSpec := c.GetDefaultSecretSpec(pgbouncer)
+//			err := c.waitUntilAdminSecretReady(pgbouncer, adminSecretSpec)
+//			if err != nil {
+//				log.Fatal(err)
+//			}
+//			adminSecret, err := c.Client.CoreV1().Secrets(adminSecretSpec.Namespace).Get(adminSecretSpec.Name, v1.GetOptions{})
+//			if err != nil {
+//				log.Fatal(err)
+//			}
+//			adminData := string(adminSecret.Data[pbAdminData])
+//
+//			println("==========adminSecret data  = ", string(adminSecret.Data[pbAdminData]))
+//			kubedbUserString := fmt.Sprintf(`%s`, adminData)
+//			if !strings.Contains(string(value), kubedbUserString) {
+//				tmpData := fmt.Sprintln(string(value)) + kubedbUserString
+//				secret.Data[key] = []byte(tmpData)
+//				_, vt, err := core_util.CreateOrPatchSecret(c.Client, secret.ObjectMeta, func(in *core.Secret) *core.Secret {
+//					in = secret
+//					return in
+//				}, false)
+//				if err != nil {
+//					log.Infoln("error patching secret with modified file, err = ", err)
+//				}
+//				if vt == kutil.VerbPatched {
+//					log.Infoln("secret patched with kubedb as an admin")
+//				}
+//			}
+//			break
+//		}
+//	}
+//}
 
 func (c *Controller) getSecretKeyValuePair(pgbouncer *api.PgBouncer) (key, value string, err error) {
 	if pgbouncer.Spec.UserListSecretRef != nil {
@@ -169,39 +171,100 @@ func (c *Controller) getSecretKey(pgbouncer *api.PgBouncer) (key string, err err
 	return key, nil
 }
 
-func (c *Controller) GetFallbackSecretSpec(pgbouncer *api.PgBouncer) *core.Secret {
-
-	secretSpec := core.Secret{
+func (c *Controller) GetDefaultSecretSpec(pgbouncer *api.PgBouncer) *core.Secret {
+	return &core.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      pgbouncer.GetName() + "-fallback-secret",
+			Name:      pgbouncer.GetName() + "-auth",
 			Namespace: pgbouncer.Namespace,
-			Labels: map[string]string{
-				meta_util.ManagedByLabelKey: api.DatabaseNamePrefix,
-			},
+			Labels: pgbouncer.OffshootLabels(),
 		},
 	}
-	return &secretSpec
 }
 
-func (c *Controller) CreateOrPatchFallbackSecret(pgbouncer *api.PgBouncer) (kutil.VerbType, error) {
-	var pbPass = ""
-	secretSpec := c.GetFallbackSecretSpec(pgbouncer)
+func (c *Controller) CreateOrPatchDefaultSecret(pgbouncer *api.PgBouncer) (kutil.VerbType, error) {
+	var myPgBouncerPass = ""
+	var adminSecretExists = true
+	var vt kutil.VerbType
+	vt = kutil.VerbCreated
+	secretSpec := c.GetDefaultSecretSpec(pgbouncer)
 	secret, err := c.Client.CoreV1().Secrets(secretSpec.Namespace).Get(secretSpec.Name, v1.GetOptions{})
 	if err == nil {
-		pbPass = string(secret.Data[pbAdminPassword])
+		myPgBouncerPass = string(secret.Data[pbAdminPassword])
 	}
-	if kerr.IsNotFound(err){
-		pbPass = rand.WithUniqSuffix(pbAdminUser)
+	if kerr.IsNotFound(err) {
+		myPgBouncerPass = rand.WithUniqSuffix(pbAdminUser)
+		adminSecretExists = false
 	}
-	_, vt, err := core_util.CreateOrPatchSecret(c.Client, secretSpec.ObjectMeta, func(in *core.Secret) *core.Secret {
-		if _, ok := in.Data[pbAdminData]; !ok {
-			in.StringData = map[string]string{
-				pbAdminData:     fmt.Sprintf(`"%s" "%s"`, pbAdminUser, pbPass),
-				pbAdminPassword: pbPass,
+	var myPgBouncerAdminData = fmt.Sprintf(`"%s" "%s"`, pbAdminUser, myPgBouncerPass)
+	mySecretData := map[string]string{
+		pbAdminData:     myPgBouncerAdminData,
+		pbAdminPassword: myPgBouncerPass,
+	}
+
+	userSecretExists, userSecret, err := c.isUserSecretExists(pgbouncer)
+	if err != nil {
+		println("!!!!!!!!!!!!!!!!!!!!!!!!")
+		return "", err
+	}
+	println("++++++userSecretExists= ", userSecretExists)
+	if userSecretExists {
+		userSecretData := c.getUserListSecretData(userSecret, "")
+		myUserSecertData := fmt.Sprintln(myPgBouncerAdminData) + string(userSecretData)
+		//i := map[string]string{pbUserData: myUserSecertData}
+		//mySecretData = core_util.UpsertMap(mySecretData,i)
+		mySecretData = map[string]string{
+			pbAdminData:     myPgBouncerAdminData,
+			pbAdminPassword: myPgBouncerPass,
+			pbUserData:      myUserSecertData,
+		}
+	}
+
+	log.Infoln("User Secret finally = ", mySecretData)
+
+	//_, vt, err := core_util.CreateOrPatchSecret(c.Client, secretSpec.ObjectMeta, func(in *core.Secret) *core.Secret {
+	//	in.StringData = mySecretData
+	//	return in
+	//}, true)
+	secretSpec.StringData = mySecretData
+	if adminSecretExists{
+		var mismatch = false
+		if len(secret.Data) != len(mySecretData){
+			println("===========1 mismatch found!!!!")
+			mismatch = true
+		} else {
+			for key, value := range secret.Data{
+				if string(value) != mySecretData[key]{
+					println("===========2 mismatch found!!!!")
+					mismatch = true
+					break
+				}
 			}
 		}
-		return in
-	})
+
+		if mismatch{
+			println("===========3 mismatch confirmed!!!!")
+			err = c.Client.CoreV1().Secrets(pgbouncer.Namespace).Delete(secret.Name, &v1.DeleteOptions{})
+			if err != nil {
+				return "", err
+			}
+			_, err =c.Client.CoreV1().Secrets(pgbouncer.Namespace).Create(secretSpec)
+			if err != nil {
+				return "", err
+			}
+			vt = kutil.VerbPatched
+		}
+		vt = kutil.VerbUnchanged
+
+	} else {
+		_, err =c.Client.CoreV1().Secrets(pgbouncer.Namespace).Create(secretSpec)
+		if err != nil {
+			return "", err
+		}
+		vt = kutil.VerbCreated
+	}
+
+	println("======vt = ", vt)
+	println("======err = ", err)
 	return vt, err
 }
 
@@ -212,9 +275,36 @@ func (c *Controller) waitUntilAdminSecretReady(pgbouncer *api.PgBouncer, secret 
 		if err == nil {
 			return true, nil
 		}
-		if kerr.IsNotFound(err){
+		if kerr.IsNotFound(err) {
 			return false, nil
 		}
 		return false, err
 	})
+}
+
+func (c *Controller) isUserSecretExists(pgbouncer *api.PgBouncer) (bool, *core.Secret, error) {
+	if pgbouncer.Spec.UserListSecretRef == nil && pgbouncer.Spec.UserListSecretRef.Name == "" {
+		return false, nil, nil
+	}
+	secret, err := c.Client.CoreV1().Secrets(pgbouncer.Namespace).Get(pgbouncer.Spec.UserListSecretRef.Name, v1.GetOptions{})
+	if err == nil {
+		return true, secret, nil
+	} else if kerr.IsNotFound(err) {
+		return false, nil, nil
+	}
+	return false, nil, err
+}
+
+func (c *Controller) getUserListSecretData(userSecret *core.Secret, key string) []byte {
+	if key == "" { //no key provided, return any
+		for _, value := range userSecret.Data {
+			return value
+		}
+	}
+	return userSecret.Data[key]
+}
+
+func (c *Controller) removeDefaultSecret(pgbouncer *api.PgBouncer)  error{
+	secretSpec := c.GetDefaultSecretSpec(pgbouncer)
+	return  c.Client.CoreV1().Secrets(secretSpec.Namespace).Delete(secretSpec.Name, &v1.DeleteOptions{})
 }

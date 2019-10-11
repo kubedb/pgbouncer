@@ -5,7 +5,6 @@ import (
 	"github.com/appscode/go/encoding/json/types"
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
-	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	kutil "kmodules.xyz/client-go"
@@ -36,11 +35,7 @@ func (c *Controller) create(pgbouncer *api.PgBouncer) error {
 		return err
 	}
 	// create or patch Fallback Secret
-	if err := c.manageFallBackSecret(pgbouncer); err != nil {
-		return err
-	}
-	// patch user Secret
-	if err := c.managePatchedUserList(pgbouncer); err != nil {
+	if err := c.manageDefaultSecret(pgbouncer); err != nil {
 		return err
 	}
 	// create or patch ConfigMap
@@ -82,7 +77,8 @@ func (c *Controller) terminate(pgbouncer *api.PgBouncer) error {
 			return nil
 		}
 	}
-	return nil
+	err := c.removeDefaultSecret(pgbouncer)
+	return err
 }
 
 func (c *Controller) removeOwnerReferenceFromOffshoots(pgbouncer *api.PgBouncer, ref *core.ObjectReference) error {
@@ -198,8 +194,8 @@ func (c *Controller) manageFinalPhase(pgbouncer *api.PgBouncer) error {
 	return nil //if no err
 }
 
-func (c *Controller) manageFallBackSecret(pgbouncer *api.PgBouncer) error {
-	sVerb, err := c.CreateOrPatchFallbackSecret(pgbouncer)
+func (c *Controller) manageDefaultSecret(pgbouncer *api.PgBouncer) error {
+	sVerb, err := c.CreateOrPatchDefaultSecret(pgbouncer)
 	if err != nil {
 		return err
 	}
@@ -324,25 +320,25 @@ func (c *Controller) manageStatService(pgbouncer *api.PgBouncer) error {
 	log.Infoln("Stat Service ", statServiceVerb)
 	return nil //if no err
 }
-func (c *Controller) managePatchedUserList(pgbouncer *api.PgBouncer) error {
-	if pgbouncer.Spec.UserListSecretRef == nil {
-		return nil
-	}
-	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name
-	pbSecretNamespace := pgbouncer.GetNamespace()
-
-	sec, err := c.Client.CoreV1().Secrets(pbSecretNamespace).Get(pbSecretName, metav1.GetOptions{})
-	if err != nil {
-		if kerr.IsNotFound(err) {
-			//secret has not been created yet, which is fine. We have watcher to take action when its created
-			return nil
-		}
-		return err
-	}
-	//if secret is already there, then add default admin if necessary
-	c.patchUserListWithDefaultAdmin(pgbouncer, sec)
-	return nil //if no err
-}
+//func (c *Controller) managePatchedUserList(pgbouncer *api.PgBouncer) error {
+//	if pgbouncer.Spec.UserListSecretRef == nil {
+//		return nil
+//	}
+//	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name
+//	pbSecretNamespace := pgbouncer.GetNamespace()
+//
+//	sec, err := c.Client.CoreV1().Secrets(pbSecretNamespace).Get(pbSecretName, metav1.GetOptions{})
+//	if err != nil {
+//		if kerr.IsNotFound(err) {
+//			//secret has not been created yet, which is fine. We have watcher to take action when its created
+//			return nil
+//		}
+//		return err
+//	}
+//	//if secret is already there, then add default admin if necessary
+//	c.patchUserListWithDefaultAdmin(pgbouncer, sec)
+//	return nil //if no err
+//}
 
 func (c *Controller) getVolumeAndVolumeMountForUserList(pgbouncer *api.PgBouncer) (*core.Volume, *core.VolumeMount, error) {
 	_, err := c.Client.CoreV1().Secrets(pgbouncer.GetNamespace()).Get(pgbouncer.Spec.UserListSecretRef.Name, metav1.GetOptions{})
@@ -367,8 +363,8 @@ func (c *Controller) getVolumeAndVolumeMountForUserList(pgbouncer *api.PgBouncer
 	return secretVolume, secretVolumeMount, nil //if no err
 }
 
-func (c *Controller) getVolumeAndVolumeMountForFallBackUserList(pgbouncer *api.PgBouncer) (*core.Volume, *core.VolumeMount, error) {
-	fSecret := c.GetFallbackSecretSpec(pgbouncer)
+func (c *Controller) getVolumeAndVolumeMountForDefaultUserList(pgbouncer *api.PgBouncer) (*core.Volume, *core.VolumeMount, error) {
+	fSecret := c.GetDefaultSecretSpec(pgbouncer)
 	_, err := c.Client.CoreV1().Secrets(fSecret.Namespace).Get(fSecret.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, nil, err

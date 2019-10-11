@@ -18,6 +18,7 @@ const (
 	pbAdminDatabase = "pgbouncer"
 	pbAdminPassword = "pb-password"
 	pbAdminData     = "pb-admin"
+	pbUserData     = "pb-user"
 )
 
 func (c *Controller) initWatcher() {
