@@ -237,7 +237,7 @@ func (c *Controller) reloadPgBouncer(pgbouncer *api.PgBouncer) error {
 		return err
 	}
 	options := []func(options *exec.Options){
-		exec.Command(c.reloadCmd(pgbouncer,localPort)...),
+		exec.Command(c.reloadCmd(pgbouncer, localPort)...),
 	}
 
 	if _, err := exec.ExecIntoPod(c.ClientConfig, &pod, options...); err != nil {
@@ -277,9 +277,9 @@ func (c *Controller) getPgBouncerPod(bouncer *api.PgBouncer) (core.Pod, error) {
 	return pod, nil
 }
 
-func (c *Controller) reloadCmd(pgbouncer *api.PgBouncer,localPort int32) []string {
+func (c *Controller) reloadCmd(pgbouncer *api.PgBouncer, localPort int32) []string {
 	adminSecretSpec := c.GetDefaultSecretSpec(pgbouncer)
-	adminSecret, err := c.Client.CoreV1().Secrets(adminSecretSpec.Namespace).Get(adminSecretSpec.Name,metav1.GetOptions{})
+	adminSecret, err := c.Client.CoreV1().Secrets(adminSecretSpec.Namespace).Get(adminSecretSpec.Name, metav1.GetOptions{})
 	if err != nil {
 		log.Infoln(err)
 	}
@@ -288,23 +288,23 @@ func (c *Controller) reloadCmd(pgbouncer *api.PgBouncer,localPort int32) []strin
 }
 
 func (c *Controller) getPgBouncerConfigCmd() []string {
-	return []string{"cat", fmt.Sprintf("%s/pgbouncer.ini",configMountPath)}
+	return []string{"cat", fmt.Sprintf("%s/pgbouncer.ini", configMountPath)}
 }
 func (c *Controller) getUserListCmd(bouncer *api.PgBouncer) ([]string, error) {
 	secretFileName, err := c.getSecretKey(bouncer)
 	if err != nil {
 		return nil, err
 	}
-	return []string{"cat", fmt.Sprintf("%s/%s", userListMountPath,secretFileName)}, nil
+	return []string{"cat", fmt.Sprintf("%s/%s", userListMountPath, secretFileName)}, nil
 }
 
 func (c *Controller) getUserListFileName(pgbouncer *api.PgBouncer) (string, error) {
 	defaultSecretSpec := c.GetDefaultSecretSpec(pgbouncer)
-	defaultSecret, err := c.Client.CoreV1().Secrets(pgbouncer.Namespace).Get(defaultSecretSpec.Name,metav1.GetOptions{})
+	defaultSecret, err := c.Client.CoreV1().Secrets(pgbouncer.Namespace).Get(defaultSecretSpec.Name, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
-	if _, exists :=  defaultSecret.Data[pbUserData]; exists{
+	if _, exists := defaultSecret.Data[pbUserData]; exists {
 		return pbUserData, nil
 	}
 	return pbAdminData, nil

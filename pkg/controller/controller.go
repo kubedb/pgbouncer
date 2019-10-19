@@ -22,7 +22,6 @@ import (
 	appcat_util "kmodules.xyz/custom-resources/apis/appcatalog/v1alpha1"
 	appcat_cs "kmodules.xyz/custom-resources/client/clientset/versioned"
 	appcat_listers "kmodules.xyz/custom-resources/client/listers/appcatalog/v1alpha1"
-	"kubedb.dev/apimachinery/apis"
 	catalog "kubedb.dev/apimachinery/apis/catalog/v1alpha1"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	cs "kubedb.dev/apimachinery/client/clientset/versioned"
@@ -185,7 +184,7 @@ func (c *Controller) pushFailureEvent(pgbouncer *api.PgBouncer, reason string) {
 		in.Reason = reason
 		in.ObservedGeneration = types.NewIntHash(pgbouncer.Generation, meta_util.GenerationHash(pgbouncer))
 		return in
-	}, apis.EnableStatusSubresource)
+	})
 	if err != nil {
 		c.recorder.Eventf(
 			pgbouncer,

@@ -4,7 +4,6 @@ import (
 	"github.com/appscode/go/log"
 	core_util "kmodules.xyz/client-go/core/v1"
 	"kmodules.xyz/client-go/tools/queue"
-	"kubedb.dev/apimachinery/apis"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 )
@@ -18,14 +17,14 @@ const (
 	pbAdminDatabase = "pgbouncer"
 	pbAdminPassword = "pb-password"
 	pbAdminData     = "pb-admin"
-	pbUserData     = "pb-user"
+	pbUserData      = "pb-user"
 )
 
 func (c *Controller) initWatcher() {
 	c.pgInformer = c.KubedbInformerFactory.Kubedb().V1alpha1().PgBouncers().Informer()
 	c.pgQueue = queue.New("PgBouncer", c.MaxNumRequeues, c.NumThreads, c.runPgBouncer)
 	c.pbLister = c.KubedbInformerFactory.Kubedb().V1alpha1().PgBouncers().Lister()
-	c.pgInformer.AddEventHandler(queue.NewObservableUpdateHandler(c.pgQueue.GetQueue(), apis.EnableStatusSubresource))
+	c.pgInformer.AddEventHandler(queue.NewObservableUpdateHandler(c.pgQueue.GetQueue(), true))
 }
 
 func (c *Controller) initSecretWatcher() {

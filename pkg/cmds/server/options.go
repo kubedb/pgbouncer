@@ -15,7 +15,6 @@ import (
 	"kmodules.xyz/client-go/tools/cli"
 	appcat_cs "kmodules.xyz/custom-resources/client/clientset/versioned"
 	appcat_in "kmodules.xyz/custom-resources/client/informers/externalversions"
-	"kubedb.dev/apimachinery/apis"
 	cs "kubedb.dev/apimachinery/client/clientset/versioned"
 	kubedbinformers "kubedb.dev/apimachinery/client/informers/externalversions"
 	"kubedb.dev/pgbouncer/pkg/controller"
@@ -71,7 +70,6 @@ func (s *ExtraOptions) AddGoFlags(fs *flag.FlagSet) {
 
 	fs.BoolVar(&s.EnableMutatingWebhook, "enable-mutating-webhook", s.EnableMutatingWebhook, "If true, enables mutating webhooks for KubeDB CRDs.")
 	fs.BoolVar(&s.EnableValidatingWebhook, "enable-validating-webhook", s.EnableValidatingWebhook, "If true, enables validating webhooks for KubeDB CRDs.")
-	fs.BoolVar(&apis.EnableStatusSubresource, "enable-status-subresource", apis.EnableStatusSubresource, "If true, uses sub resource for KubeDB crds.")
 }
 
 func (s *ExtraOptions) AddFlags(fs *pflag.FlagSet) {

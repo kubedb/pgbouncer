@@ -3,15 +3,15 @@ package controller
 import (
 	"errors"
 	"fmt"
-	"github.com/appscode/go/crypto/rand"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"strings"
 
+	"github.com/appscode/go/crypto/rand"
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	kutil "kmodules.xyz/client-go"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 )
@@ -76,7 +76,7 @@ func (c *Controller) checkForPgBouncerSecret(pgbouncer *api.PgBouncer, secretInf
 		// in case there is an update of the user provided secret
 		//ensure that the default secret is updated as well
 		println("====> Update for user Secret")
-		println("====> user Secret exists = ",secretExists)
+		println("====> user Secret exists = ", secretExists)
 		if _, err := c.CreateOrPatchDefaultSecret(pgbouncer); err != nil {
 			return err
 		}
@@ -176,7 +176,7 @@ func (c *Controller) GetDefaultSecretSpec(pgbouncer *api.PgBouncer) *core.Secret
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      pgbouncer.GetName() + "-auth",
 			Namespace: pgbouncer.Namespace,
-			Labels: pgbouncer.OffshootLabels(),
+			Labels:    pgbouncer.OffshootLabels(),
 		},
 	}
 }
@@ -226,14 +226,14 @@ func (c *Controller) CreateOrPatchDefaultSecret(pgbouncer *api.PgBouncer) (kutil
 	//	return in
 	//}, true)
 	secretSpec.StringData = mySecretData
-	if adminSecretExists{
+	if adminSecretExists {
 		var mismatch = false
-		if len(secret.Data) != len(mySecretData){
+		if len(secret.Data) != len(mySecretData) {
 			println("===========1 mismatch found!!!!")
 			mismatch = true
 		} else {
-			for key, value := range secret.Data{
-				if string(value) != mySecretData[key]{
+			for key, value := range secret.Data {
+				if string(value) != mySecretData[key] {
 					println("===========2 mismatch found!!!!")
 					mismatch = true
 					break
@@ -241,13 +241,13 @@ func (c *Controller) CreateOrPatchDefaultSecret(pgbouncer *api.PgBouncer) (kutil
 			}
 		}
 
-		if mismatch{
+		if mismatch {
 			println("===========3 mismatch confirmed!!!!")
 			err = c.Client.CoreV1().Secrets(pgbouncer.Namespace).Delete(secret.Name, &v1.DeleteOptions{})
 			if err != nil {
 				return "", err
 			}
-			_, err =c.Client.CoreV1().Secrets(pgbouncer.Namespace).Create(secretSpec)
+			_, err = c.Client.CoreV1().Secrets(pgbouncer.Namespace).Create(secretSpec)
 			if err != nil {
 				return "", err
 			}
@@ -256,7 +256,7 @@ func (c *Controller) CreateOrPatchDefaultSecret(pgbouncer *api.PgBouncer) (kutil
 		vt = kutil.VerbUnchanged
 
 	} else {
-		_, err =c.Client.CoreV1().Secrets(pgbouncer.Namespace).Create(secretSpec)
+		_, err = c.Client.CoreV1().Secrets(pgbouncer.Namespace).Create(secretSpec)
 		if err != nil {
 			return "", err
 		}
@@ -304,7 +304,7 @@ func (c *Controller) getUserListSecretData(userSecret *core.Secret, key string) 
 	return userSecret.Data[key]
 }
 
-func (c *Controller) removeDefaultSecret(pgbouncer *api.PgBouncer)  error{
+func (c *Controller) removeDefaultSecret(pgbouncer *api.PgBouncer) error {
 	secretSpec := c.GetDefaultSecretSpec(pgbouncer)
-	return  c.Client.CoreV1().Secrets(secretSpec.Namespace).Delete(secretSpec.Name, &v1.DeleteOptions{})
+	return c.Client.CoreV1().Secrets(secretSpec.Namespace).Delete(secretSpec.Name, &v1.DeleteOptions{})
 }

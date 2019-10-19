@@ -2,6 +2,7 @@ package controller
 
 import (
 	"fmt"
+
 	"github.com/appscode/go/encoding/json/types"
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
@@ -10,7 +11,6 @@ import (
 	kutil "kmodules.xyz/client-go"
 	dynamic_util "kmodules.xyz/client-go/dynamic"
 	meta_util "kmodules.xyz/client-go/meta"
-	"kubedb.dev/apimachinery/apis"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 	"kubedb.dev/apimachinery/pkg/eventer"
@@ -121,7 +121,7 @@ func (c *Controller) removeOwnerReferenceFromOffshoots(pgbouncer *api.PgBouncer,
 //		in.Phase = phase
 //		in.Reason = reason
 //		return in
-//	}, apis.EnableStatusSubresource)
+//	})
 //	return err
 //}
 
@@ -158,7 +158,7 @@ func (c *Controller) manageInitialPhase(pgbouncer *api.PgBouncer) error {
 		pg, err := util.UpdatePgBouncerStatus(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncerStatus) *api.PgBouncerStatus {
 			in.Phase = api.DatabasePhaseCreating
 			return in
-		}, apis.EnableStatusSubresource)
+		})
 		if err != nil {
 			return err
 		}
@@ -176,7 +176,7 @@ func (c *Controller) manageFinalPhase(pgbouncer *api.PgBouncer) error {
 		pg, err := util.UpdatePgBouncerStatus(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncerStatus) *api.PgBouncerStatus {
 			in.Phase = api.DatabasePhaseInitializing
 			return in
-		}, apis.EnableStatusSubresource)
+		})
 		if err != nil {
 			return err
 		}
@@ -186,7 +186,7 @@ func (c *Controller) manageFinalPhase(pgbouncer *api.PgBouncer) error {
 		in.Phase = api.DatabasePhaseRunning
 		in.ObservedGeneration = types.NewIntHash(pgbouncer.Generation, meta_util.GenerationHash(pgbouncer))
 		return in
-	}, apis.EnableStatusSubresource)
+	})
 	if err != nil {
 		return err
 	}
@@ -320,6 +320,7 @@ func (c *Controller) manageStatService(pgbouncer *api.PgBouncer) error {
 	log.Infoln("Stat Service ", statServiceVerb)
 	return nil //if no err
 }
+
 //func (c *Controller) managePatchedUserList(pgbouncer *api.PgBouncer) error {
 //	if pgbouncer.Spec.UserListSecretRef == nil {
 //		return nil
