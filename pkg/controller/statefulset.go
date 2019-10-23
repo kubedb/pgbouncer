@@ -22,9 +22,9 @@ import (
 )
 
 const (
-	securityContextCode = int64(65535)
-	configMountPath     = "/etc/config"
-	userListMountPath   = "/var/run/pgbouncer/secret"
+	//securityContextCode = int64(65535)
+	configMountPath   = "/etc/config"
+	userListMountPath = "/var/run/pgbouncer/secret"
 )
 
 func (c *Controller) ensureStatefulSet(
@@ -34,7 +34,10 @@ func (c *Controller) ensureStatefulSet(
 ) (kutil.VerbType, error) {
 	if err := c.checkConfigMap(pgbouncer); err != nil {
 		if kerr.IsNotFound(err) {
-			_, _ = c.ensureConfigMapFromCRD(pgbouncer)
+			_, err := c.ensureConfigMapFromCRD(pgbouncer)
+			if err != nil {
+				return kutil.VerbUnchanged, err
+			}
 
 		} else {
 			return kutil.VerbUnchanged, err
@@ -139,7 +142,7 @@ func (c *Controller) ensureStatefulSet(
 				ReadinessProbe: pgbouncer.Spec.PodTemplate.Spec.ReadinessProbe,
 				Lifecycle:      pgbouncer.Spec.PodTemplate.Spec.Lifecycle,
 			})
-
+		in = upsertEnv(in, pgbouncer, envList)
 		in.Spec.Template.Spec.Volumes = volumes
 		in = upsertUserEnv(in, pgbouncer)
 		in = upsertPort(in, pgbouncer)
@@ -319,5 +322,34 @@ func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pg
 		containers = core_util.UpsertContainer(containers, container)
 		statefulSet.Spec.Template.Spec.Containers = containers
 	}
+	return statefulSet
+}
+
+func upsertEnv(statefulSet *apps.StatefulSet, pgbouncer *api.PgBouncer, envs []core.EnvVar) *apps.StatefulSet {
+	envList := []core.EnvVar{
+		{
+			Name: "NAMESPACE",
+			ValueFrom: &core.EnvVarSource{
+				FieldRef: &core.ObjectFieldSelector{
+					FieldPath: "metadata.namespace",
+				},
+			},
+		},
+		{
+			Name:  "PRIMARY_HOST",
+			Value: pgbouncer.ServiceName(),
+		},
+	}
+
+	envList = append(envList, envs...)
+
+	// To do this, Upsert Container first
+	for i, container := range statefulSet.Spec.Template.Spec.Containers {
+		if container.Name == api.ResourceSingularPgBouncer {
+			statefulSet.Spec.Template.Spec.Containers[i].Env = core_util.UpsertEnvVars(container.Env, envList...)
+			return statefulSet
+		}
+	}
+
 	return statefulSet
 }

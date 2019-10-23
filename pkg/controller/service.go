@@ -34,10 +34,11 @@ func (c *Controller) ensureService(pgbouncer *api.PgBouncer) (kutil.VerbType, er
 		return kutil.VerbUnchanged, err
 	}
 	// create database Service
-	vt1, err := c.createService(pgbouncer)
+	vt1, err := c.createOrPatchService(pgbouncer)
 	if err != nil {
 		return kutil.VerbUnchanged, err
-	} else if vt1 != kutil.VerbUnchanged {
+	}
+	if vt1 != kutil.VerbUnchanged {
 		c.recorder.Eventf(
 			pgbouncer,
 			core.EventTypeNormal,
@@ -47,7 +48,7 @@ func (c *Controller) ensureService(pgbouncer *api.PgBouncer) (kutil.VerbType, er
 		)
 	}
 
-	return kutil.VerbUnchanged, nil
+	return vt1, nil
 }
 
 func (c *Controller) checkService(pgbouncer *api.PgBouncer, name string) error {
@@ -68,7 +69,7 @@ func (c *Controller) checkService(pgbouncer *api.PgBouncer, name string) error {
 	return nil
 }
 
-func (c *Controller) createService(pgbouncer *api.PgBouncer) (kutil.VerbType, error) {
+func (c *Controller) createOrPatchService(pgbouncer *api.PgBouncer) (kutil.VerbType, error) {
 	meta := metav1.ObjectMeta{
 		Name:      pgbouncer.OffshootName(),
 		Namespace: pgbouncer.Namespace,
@@ -186,17 +187,4 @@ func (c *Controller) ensureStatsService(pgbouncer *api.PgBouncer) (kutil.VerbTyp
 		)
 	}
 	return vt, nil
-}
-func (c *Controller) AnnotateService(pgbouncer *api.PgBouncer, annotaion string) error {
-	service, err := c.Client.CoreV1().Services(pgbouncer.Namespace).Get(pgbouncer.Name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	_, _, err = core_util.CreateOrPatchService(c.Client, service.ObjectMeta, func(in *core.Service) *core.Service {
-		in.ObjectMeta.Annotations = map[string]string{
-			"podConfigMap": fmt.Sprintf("%s", annotaion),
-		}
-		return in
-	})
-	return err
 }

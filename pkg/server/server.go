@@ -9,20 +9,18 @@ import (
 	mgAdmsn "kubedb.dev/pgbouncer/pkg/admission"
 	"kubedb.dev/pgbouncer/pkg/controller"
 
+	"github.com/appscode/go/log"
 	admission "k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	runtime2 "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	hooks "kmodules.xyz/webhook-runtime/admission/v1beta1"
 	admissionreview "kmodules.xyz/webhook-runtime/registry/admissionreview/v1beta1"
-)
-
-const (
-	apiserviceName = "v1alpha1.validators.kubedb.com"
 )
 
 var (
@@ -31,15 +29,16 @@ var (
 )
 
 func init() {
-	admission.AddToScheme(Scheme)
+	err := admission.AddToScheme(Scheme)
+	runtime2.Must(err)
 
 	// we need to add the options to empty v1
 	// TODO fix the server code to avoid this
 	metav1.AddToGroupVersion(Scheme, schema.GroupVersion{Version: "v1"})
 
 	// TODO: keep the generic API server from wanting this
-	unversioned := schema.GroupVersion{Group: "", Version: "v1"}
-	Scheme.AddUnversionedTypes(unversioned,
+	unVersioned := schema.GroupVersion{Group: "", Version: "v1"}
+	Scheme.AddUnversionedTypes(unVersioned,
 		&metav1.Status{},
 		&metav1.APIVersions{},
 		&metav1.APIGroupList{},
@@ -210,6 +209,7 @@ func (c completedConfig) New() (*PgBouncerServer, error) {
 		//		return nil
 		//	},
 		//)
+		log.Infoln("No PostStartHook for PgBouncer")
 	}
 	return s, nil
 }

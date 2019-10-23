@@ -50,14 +50,13 @@ func (f *Framework) AddUserToUserListSecret(username, password string) error {
 	if err != nil {
 		return err
 	}
-	secStData := sec.StringData
-	for key, data := range secStData {
+	for key, data := range sec.StringData {
+		//add new data to existing data
 		newData := string(data) + fmt.Sprintf(`
 "%s" "%s"`, username, password)
 		sec.StringData[key] = newData
 	}
 	_, _, err = core_util.CreateOrPatchSecret(f.kubeClient, sec.ObjectMeta, func(in *core.Secret) *core.Secret {
-		in = sec
 		return in
 	}, false)
 	return err

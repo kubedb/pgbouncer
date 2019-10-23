@@ -9,13 +9,13 @@ import (
 
 	cs "kubedb.dev/apimachinery/client/clientset/versioned"
 	"kubedb.dev/apimachinery/client/clientset/versioned/scheme"
-	"kubedb.dev/pgbouncer/pkg/controller"
 	"kubedb.dev/pgbouncer/test/e2e/framework"
 
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 	kext_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	clientSetScheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -46,7 +46,7 @@ var (
 )
 
 func init() {
-	scheme.AddToScheme(clientSetScheme.Scheme)
+	runtime.Must(scheme.AddToScheme(clientSetScheme.Scheme))
 
 	flag.StringVar(&storageClass, "storageclass", storageClass, "Kubernetes StorageClass name")
 	flag.StringVar(&framework.DockerRegistry, "docker-registry", framework.DockerRegistry, "User provided docker repository")
@@ -59,7 +59,6 @@ const (
 )
 
 var (
-	ctrl *controller.Controller
 	root *framework.Framework
 )
 

@@ -12,21 +12,6 @@ import (
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 )
 
-const (
-	S3_BUCKET_NAME          = "S3_BUCKET_NAME"
-	GCS_BUCKET_NAME         = "GCS_BUCKET_NAME"
-	AZURE_CONTAINER_NAME    = "AZURE_CONTAINER_NAME"
-	SWIFT_CONTAINER_NAME    = "SWIFT_CONTAINER_NAME"
-	POSTGRES_DB             = "POSTGRES_DB"
-	POSTGRES_PASSWORD       = "POSTGRES_PASSWORD"
-	PGDATA                  = "PGDATA"
-	POSTGRES_USER           = "POSTGRES_USER"
-	POSTGRES_INITDB_ARGS    = "POSTGRES_INITDB_ARGS"
-	POSTGRES_INITDB_WALDIR  = "POSTGRES_INITDB_WALDIR"
-	POSTGRES_INITDB_XLOGDIR = "POSTGRES_INITDB_XLOGDIR"
-	POSTGRES_NAME           = "postgres-for-pgbouncer-test"
-)
-
 var _ = Describe("PgBouncer", func() {
 	var (
 		err              error

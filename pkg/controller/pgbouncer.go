@@ -12,9 +12,7 @@ import (
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	kutil "kmodules.xyz/client-go"
-	dynamic_util "kmodules.xyz/client-go/dynamic"
 	meta_util "kmodules.xyz/client-go/meta"
 )
 
@@ -81,36 +79,36 @@ func (c *Controller) terminate(pgbouncer *api.PgBouncer) error {
 	return nil
 }
 
-func (c *Controller) removeOwnerReferenceFromOffshoots(pgbouncer *api.PgBouncer, ref *core.ObjectReference) error {
-	// First, Get LabelSelector for Other Components
-	labelSelector := labels.SelectorFromSet(pgbouncer.OffshootSelectors())
-
-	if err := dynamic_util.RemoveOwnerReferenceForSelector(
-		c.DynamicClient,
-		api.SchemeGroupVersion.WithResource(api.ResourcePluralSnapshot),
-		pgbouncer.Namespace,
-		labelSelector,
-		ref); err != nil {
-		return err
-	}
-	if err := dynamic_util.RemoveOwnerReferenceForSelector(
-		c.DynamicClient,
-		core.SchemeGroupVersion.WithResource("persistentvolumeclaims"),
-		pgbouncer.Namespace,
-		labelSelector,
-		ref); err != nil {
-		return err
-	}
-	if err := dynamic_util.RemoveOwnerReferenceForItems(
-		c.DynamicClient,
-		core.SchemeGroupVersion.WithResource("secrets"),
-		pgbouncer.Namespace,
-		nil,
-		ref); err != nil {
-		return err
-	}
-	return nil
-}
+//func (c *Controller) removeOwnerReferenceFromOffshoots(pgbouncer *api.PgBouncer, ref *core.ObjectReference) error {
+//	// First, Get LabelSelector for Other Components
+//	labelSelector := labels.SelectorFromSet(pgbouncer.OffshootSelectors())
+//
+//	if err := dynamic_util.RemoveOwnerReferenceForSelector(
+//		c.DynamicClient,
+//		api.SchemeGroupVersion.WithResource(api.ResourcePluralSnapshot),
+//		pgbouncer.Namespace,
+//		labelSelector,
+//		ref); err != nil {
+//		return err
+//	}
+//	if err := dynamic_util.RemoveOwnerReferenceForSelector(
+//		c.DynamicClient,
+//		core.SchemeGroupVersion.WithResource("persistentvolumeclaims"),
+//		pgbouncer.Namespace,
+//		labelSelector,
+//		ref); err != nil {
+//		return err
+//	}
+//	if err := dynamic_util.RemoveOwnerReferenceForItems(
+//		c.DynamicClient,
+//		core.SchemeGroupVersion.WithResource("secrets"),
+//		pgbouncer.Namespace,
+//		nil,
+//		ref); err != nil {
+//		return err
+//	}
+//	return nil
+//}
 
 //func (c *Controller) SetDatabaseStatus(meta metav1.ObjectMeta, phase api.DatabasePhase, reason string) error {
 //	pgbouncer, err := c.ExtClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
@@ -215,7 +213,9 @@ func (c *Controller) manageDefaultSecret(pgbouncer *api.PgBouncer) error {
 			"Successfully patched PgBouncer Fallback Secret",
 		)
 	}
-	log.Infoln("Fallback Secret ", sVerb)
+	if sVerb != kutil.VerbUnchanged {
+		log.Infoln("Default secret ", sVerb)
+	}
 	return nil //if no err
 }
 
@@ -240,7 +240,10 @@ func (c *Controller) manageConfigMap(pgbouncer *api.PgBouncer) error {
 			"Successfully patched PgBouncer configMap",
 		)
 	}
-	log.Infoln("ConfigMap ", configMapVerb)
+	if configMapVerb != kutil.VerbUnchanged {
+		log.Infoln("ConfigMap ", configMapVerb)
+	}
+
 	return nil //if no err
 }
 
@@ -269,7 +272,9 @@ func (c *Controller) manageStatefulSet(pgbouncer *api.PgBouncer) error {
 			"Successfully patched PgBouncer statefulset",
 		)
 	}
-	log.Infoln("Statefulset ", statefulsetVerb)
+	if statefulsetVerb != kutil.VerbUnchanged {
+		log.Infoln("Statefulset ", statefulsetVerb)
+	}
 	return nil //if no err
 }
 
@@ -293,7 +298,9 @@ func (c *Controller) manageService(pgbouncer *api.PgBouncer) error {
 			"Successfully patched Service",
 		)
 	}
-	log.Infoln("Service ", serviceVerb)
+	if serviceVerb != kutil.VerbUnchanged {
+		log.Infoln("Service ", serviceVerb)
+	}
 	return nil //if no err
 }
 
@@ -317,51 +324,10 @@ func (c *Controller) manageStatService(pgbouncer *api.PgBouncer) error {
 			"Successfully patched Stat Service",
 		)
 	}
-	log.Infoln("Stat Service ", statServiceVerb)
+	if statServiceVerb != kutil.VerbUnchanged {
+		log.Infoln("Stat Service ", statServiceVerb)
+	}
 	return nil //if no err
-}
-
-//func (c *Controller) managePatchedUserList(pgbouncer *api.PgBouncer) error {
-//	if pgbouncer.Spec.UserListSecretRef == nil {
-//		return nil
-//	}
-//	pbSecretName := pgbouncer.Spec.UserListSecretRef.Name
-//	pbSecretNamespace := pgbouncer.GetNamespace()
-//
-//	sec, err := c.Client.CoreV1().Secrets(pbSecretNamespace).Get(pbSecretName, metav1.GetOptions{})
-//	if err != nil {
-//		if kerr.IsNotFound(err) {
-//			//secret has not been created yet, which is fine. We have watcher to take action when its created
-//			return nil
-//		}
-//		return err
-//	}
-//	//if secret is already there, then add default admin if necessary
-//	c.patchUserListWithDefaultAdmin(pgbouncer, sec)
-//	return nil //if no err
-//}
-
-func (c *Controller) getVolumeAndVolumeMountForUserList(pgbouncer *api.PgBouncer) (*core.Volume, *core.VolumeMount, error) {
-	_, err := c.Client.CoreV1().Secrets(pgbouncer.GetNamespace()).Get(pgbouncer.Spec.UserListSecretRef.Name, metav1.GetOptions{})
-	if err != nil {
-		return nil, nil, err
-	}
-	secretVolume := &core.Volume{
-		Name: "userlist",
-		VolumeSource: core.VolumeSource{
-			Secret: &core.SecretVolumeSource{
-				SecretName: pgbouncer.Spec.UserListSecretRef.Name,
-			},
-		},
-	}
-	//Add to volumeMounts to mount the vpilume
-	secretVolumeMount := &core.VolumeMount{
-		Name:      "userlist",
-		MountPath: userListMountPath,
-		ReadOnly:  true,
-	}
-
-	return secretVolume, secretVolumeMount, nil //if no err
 }
 
 func (c *Controller) getVolumeAndVolumeMountForDefaultUserList(pgbouncer *api.PgBouncer) (*core.Volume, *core.VolumeMount, error) {
@@ -388,7 +354,7 @@ func (c *Controller) getVolumeAndVolumeMountForDefaultUserList(pgbouncer *api.Pg
 	return secretVolume, secretVolumeMount, nil //if no err
 }
 
-func (c *Controller) manageTemPlate(pgbouncer *api.PgBouncer) error {
-
-	return nil //if no err
-}
+//func (c *Controller) manageTemPlate(pgbouncer *api.PgBouncer) error {
+//
+//	return nil //if no err
+//}

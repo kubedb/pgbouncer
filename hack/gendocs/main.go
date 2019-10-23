@@ -9,6 +9,7 @@ import (
 
 	"github.com/appscode/go/runtime"
 	"github.com/spf13/cobra/doc"
+	runtime2 "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 // ref: https://github.com/spf13/cobra/blob/master/doc/md_docs.md
@@ -24,5 +25,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	doc.GenMarkdownTree(rootCmd, dir)
+	runtime2.Must(doc.GenMarkdownTree(rootCmd, dir))
 }

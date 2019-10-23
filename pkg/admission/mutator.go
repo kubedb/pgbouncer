@@ -81,11 +81,9 @@ func (a *PgBouncerMutator) Admit(req *admission.AdmissionRequest) *admission.Adm
 		return hookapi.StatusBadRequest(err)
 	}
 
-	dbMod, err := setDefaultValues(a.client, a.extClient, obj.(*api.PgBouncer).DeepCopy())
-	if err != nil {
-		return hookapi.StatusForbidden(err)
-	} else if dbMod != nil {
-		patch, err := meta_util.CreateJSONPatch(req.Object.Raw, dbMod)
+	pbMod := setDefaultValues(obj.(*api.PgBouncer).DeepCopy())
+	if pbMod != nil {
+		patch, err := meta_util.CreateJSONPatch(req.Object.Raw, pbMod)
 		if err != nil {
 			return hookapi.StatusInternalServerError(err)
 		}
@@ -99,7 +97,8 @@ func (a *PgBouncerMutator) Admit(req *admission.AdmissionRequest) *admission.Adm
 }
 
 // setDefaultValues provides the defaulting that is performed in mutating stage of creating/updating a PgBouncer database
-func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbouncer *api.PgBouncer) (runtime.Object, error) {
+func setDefaultValues(pgbouncer *api.PgBouncer) runtime.Object {
+	//func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbouncer *api.PgBouncer) (runtime.Object, error) {
 	if pgbouncer.Spec.Replicas == nil {
 		pgbouncer.Spec.Replicas = types.Int32P(1)
 	}
@@ -120,7 +119,7 @@ func setDefaultValues(client kubernetes.Interface, extClient cs.Interface, pgbou
 	// set default Listening port
 	setMonitoringPort(pgbouncer)
 
-	return pgbouncer, nil
+	return pgbouncer
 }
 
 // Assign Default Monitoring Port if MonitoringSpec Exists

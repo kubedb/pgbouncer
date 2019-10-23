@@ -30,10 +30,10 @@ type PgBouncerValidator struct {
 
 var _ hookapi.AdmissionHook = &PgBouncerValidator{}
 
-var forbiddenEnvVars = []string{
-	"POSTGRES_PASSWORD",
-	"POSTGRES_USER",
-}
+//var forbiddenEnvVars = []string{
+//	"POSTGRES_PASSWORD",
+//	"POSTGRES_USER",
+//}
 
 func (a *PgBouncerValidator) Resource() (plural schema.GroupVersionResource, singular string) {
 	return schema.GroupVersionResource{
@@ -188,7 +188,7 @@ var preconditionSpecFields = []string{
 func preconditionFailedError(kind string) error {
 	str := preconditionSpecFields
 	strList := strings.Join(str, "\n\t")
-	return fmt.Errorf(strings.Join([]string{`At least one of the following was changed:
+	return fmt.Errorf(strings.Join([]string{"For resource kind ", kind, `, at least one of the following was changed for resource
 	apiVersion
 	kind
 	name

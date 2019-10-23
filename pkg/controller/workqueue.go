@@ -79,7 +79,7 @@ func (c *Controller) managePgBouncerEvent(key string) error {
 					log.Errorln(err)
 					return err
 				}
-				pgbouncer, _, err = util.PatchPgBouncer(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncer) *api.PgBouncer {
+				_, _, err = util.PatchPgBouncer(c.ExtClient.KubedbV1alpha1(), pgbouncer, func(in *api.PgBouncer) *api.PgBouncer {
 					in.ObjectMeta = core_util.RemoveFinalizer(in.ObjectMeta, api.GenericKey)
 					return in
 				})
@@ -95,6 +95,7 @@ func (c *Controller) managePgBouncerEvent(key string) error {
 			}
 			if err := c.create(pgbouncer); err != nil {
 				log.Errorln(err)
+				c.pushFailureEvent(pgbouncer, err.Error())
 				return err
 			}
 		}

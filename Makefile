@@ -274,6 +274,7 @@ e2e-tests: $(BUILD_DIRS)
 	    -i                                                      \
 	    --rm                                                    \
 	    -u $$(id -u):$$(id -g)                                  \
+	    -v $$(pwd)/../postgres/:/postgres                       \
 	    -v $$(pwd):/src                                         \
 	    -w /src                                                 \
 	    --net=host                                              \
