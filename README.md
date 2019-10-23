@@ -1,4 +1,4 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/kubedb/pgbouncer)](https://goreportcard.com/report/github.com/kubedb/pgbouncer)
+[![Go Report Card](https://goreportcard.com/badge/kubedb.dev/pgbouncer)](https://goreportcard.com/report/kubedb.dev/pgbouncer)
 [![Build Status](https://travis-ci.org/kubedb/pgbouncer.svg?branch=master)](https://travis-ci.org/kubedb/pgbouncer)
 [![codecov](https://codecov.io/gh/kubedb/pgbouncer/branch/master/graph/badge.svg)](https://codecov.io/gh/kubedb/pgbouncer)
 [![Slack](http://slack.kubernetes.io/badge.svg)](http://slack.kubernetes.io/#kubedb)

@@ -2,218 +2,63 @@ package framework
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"time"
 
-	"github.com/appscode/go/crypto/rand"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	"kubedb.dev/pgbouncer/pkg/controller"
+
 	"github.com/appscode/go/log"
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
-	"github.com/kubedb/pgbouncer/pkg/controller"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	v1 "kmodules.xyz/client-go/core/v1"
-	meta_util "kmodules.xyz/client-go/meta"
-	store "kmodules.xyz/objectstore-api/api/v1"
-	"stash.appscode.dev/stash/pkg/restic"
+	core_util "kmodules.xyz/client-go/core/v1"
 )
 
-var (
-	CustomSecretSuffix = "custom-secret"
-	CustomUsername     = "username1234567890"
-	CustomPassword     = "password0987654321"
+const (
+	PgBouncerUserListSecret = "pb-userlist-secret"
 )
-
-func (i *Invocation) SecretForLocalBackend() *core.Secret {
-	return &core.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      rand.WithUniqSuffix(i.app + "-local"),
-			Namespace: i.namespace,
-		},
-		Data: map[string][]byte{},
-	}
-}
-
-func (i *Invocation) SecretForS3Backend() *core.Secret {
-	if os.Getenv(store.AWS_ACCESS_KEY_ID) == "" ||
-		os.Getenv(store.AWS_SECRET_ACCESS_KEY) == "" {
-		return &core.Secret{}
-	}
-
-	return &core.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      rand.WithUniqSuffix(i.app + "-s3"),
-			Namespace: i.namespace,
-		},
-		Data: map[string][]byte{
-			store.AWS_ACCESS_KEY_ID:     []byte(os.Getenv(store.AWS_ACCESS_KEY_ID)),
-			store.AWS_SECRET_ACCESS_KEY: []byte(os.Getenv(store.AWS_SECRET_ACCESS_KEY)),
-		},
-	}
-}
-
-func (i *Invocation) SecretForMinioBackend() *core.Secret {
-	if os.Getenv(store.AWS_ACCESS_KEY_ID) == "" ||
-		os.Getenv(store.AWS_SECRET_ACCESS_KEY) == "" {
-		return &core.Secret{}
-	}
-
-	return &core.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      rand.WithUniqSuffix(i.app + "-s3"),
-			Namespace: i.namespace,
-		},
-		Data: map[string][]byte{
-			store.AWS_ACCESS_KEY_ID:     []byte(os.Getenv(store.AWS_ACCESS_KEY_ID)),
-			store.AWS_SECRET_ACCESS_KEY: []byte(os.Getenv(store.AWS_SECRET_ACCESS_KEY)),
-			store.CA_CERT_DATA:          i.CertStore.CACertBytes(),
-		},
-	}
-}
-
-func (i *Invocation) SecretForMinioServer() *core.Secret {
-
-	if os.Getenv(store.AWS_ACCESS_KEY_ID) == "" ||
-		os.Getenv(store.AWS_SECRET_ACCESS_KEY) == "" {
-		return &core.Secret{}
-	}
-
-	crt, key, err := i.CertStore.NewServerCertPairBytes(i.MinioServerSANs())
-	if err != nil {
-		return nil
-	}
-	Expect(err).NotTo(HaveOccurred())
-
-	return &core.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      rand.WithUniqSuffix(i.app + "-s3"),
-			Namespace: i.namespace,
-		},
-		Data: map[string][]byte{
-			store.AWS_ACCESS_KEY_ID:     []byte(os.Getenv(store.AWS_ACCESS_KEY_ID)),
-			store.AWS_SECRET_ACCESS_KEY: []byte(os.Getenv(store.AWS_SECRET_ACCESS_KEY)),
-			MINIO_PUBLIC_CRT_NAME:       []byte(string(crt) + "\n" + string(i.CertStore.CACertBytes())),
-			MINIO_PRIVATE_KEY_NAME:      key,
-		},
-	}
-}
-
-func (i *Invocation) SecretForGCSBackend() *core.Secret {
-	if os.Getenv(store.GOOGLE_PROJECT_ID) == "" ||
-		(os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" && os.Getenv(store.GOOGLE_SERVICE_ACCOUNT_JSON_KEY) == "") {
-		return &core.Secret{}
-	}
-
-	jsonKey := os.Getenv(store.GOOGLE_SERVICE_ACCOUNT_JSON_KEY)
-	if jsonKey == "" {
-		if keyBytes, err := ioutil.ReadFile(os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")); err == nil {
-			jsonKey = string(keyBytes)
-		}
-	}
-
-	return &core.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      rand.WithUniqSuffix(i.app + "-gcs"),
-			Namespace: i.namespace,
-		},
-		Data: map[string][]byte{
-			store.GOOGLE_PROJECT_ID:               []byte(os.Getenv(store.GOOGLE_PROJECT_ID)),
-			store.GOOGLE_SERVICE_ACCOUNT_JSON_KEY: []byte(jsonKey),
-		},
-	}
-}
-
-func (i *Invocation) SecretForAzureBackend() *core.Secret {
-	if os.Getenv(store.AZURE_ACCOUNT_NAME) == "" ||
-		os.Getenv(store.AZURE_ACCOUNT_KEY) == "" {
-		return &core.Secret{}
-	}
-
-	return &core.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      rand.WithUniqSuffix(i.app + "-azure"),
-			Namespace: i.namespace,
-		},
-		Data: map[string][]byte{
-			store.AZURE_ACCOUNT_NAME: []byte(os.Getenv(store.AZURE_ACCOUNT_NAME)),
-			store.AZURE_ACCOUNT_KEY:  []byte(os.Getenv(store.AZURE_ACCOUNT_KEY)),
-		},
-	}
-}
-
-func (i *Invocation) SecretForSwiftBackend() *core.Secret {
-	if os.Getenv(store.OS_AUTH_URL) == "" ||
-		(os.Getenv(store.OS_TENANT_ID) == "" && os.Getenv(store.OS_TENANT_NAME) == "") ||
-		os.Getenv(store.OS_USERNAME) == "" ||
-		os.Getenv(store.OS_PASSWORD) == "" {
-		return &core.Secret{}
-	}
-
-	return &core.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      rand.WithUniqSuffix(i.app + "-swift"),
-			Namespace: i.namespace,
-		},
-		Data: map[string][]byte{
-			store.OS_AUTH_URL:    []byte(os.Getenv(store.OS_AUTH_URL)),
-			store.OS_TENANT_ID:   []byte(os.Getenv(store.OS_TENANT_ID)),
-			store.OS_TENANT_NAME: []byte(os.Getenv(store.OS_TENANT_NAME)),
-			store.OS_USERNAME:    []byte(os.Getenv(store.OS_USERNAME)),
-			store.OS_PASSWORD:    []byte(os.Getenv(store.OS_PASSWORD)),
-			store.OS_REGION_NAME: []byte(os.Getenv(store.OS_REGION_NAME)),
-		},
-	}
-}
-
-func (i *Invocation) SecretForDatabaseAuthentication(meta metav1.ObjectMeta) *core.Secret {
-	return &core.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%v-%v", meta.Name, CustomSecretSuffix),
-			Namespace: meta.Namespace,
-		},
-		StringData: map[string]string{
-			controller.PostgresUser:     CustomUsername,
-			controller.PostgresPassword: CustomPassword,
-		},
-	}
-}
-
-func (i *Invocation) SecretForDatabaseAuthenticationWithLabel(meta metav1.ObjectMeta) *core.Secret {
-	//this Label mimics a secret created and manged by kubedb and not user.
-	// It should get deleted during wipeout
-	return &core.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("kubedb-%v-%v", meta.Name, CustomSecretSuffix),
-			Namespace: meta.Namespace,
-			Labels: map[string]string{
-				meta_util.ManagedByLabelKey: api.GenericKey,
-			},
-		},
-		StringData: map[string]string{
-			controller.PostgresUser:     CustomUsername,
-			controller.PostgresPassword: CustomPassword,
-		},
-	}
-}
-
-func (i *Invocation) PatchSecretForRestic(secret *core.Secret) *core.Secret {
-	if secret == nil {
-		return secret
-	}
-
-	secret.StringData = v1.UpsertMap(secret.StringData, map[string]string{
-		restic.RESTIC_PASSWORD: "RESTIC_PASSWORD",
-	})
-	return secret
-}
-
-// TODO: Add more methods for Swift, Backblaze B2, Rest server backend.
 
 func (f *Framework) CreateSecret(obj *core.Secret) error {
 	_, err := f.kubeClient.CoreV1().Secrets(obj.Namespace).Create(obj)
+	return err
+}
+
+func (f *Framework) CreateUserListSecret() error {
+	username, password, err := f.GetPostgresCredentials()
+	if err != nil {
+		return err
+	}
+	useListSecretSpec := &core.Secret{
+		StringData: map[string]string{
+			"userlist.txt": fmt.Sprintf(`"%s" "%s"
+"%s" "%s"`, username, password, testUser, testPass),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      PgBouncerUserListSecret,
+			Namespace: f.namespace,
+		},
+		//TypeMeta: metav1.TypeMeta{},
+	}
+	_, err = f.kubeClient.CoreV1().Secrets(f.namespace).Create(useListSecretSpec)
+	return err
+}
+
+func (f *Framework) AddUserToUserListSecret(username, password string) error {
+	sec, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(PgBouncerUserListSecret, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	for key, data := range sec.StringData {
+		//add new data to existing data
+		newData := string(data) + fmt.Sprintf(`
+"%s" "%s"`, username, password)
+		sec.StringData[key] = newData
+	}
+	_, _, err = core_util.CreateOrPatchSecret(f.kubeClient, sec.ObjectMeta, func(in *core.Secret) *core.Secret {
+		return in
+	}, false)
 	return err
 }
 
@@ -246,7 +91,7 @@ func (f *Framework) DeleteSecret(meta metav1.ObjectMeta) error {
 
 func (f *Framework) EventuallyDBSecretCount(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	labelMap := map[string]string{
-		api.LabelDatabaseKind: api.ResourceKindPostgres,
+		api.LabelDatabaseKind: api.ResourceKindPgBouncer,
 		api.LabelDatabaseName: meta.Name,
 	}
 	labelSelector := labels.SelectorFromSet(labelMap)
@@ -265,7 +110,27 @@ func (f *Framework) EventuallyDBSecretCount(meta metav1.ObjectMeta) GomegaAsyncA
 	)
 }
 
-func (f *Framework) CheckSecret(secret *core.Secret) error {
-	_, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(secret.Name, metav1.GetOptions{})
+func (f *Framework) CheckSecret() error {
+	_, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(PostgresName+"-auth", metav1.GetOptions{})
 	return err
+}
+
+func (f *Framework) CheckUserListSecret() error {
+	_, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(PgBouncerUserListSecret, metav1.GetOptions{})
+	return err
+}
+
+func (f *Framework) DeleteUserListSecret() error {
+	err := f.kubeClient.CoreV1().Secrets(f.namespace).Delete(PgBouncerUserListSecret, &metav1.DeleteOptions{})
+	return err
+}
+
+func (f *Framework) GetPostgresCredentials() (string, string, error) {
+	scrt, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(PostgresName+"-auth", metav1.GetOptions{})
+	if err != nil {
+		return "", "", err
+	}
+	username := string(scrt.Data[controller.PostgresUser])
+	password := string(scrt.Data[controller.PostgresPassword])
+	return username, password, nil
 }

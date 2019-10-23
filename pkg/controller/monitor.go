@@ -3,8 +3,9 @@ package controller
 import (
 	"fmt"
 
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+
 	"github.com/appscode/go/log"
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kutil "kmodules.xyz/client-go"
@@ -14,11 +15,11 @@ import (
 	mona "kmodules.xyz/monitoring-agent-api/api/v1"
 )
 
-func (c *Controller) newMonitorController(postgres *api.Postgres) (mona.Agent, error) {
-	monitorSpec := postgres.Spec.Monitor
+func (c *Controller) newMonitorController(pgbouncer *api.PgBouncer) (mona.Agent, error) {
+	monitorSpec := pgbouncer.Spec.Monitor
 
 	if monitorSpec == nil {
-		return nil, fmt.Errorf("MonitorSpec not found in %v", postgres.Spec)
+		return nil, fmt.Errorf("MonitorSpec not found in %v", pgbouncer.Spec)
 	}
 
 	if monitorSpec.Prometheus != nil {
@@ -28,24 +29,25 @@ func (c *Controller) newMonitorController(postgres *api.Postgres) (mona.Agent, e
 	return nil, fmt.Errorf("monitoring controller not found for %v", monitorSpec)
 }
 
-func (c *Controller) addOrUpdateMonitor(postgres *api.Postgres) (kutil.VerbType, error) {
-	agent, err := c.newMonitorController(postgres)
+func (c *Controller) addOrUpdateMonitor(pgbouncer *api.PgBouncer) (kutil.VerbType, error) {
+	agent, err := c.newMonitorController(pgbouncer)
 	if err != nil {
 		return kutil.VerbUnchanged, err
 	}
-	return agent.CreateOrUpdate(postgres.StatsService(), postgres.Spec.Monitor)
+	return agent.CreateOrUpdate(pgbouncer.StatsService(), pgbouncer.Spec.Monitor)
 }
 
-func (c *Controller) deleteMonitor(postgres *api.Postgres) (kutil.VerbType, error) {
-	agent, err := c.newMonitorController(postgres)
+func (c *Controller) deleteMonitor(pgbouncer *api.PgBouncer) (kutil.VerbType, error) {
+	println("========deleteMonitor was called")
+	agent, err := c.newMonitorController(pgbouncer)
 	if err != nil {
 		return kutil.VerbUnchanged, err
 	}
-	return agent.Delete(postgres.StatsService())
+	return agent.Delete(pgbouncer.StatsService())
 }
 
-func (c *Controller) getOldAgent(postgres *api.Postgres) mona.Agent {
-	service, err := c.Client.CoreV1().Services(postgres.Namespace).Get(postgres.StatsService().ServiceName(), metav1.GetOptions{})
+func (c *Controller) getOldAgent(pgbouncer *api.PgBouncer) mona.Agent {
+	service, err := c.Client.CoreV1().Services(pgbouncer.Namespace).Get(pgbouncer.StatsService().ServiceName(), metav1.GetOptions{})
 	if err != nil {
 		return nil
 	}
@@ -53,14 +55,14 @@ func (c *Controller) getOldAgent(postgres *api.Postgres) mona.Agent {
 	return agents.New(mona.AgentType(oldAgentType), c.Client, c.ApiExtKubeClient, c.promClient)
 }
 
-func (c *Controller) setNewAgent(postgres *api.Postgres) error {
-	service, err := c.Client.CoreV1().Services(postgres.Namespace).Get(postgres.StatsService().ServiceName(), metav1.GetOptions{})
+func (c *Controller) setNewAgent(pgbouncer *api.PgBouncer) error {
+	service, err := c.Client.CoreV1().Services(pgbouncer.Namespace).Get(pgbouncer.StatsService().ServiceName(), metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 	_, _, err = core_util.PatchService(c.Client, service, func(in *core.Service) *core.Service {
 		in.Annotations = core_util.UpsertMap(in.Annotations, map[string]string{
-			mona.KeyAgent: string(postgres.Spec.Monitor.Agent),
+			mona.KeyAgent: string(pgbouncer.Spec.Monitor.Agent),
 		},
 		)
 		return in
@@ -68,21 +70,22 @@ func (c *Controller) setNewAgent(postgres *api.Postgres) error {
 	return err
 }
 
-func (c *Controller) manageMonitor(postgres *api.Postgres) error {
-	oldAgent := c.getOldAgent(postgres)
-	if postgres.Spec.Monitor != nil {
+func (c *Controller) manageMonitor(pgbouncer *api.PgBouncer) error {
+	oldAgent := c.getOldAgent(pgbouncer)
+
+	if pgbouncer.Spec.Monitor != nil {
 		if oldAgent != nil &&
-			oldAgent.GetType() != postgres.Spec.Monitor.Agent {
-			if _, err := oldAgent.Delete(postgres.StatsService()); err != nil {
+			oldAgent.GetType() != pgbouncer.Spec.Monitor.Agent {
+			if _, err := oldAgent.Delete(pgbouncer.StatsService()); err != nil {
 				log.Errorf("error in deleting Prometheus agent. Reason: %s", err)
 			}
 		}
-		if _, err := c.addOrUpdateMonitor(postgres); err != nil {
+		if _, err := c.addOrUpdateMonitor(pgbouncer); err != nil {
 			return err
 		}
-		return c.setNewAgent(postgres)
+		return c.setNewAgent(pgbouncer)
 	} else if oldAgent != nil {
-		if _, err := oldAgent.Delete(postgres.StatsService()); err != nil {
+		if _, err := oldAgent.Delete(pgbouncer.StatsService()); err != nil {
 			log.Errorf("error in deleting Prometheus agent. Reason: %s", err)
 		}
 	}

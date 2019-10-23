@@ -2,120 +2,59 @@ package framework
 
 import (
 	"fmt"
-	"net"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
-	"github.com/appscode/go/log"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+
 	shell "github.com/codeskyblue/go-sh"
-	"github.com/kubedb/apimachinery/apis"
-	catlog "github.com/kubedb/apimachinery/apis/catalog/v1alpha1"
-	"github.com/kubedb/pgbouncer/pkg/cmds/server"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	crd_api "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/discovery"
-	restclient "k8s.io/client-go/rest"
-	kApi "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	kutil "kmodules.xyz/client-go"
-	admsn_kutil "kmodules.xyz/client-go/admissionregistration/v1beta1"
-	apiext_util "kmodules.xyz/client-go/apiextensions/v1beta1"
-	discovery_util "kmodules.xyz/client-go/discovery"
-	meta_util "kmodules.xyz/client-go/meta"
 )
 
-func (f *Framework) isApiSvcReady(apiSvcName string) error {
-	apiSvc, err := f.kaClient.ApiregistrationV1beta1().APIServices().Get(apiSvcName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	for _, cond := range apiSvc.Status.Conditions {
-		if cond.Type == kApi.Available && cond.Status == kApi.ConditionTrue {
-			log.Infof("APIService %v status is true", apiSvcName)
-			return nil
-		}
-	}
-	log.Errorf("APIService %v not ready yet", apiSvcName)
-	return fmt.Errorf("APIService %v not ready yet", apiSvcName)
-}
+const (
+	operatorGetRetryInterval = time.Second * 5
+)
 
-func (f *Framework) EventuallyAPIServiceReady() GomegaAsyncAssertion {
-	return Eventually(
-		func() error {
-			if err := f.isApiSvcReady("v1alpha1.mutators.kubedb.com"); err != nil {
-				return err
-			}
-			if err := f.isApiSvcReady("v1alpha1.validators.kubedb.com"); err != nil {
-				return err
-			}
-			time.Sleep(time.Second * 5) // let the resource become available
-
-			// Check if the annotations of validating webhook is updated by operator/controller
-			apiSvc, err := f.kaClient.ApiregistrationV1beta1().APIServices().Get("v1alpha1.validators.kubedb.com", metav1.GetOptions{})
-			if err != nil {
-				return err
-			}
-
-			if _, err := meta_util.GetString(apiSvc.Annotations, admsn_kutil.KeyAdmissionWebhookActive); err == kutil.ErrNotFound {
-				log.Errorf("APIService v1alpha1.validators.kubedb.com not ready yet")
-				return err
-			}
-			return nil
-		},
-		time.Minute*2,
-		time.Second*5,
-	)
-}
-
-func (f *Framework) RunOperatorAndServer(config *restclient.Config, kubeconfigPath string, stopCh <-chan struct{}) {
-	defer GinkgoRecover()
-
-	// ensure crds. Mainly for catalogVersions CRD.
-	log.Infoln("Ensuring CustomResourceDefinition...")
-	crds := []*crd_api.CustomResourceDefinition{
-		catlog.PostgresVersion{}.CustomResourceDefinition(),
-	}
-	err := apiext_util.RegisterCRDs(f.apiExtKubeClient, crds)
-	Expect(err).NotTo(HaveOccurred())
-
-	// Check and set EnableStatusSubresource=true for >=kubernetes v1.11
-	// Todo: remove this part and set EnableStatusSubresource=true automatically when subresources is must in kubedb.
-	discClient, err := discovery.NewDiscoveryClientForConfig(config)
-	Expect(err).NotTo(HaveOccurred())
-	serverVersion, err := discovery_util.GetBaseVersion(discClient)
-	Expect(err).NotTo(HaveOccurred())
-	if strings.Compare(serverVersion, "1.11") >= 0 {
-		apis.EnableStatusSubresource = true
-	}
-
+func (f *Framework) InstallKubeDBOperators(kubeconfigPath string) {
 	sh := shell.NewSession()
-	args := []interface{}{"--minikube", fmt.Sprintf("--docker-registry=%v", DockerRegistry)}
-	SetupServer := filepath.Join("..", "..", "hack", "deploy", "setup.sh")
 
-	By("Creating API server and webhook stuffs")
-	cmd := sh.Command(SetupServer, args...)
-	err = cmd.Run()
+	By("Installing Posgtres Operator")
+	sh.SetDir("../../../postgres")
+	err := sh.Command("env", "REGISTRY=rezoan", "make", "install").Run()
 	Expect(err).ShouldNot(HaveOccurred())
 
-	By("Starting Server and Operator")
-	serverOpt := server.NewPostgresServerOptions(os.Stdout, os.Stderr)
-
-	serverOpt.RecommendedOptions.CoreAPI.CoreAPIKubeconfigPath = kubeconfigPath
-	serverOpt.RecommendedOptions.SecureServing.BindPort = 8443
-	serverOpt.RecommendedOptions.SecureServing.BindAddress = net.ParseIP("127.0.0.1")
-	serverOpt.RecommendedOptions.Authorization.RemoteKubeConfigFile = kubeconfigPath
-	serverOpt.RecommendedOptions.Authentication.RemoteKubeConfigFile = kubeconfigPath
-
-	serverOpt.ExtraOptions.EnableRBAC = true
-	serverOpt.ExtraOptions.EnableMutatingWebhook = true
-	serverOpt.ExtraOptions.EnableValidatingWebhook = true
-
-	err = serverOpt.Run(stopCh)
+	By("Setup postgres")
+	postgres := f.Invoke().Postgres()
+	err = f.CreatePostgres(postgres)
+	Expect(err).ShouldNot(HaveOccurred())
+	By("Waiting for running Postgres")
+	err = f.WaitUntilPostgresReady(postgres.Name)
+	Expect(err).ShouldNot(HaveOccurred())
+	By("Uninstall Postgres Operator")
+	err = sh.Command("env", "REGISTRY=rezoan", "make", "uninstall").Run()
 	Expect(err).NotTo(HaveOccurred())
+
+	By("Installing PgBouncer operator")
+	sh = shell.NewSession()
+	sh.SetDir("../../")
+	cmd := sh.Command("env", "REGISTRY=rezoan", "make", "install")
+	err = cmd.Run()
+	Expect(err).ShouldNot(HaveOccurred())
+	By("PgBouncer operator installed")
+}
+func (f *Framework) WaitUntilPostgresReady(name string) error {
+	return wait.PollImmediate(operatorGetRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
+		if pg, err := f.dbClient.KubedbV1alpha1().Postgreses(f.Namespace()).Get(name, metav1.GetOptions{}); err == nil {
+			if pg.Status.Phase == api.DatabasePhaseRunning {
+				return true, nil
+			}
+		}
+		return false, nil
+	})
 }
 
 func (f *Framework) CleanAdmissionConfigs() {
@@ -153,4 +92,16 @@ func (f *Framework) CleanAdmissionConfigs() {
 	}
 
 	time.Sleep(time.Second * 1) // let the kube-server know it!!
+}
+
+func (f *Framework) DeleteOperatorAndServer() {
+	sh := shell.NewSession()
+	//args := []interface{}{"--minikube", fmt.Sprintf("--docker-registry=%v", DockerRegistry)
+	sh.ShowCMD = true
+	By("Creating API server and webhook stuffs")
+	sh.SetDir("../../")
+	cmd := sh.Command("make", "uninstall")
+	By("Starting Server and Operator")
+	err := cmd.Run()
+	Expect(err).ShouldNot(HaveOccurred())
 }

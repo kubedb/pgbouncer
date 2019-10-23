@@ -3,25 +3,24 @@ package cmds
 import (
 	"io"
 
-	"github.com/appscode/go/log"
-	"github.com/kubedb/pgbouncer/pkg/cmds/server"
+	"kubedb.dev/pgbouncer/pkg/cmds/server"
+
 	"github.com/spf13/cobra"
 	"kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/cli"
 )
 
 func NewCmdRun(version string, out, errOut io.Writer, stopCh <-chan struct{}) *cobra.Command {
-	o := server.NewPostgresServerOptions(out, errOut)
+	o := server.NewPgBouncerServerOptions(out, errOut)
 
 	cmd := &cobra.Command{
 		Use:               "run",
-		Short:             "Launch Postgres server",
+		Short:             "Launch PgBouncer server",
 		DisableAutoGenTag: true,
 		PreRun: func(c *cobra.Command, args []string) {
 			cli.SendPeriodicAnalytics(c, version)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Infoln("Starting postgres-server...")
 
 			if err := o.Complete(); err != nil {
 				return err

@@ -3,7 +3,8 @@ package main
 import (
 	"log"
 
-	"github.com/kubedb/pgbouncer/pkg/cmds"
+	"kubedb.dev/pgbouncer/pkg/cmds"
+
 	"kmodules.xyz/client-go/logs"
 )
 

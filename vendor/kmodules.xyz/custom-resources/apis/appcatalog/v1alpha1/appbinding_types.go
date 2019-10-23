@@ -26,9 +26,13 @@ type AppBinding struct {
 
 // AppBindingSpec is the spec for app
 type AppBindingSpec struct {
-	// Used to facilitate programmatic handling of application.
+	// Type used to facilitate programmatic handling of application.
 	// +optional
 	Type AppType `json:"type,omitempty"`
+
+	// Version used to facilitate programmatic handling of application.
+	// +optional
+	Version string `json:"version,omitempty"`
 
 	// ClientConfig defines how to communicate with the app.
 	// Required
@@ -91,7 +95,7 @@ type ClientConfig struct {
 	// If the webhook is running within the cluster, then you should use `service`.
 	//
 	// +optional
-	Service *ServiceReference `json:"service"`
+	Service *ServiceReference `json:"service,omitempty"`
 
 	// InsecureSkipTLSVerify disables TLS certificate verification when communicating with this app.
 	// This is strongly discouraged.  You should use the CABundle instead.

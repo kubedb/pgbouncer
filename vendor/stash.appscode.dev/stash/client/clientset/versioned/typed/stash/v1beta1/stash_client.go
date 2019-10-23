@@ -19,16 +19,18 @@ limitations under the License.
 package v1beta1
 
 import (
-	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
-	rest "k8s.io/client-go/rest"
 	v1beta1 "stash.appscode.dev/stash/apis/stash/v1beta1"
 	"stash.appscode.dev/stash/client/clientset/versioned/scheme"
+
+	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
+	rest "k8s.io/client-go/rest"
 )
 
 type StashV1beta1Interface interface {
 	RESTClient() rest.Interface
+	BackupBatchesGetter
+	BackupBlueprintsGetter
 	BackupConfigurationsGetter
-	BackupConfigurationTemplatesGetter
 	BackupSessionsGetter
 	FunctionsGetter
 	RestoreSessionsGetter
@@ -40,12 +42,16 @@ type StashV1beta1Client struct {
 	restClient rest.Interface
 }
 
-func (c *StashV1beta1Client) BackupConfigurations(namespace string) BackupConfigurationInterface {
-	return newBackupConfigurations(c, namespace)
+func (c *StashV1beta1Client) BackupBatches(namespace string) BackupBatchInterface {
+	return newBackupBatches(c, namespace)
 }
 
-func (c *StashV1beta1Client) BackupConfigurationTemplates() BackupConfigurationTemplateInterface {
-	return newBackupConfigurationTemplates(c)
+func (c *StashV1beta1Client) BackupBlueprints() BackupBlueprintInterface {
+	return newBackupBlueprints(c)
+}
+
+func (c *StashV1beta1Client) BackupConfigurations(namespace string) BackupConfigurationInterface {
+	return newBackupConfigurations(c, namespace)
 }
 
 func (c *StashV1beta1Client) BackupSessions(namespace string) BackupSessionInterface {

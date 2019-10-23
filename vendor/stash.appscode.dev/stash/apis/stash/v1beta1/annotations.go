@@ -4,10 +4,9 @@ const (
 	// ResourceVersion will be used to trigger restarts for ReplicaSet and RC pods
 	StashKey = "stash.appscode.com"
 
-	KeyBackupConfigurationTemplate = StashKey + "/backup-template"
-	KeyTargetDirectories           = StashKey + "/target-directories"
-	KeyMountPath                   = StashKey + "/mountpath"
-	KeyVolumeMounts                = StashKey + "/volume-mounts"
+	KeyBackupBlueprint = StashKey + "/backup-blueprint"
+	KeyTargetPaths     = StashKey + "/target-paths"
+	KeyVolumeMounts    = StashKey + "/volume-mounts"
 
 	KeyLastAppliedRestoreSession      = StashKey + "/last-applied-restoresession"
 	KeyLastAppliedBackupConfiguration = StashKey + "/last-applied-backupconfiguration"

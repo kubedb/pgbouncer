@@ -3,9 +3,10 @@ package framework
 import (
 	"path/filepath"
 
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	cs "kubedb.dev/apimachinery/client/clientset/versioned"
+
 	"github.com/appscode/go/crypto/rand"
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
-	cs "github.com/kubedb/apimachinery/client/clientset/versioned"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
 	"gomodules.xyz/cert/certstore"
@@ -60,8 +61,8 @@ func New(
 		kaClient:         kaClient,
 		appCatalogClient: appCatalogClient,
 		stashClient:      stashClient,
-		name:             "postgres-operator",
-		namespace:        rand.WithUniqSuffix(api.ResourceSingularPostgres),
+		name:             "pgbouncer-operator",
+		namespace:        rand.WithUniqSuffix(api.ResourceSingularPgBouncer),
 		StorageClass:     storageClass,
 		CertStore:        store,
 	}
@@ -70,7 +71,7 @@ func New(
 func (f *Framework) Invoke() *Invocation {
 	return &Invocation{
 		Framework: f,
-		app:       rand.WithUniqSuffix("postgres-e2e"),
+		app:       rand.WithUniqSuffix("pgbouncer-e2e"),
 	}
 }
 

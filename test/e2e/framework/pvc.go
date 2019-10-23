@@ -3,7 +3,8 @@ package framework
 import (
 	"time"
 
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -13,7 +14,7 @@ import (
 
 func (f *Framework) EventuallyPVCCount(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	labelMap := map[string]string{
-		api.LabelDatabaseKind: api.ResourceKindPostgres,
+		api.LabelDatabaseKind: api.ResourceKindPgBouncer,
 		api.LabelDatabaseName: meta.Name,
 	}
 	labelSelector := labels.SelectorFromSet(labelMap)

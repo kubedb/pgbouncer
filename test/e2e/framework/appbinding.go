@@ -1,10 +1,8 @@
 package framework
 
 import (
-	"fmt"
 	"time"
 
-	controller "github.com/kubedb/pgbouncer/pkg/controller"
 	. "github.com/onsi/gomega"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,23 +25,26 @@ func (f *Framework) EventuallyAppBinding(meta metav1.ObjectMeta) GomegaAsyncAsse
 	)
 }
 
-func (f *Framework) CheckAppBindingSpec(meta metav1.ObjectMeta) error {
+func (f *Framework) CheckPostgresAppBindingSpec(meta metav1.ObjectMeta) error {
 	postgres, err := f.GetPostgres(meta)
 	Expect(err).NotTo(HaveOccurred())
 
-	appBinding, err := f.appCatalogClient.AppBindings(postgres.Namespace).Get(postgres.Name, metav1.GetOptions{})
+	_, err = f.appCatalogClient.AppBindings(postgres.Namespace).Get(postgres.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
-	if appBinding.Spec.ClientConfig.Service == nil ||
-		appBinding.Spec.ClientConfig.Service.Name != postgres.ServiceName() ||
-		appBinding.Spec.ClientConfig.Service.Port != controller.PostgresPort {
-		return fmt.Errorf("appbinding %v/%v contains invalid data", appBinding.Namespace, appBinding.Name)
+	return nil
+}
+
+func (f *Framework) CheckPgBouncerAppBindingSpec(meta metav1.ObjectMeta) error {
+	pgbouncer, err := f.GetPgBouncer(meta)
+	Expect(err).NotTo(HaveOccurred())
+
+	_, err = f.appCatalogClient.AppBindings(pgbouncer.Namespace).Get(pgbouncer.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
 	}
-	if appBinding.Spec.Secret == nil ||
-		appBinding.Spec.Secret.Name != postgres.Spec.DatabaseSecret.SecretName {
-		return fmt.Errorf("appbinding %v/%v contains invalid data", appBinding.Namespace, appBinding.Name)
-	}
+
 	return nil
 }

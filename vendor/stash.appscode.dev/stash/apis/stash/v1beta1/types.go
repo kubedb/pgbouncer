@@ -4,6 +4,17 @@ import (
 	core "k8s.io/api/core/v1"
 )
 
+// BackupInvokerRef contains information that points to the backup configuration or batch being used
+type BackupInvokerRef struct {
+	// APIGroup is the group for the resource being referenced
+	// +optional
+	APIGroup string `json:"apiGroup,omitempty"`
+	// Kind is the type of resource being referenced
+	Kind string `json:"kind"`
+	// Name is the name of resource being referenced
+	Name string `json:"name"`
+}
+
 // Param declares a value to use for the Param called Name.
 type Param struct {
 	Name  string `json:"name"`
@@ -11,7 +22,7 @@ type Param struct {
 }
 
 type TaskRef struct {
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
 	// +optional
 	Params []Param `json:"params,omitempty"`
 }
@@ -19,9 +30,9 @@ type TaskRef struct {
 type BackupTarget struct {
 	// Ref refers to the backup target
 	Ref TargetRef `json:"ref,omitempty"`
-	// Directories specify the directories to backup
+	// Paths specify the file paths to backup
 	// +optional
-	Directories []string `json:"directories,omitempty"`
+	Paths []string `json:"paths,omitempty"`
 	// VolumeMounts specifies the volumes to mount inside stash sidecar/init container
 	// Specify the volumes that contains the target directories
 	// +optional

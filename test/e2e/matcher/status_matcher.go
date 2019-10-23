@@ -1,7 +1,8 @@
 package matcher
 
 import (
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+
 	"github.com/onsi/gomega/types"
 )
 

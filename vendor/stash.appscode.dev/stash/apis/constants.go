@@ -11,20 +11,27 @@ const (
 	RepositoryBucket     = "REPOSITORY_BUCKET"
 	RepositoryPrefix     = "REPOSITORY_PREFIX"
 	RepositoryEndpoint   = "REPOSITORY_ENDPOINT"
-	RepositoryURL        = "REPOSITORY_URL"
 
-	Hostname = "HOSTNAME"
+	Hostname       = "HOSTNAME"
+	SourceHostname = "SOURCE_HOSTNAME"
+	InterimDataDir = "INTERIM_DATA_DIR"
 
-	TargetName        = "TARGET_NAME"
-	TargetAPIVersion  = "TARGET_API_VERSION"
-	TargetKind        = "TARGET_KIND"
-	TargetResource    = "TARGET_RESOURCE"
-	TargetNamespace   = "TARGET_NAMESPACE"
-	TargetMountPath   = "TARGET_MOUNT_PATH"
-	TargetDirectories = "TARGET_DIRECTORIES"
+	TargetName       = "TARGET_NAME"
+	TargetAPIVersion = "TARGET_API_VERSION"
+	TargetKind       = "TARGET_KIND"
+	TargetResource   = "TARGET_RESOURCE"
+	TargetNamespace  = "TARGET_NAMESPACE"
+	TargetMountPath  = "TARGET_MOUNT_PATH"
+	TargetPaths      = "TARGET_PATHS"
 
-	RestoreDirectories = "RESTORE_DIRECTORIES"
-	RestoreSnapshots   = "RESTORE_SNAPSHOTS"
+	TargetAppVersion  = "TARGET_APP_VERSION"
+	TargetAppType     = "TARGET_APP_TYPE"
+	TargetAppGroup    = "TARGET_APP_GROUP"
+	TargetAppResource = "TARGET_APP_RESOURCE"
+	TargetAppReplicas = "TARGET_APP_REPLICAS"
+
+	RestorePaths     = "RESTORE_PATHS"
+	RestoreSnapshots = "RESTORE_SNAPSHOTS"
 
 	RetentionKeepLast    = "RETENTION_KEEP_LAST"
 	RetentionKeepHourly  = "RETENTION_KEEP_HOURLY"
@@ -46,5 +53,12 @@ const (
 	IONiceClass     = "IONICE_CLASS"
 	IONiceClassData = "IONICE_CLASS_DATA"
 
-	StatusSubresourceEnabled = "ENABLE_STATUS_SUBRESOURCE"
+	PushgatewayURL    = "PROMETHEUS_PUSHGATEWAY_URL"
+	PrometheusJobName = "PROMETHEUS_JOB_NAME"
+
+	StashDefaultVolume          = "stash-volume"
+	StashDefaultMountPath       = "/stash-data"
+	StashInterimVolume          = "stash-interim-volume"
+	StashInterimVolumeMountPath = "/stash-interim-volume"
+	StashInterimDataDir         = "/stash-interim-volume/data"
 )

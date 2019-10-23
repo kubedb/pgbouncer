@@ -1,161 +1,213 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
+	"strings"
+
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 
 	"github.com/appscode/go/crypto/rand"
-	api "github.com/kubedb/apimachinery/apis/kubedb/v1alpha1"
-	"github.com/kubedb/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
+	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	core_util "kmodules.xyz/client-go/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kutil "kmodules.xyz/client-go"
 )
 
-const (
-	PostgresUser     = "POSTGRES_USER"
-	PostgresPassword = "POSTGRES_PASSWORD"
-)
-
-func (c *Controller) ensureDatabaseSecret(postgres *api.Postgres) error {
-	databaseSecretVolume := postgres.Spec.DatabaseSecret
-	if databaseSecretVolume == nil {
-		var err error
-		if databaseSecretVolume, err = c.createDatabaseSecret(postgres); err != nil {
-			return err
-		}
-		pg, _, err := util.PatchPostgres(c.ExtClient.KubedbV1alpha1(), postgres, func(in *api.Postgres) *api.Postgres {
-			in.Spec.DatabaseSecret = databaseSecretVolume
-			return in
-		})
-		if err != nil {
-			return err
-		}
-		postgres.Spec.DatabaseSecret = pg.Spec.DatabaseSecret
-		return nil
-	}
-	return c.upgradeDatabaseSecret(postgres)
-}
-
-func (c *Controller) findDatabaseSecret(postgres *api.Postgres) (*core.Secret, error) {
-	name := postgres.OffshootName() + "-auth"
-
-	secret, err := c.Client.CoreV1().Secrets(postgres.Namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		if kerr.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	if secret.Labels[api.LabelDatabaseKind] != api.ResourceKindPostgres ||
-		secret.Labels[api.LabelDatabaseName] != postgres.Name {
-		return nil, fmt.Errorf(`intended secret "%v/%v" already exists`, postgres.Namespace, name)
-	}
-
-	return secret, nil
-}
-
-func (c *Controller) createDatabaseSecret(postgres *api.Postgres) (*core.SecretVolumeSource, error) {
-	databaseSecret, err := c.findDatabaseSecret(postgres)
-	if err != nil {
-		return nil, err
-	}
-	if databaseSecret != nil {
-		return &core.SecretVolumeSource{
-			SecretName: databaseSecret.Name,
-		}, nil
-	}
-
-	name := fmt.Sprintf("%v-auth", postgres.OffshootName())
-	secret := &core.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: postgres.OffshootLabels(),
-		},
-		Type: core.SecretTypeOpaque,
-		Data: map[string][]byte{
-			PostgresUser:     []byte("postgres"),
-			PostgresPassword: []byte(rand.GeneratePassword()),
-		},
-	}
-	if _, err := c.Client.CoreV1().Secrets(postgres.Namespace).Create(secret); err != nil {
-		return nil, err
-	}
-
-	return &core.SecretVolumeSource{
-		SecretName: secret.Name,
-	}, nil
-}
-
-// This is done to fix 0.8.0 -> 0.9.0 upgrade due to
-// https://github.com/kubedb/pgbouncer/pull/179/files#diff-10ddaf307bbebafda149db10a28b9c24R20 commit
-func (c *Controller) upgradeDatabaseSecret(postgres *api.Postgres) error {
-	meta := metav1.ObjectMeta{
-		Name:      postgres.Spec.DatabaseSecret.SecretName,
-		Namespace: postgres.Namespace,
-	}
-
-	_, _, err := core_util.CreateOrPatchSecret(c.Client, meta, func(in *core.Secret) *core.Secret {
-		if _, ok := in.Data[PostgresUser]; !ok {
-			in.StringData = map[string]string{PostgresUser: "postgres"}
-		}
-		return in
-	})
-	return err
-}
-
-func (c *Controller) deleteSecret(dormantDb *api.DormantDatabase, secretVolume *core.SecretVolumeSource) error {
-	secretFound := false
-	postgresList, err := c.ExtClient.KubedbV1alpha1().Postgreses(dormantDb.Namespace).List(metav1.ListOptions{})
+func (c *Controller) manageUserSecretEvent(key string) error {
+	//wait for pgbouncer to be ready
+	log.Debugln("started processing secret, key:", key)
+	_, _, err := c.secretInformer.GetIndexer().GetByKey(key)
 	if err != nil {
 		return err
 	}
+	splitKey := strings.Split(key, "/")
 
-	for _, postgres := range postgresList.Items {
-		databaseSecret := postgres.Spec.DatabaseSecret
-		if databaseSecret != nil {
-			if databaseSecret.SecretName == secretVolume.SecretName {
-				secretFound = true
-				break
-			}
-		}
+	if len(splitKey) != 2 || splitKey[0] == "" || splitKey[1] == "" {
+		return errors.New("received unknown key")
+	}
+	//Now we are interested in this particular secret
+	secretInfo := make(map[string]string)
+	secretInfo[namespaceKey] = splitKey[0]
+	secretInfo[nameKey] = splitKey[1]
+	if secretInfo[namespaceKey] == systemNamespace || secretInfo[namespaceKey] == publicNamespace {
+		return nil
 	}
 
-	if !secretFound {
-		labelMap := map[string]string{
-			api.LabelDatabaseKind: api.ResourceKindPostgres,
-		}
-		dormantDatabaseList, err := c.ExtClient.KubedbV1alpha1().DormantDatabases(dormantDb.Namespace).List(
-			metav1.ListOptions{
-				LabelSelector: labels.SelectorFromSet(labelMap).String(),
-			},
-		)
+	pgBouncerList, err := c.ExtClient.KubedbV1alpha1().PgBouncers(core.NamespaceAll).List(v1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, pgbouncer := range pgBouncerList.Items {
+		err := c.checkForPgBouncerSecret(&pgbouncer, secretInfo)
 		if err != nil {
+			log.Warning(err)
+		}
+	}
+	return nil
+}
+
+func (c *Controller) checkForPgBouncerSecret(pgbouncer *api.PgBouncer, secretInfo map[string]string) error {
+	if pgbouncer == nil {
+		return errors.New("cant sync secret with pgbouncer == nil")
+	}
+	if pgbouncer.GetNamespace() != secretInfo[namespaceKey] {
+		return nil
+	}
+	//three possibilities:
+	//1. it may or may not be fallback secret
+	//2a. There might be no secret associated with this pg bouncer
+	//2b. this might be a user provided secret
+
+	if fSecretSpec := c.GetDefaultSecretSpec(pgbouncer); fSecretSpec.Name == secretInfo[nameKey] {
+		//its an event for fallback secret, which must always stay in kubedb provided form
+		println("====> Update for admin Secret")
+		if _, err := c.CreateOrPatchDefaultSecret(pgbouncer); err != nil {
 			return err
 		}
+	} else if pgbouncer.Spec.UserListSecretRef == nil || pgbouncer.Spec.UserListSecretRef.Name == "" {
+		return nil
+	} else if pgbouncer.Spec.UserListSecretRef.Name == secretInfo[nameKey] {
+		//ensure that default admin credentials are set
+		// in case there is an update of the user provided secret
+		//ensure that the default secret is updated as well
+		println("====> Update for user Secret")
+		if _, err := c.CreateOrPatchDefaultSecret(pgbouncer); err != nil {
+			return err
+		}
+	}
+	//need to ensure statefulset to mount volume containing the list, and configmap to load userlist from that path
+	//if err := c.manageStatefulSet(pgbouncer); err != nil {
+	//	return err
+	//}
+	if err := c.manageConfigMap(pgbouncer); err != nil {
+		return err
+	}
+	println("Secret update managed")
+	return nil
+}
 
-		for _, ddb := range dormantDatabaseList.Items {
-			if ddb.Name == dormantDb.Name {
-				continue
-			}
+func (c *Controller) GetDefaultSecretSpec(pgbouncer *api.PgBouncer) *core.Secret {
+	return &core.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pgbouncer.GetName() + "-auth",
+			Namespace: pgbouncer.Namespace,
+			Labels:    pgbouncer.OffshootLabels(),
+		},
+	}
+}
 
-			databaseSecret := ddb.Spec.Origin.Spec.Postgres.DatabaseSecret
-			if databaseSecret != nil {
-				if databaseSecret.SecretName == secretVolume.SecretName {
-					secretFound = true
+func (c *Controller) CreateOrPatchDefaultSecret(pgbouncer *api.PgBouncer) (kutil.VerbType, error) {
+	var myPgBouncerPass string
+	var adminSecretExists = true
+	var vt kutil.VerbType
+	secretSpec := c.GetDefaultSecretSpec(pgbouncer)
+	secret, err := c.Client.CoreV1().Secrets(secretSpec.Namespace).Get(secretSpec.Name, v1.GetOptions{})
+	if err == nil {
+		myPgBouncerPass = string(secret.Data[pbAdminPassword])
+	} else if kerr.IsNotFound(err) {
+		myPgBouncerPass = rand.WithUniqSuffix(pbAdminUser)
+		adminSecretExists = false
+	} else {
+		return "", err
+	}
+	var myPgBouncerAdminData = fmt.Sprintf(`"%s" "%s"`, pbAdminUser, myPgBouncerPass)
+	mySecretData := map[string]string{
+		pbAdminData:     myPgBouncerAdminData,
+		pbAdminPassword: myPgBouncerPass,
+	}
+
+	userSecretExists, userSecret, err := c.isUserSecretExists(pgbouncer)
+	if err != nil {
+		return "", err
+	}
+	println("++++++userSecretExists= ", userSecretExists)
+	if userSecretExists {
+		mySecretData[pbUserData] = fmt.Sprintln(myPgBouncerAdminData) + string(c.getUserListSecretData(userSecret, ""))
+	}
+
+	secretSpec.StringData = mySecretData
+
+	if adminSecretExists {
+		var mismatch = false
+		if len(secret.Data) != len(mySecretData) {
+			mismatch = true
+		} else {
+			for key, value := range secret.Data {
+				if string(value) != mySecretData[key] {
+					mismatch = true
 					break
 				}
 			}
 		}
-	}
 
-	if !secretFound {
-		if err := c.Client.CoreV1().Secrets(dormantDb.Namespace).Delete(secretVolume.SecretName, nil); !kerr.IsNotFound(err) {
-			return err
+		if mismatch {
+			err = c.Client.CoreV1().Secrets(pgbouncer.Namespace).Delete(secret.Name, &v1.DeleteOptions{})
+			if err != nil {
+				return "", err
+			}
+			_, err = c.Client.CoreV1().Secrets(pgbouncer.Namespace).Create(secretSpec)
+			if err != nil {
+				return "", err
+			}
+			vt = kutil.VerbPatched
+		} else {
+			vt = kutil.VerbUnchanged
+		}
+
+	} else {
+		_, err = c.Client.CoreV1().Secrets(pgbouncer.Namespace).Create(secretSpec)
+		if err != nil {
+			return "", err
+		}
+		vt = kutil.VerbCreated
+	}
+	return vt, err
+}
+
+//func (c *Controller) waitUntilAdminSecretReady(pgbouncer *api.PgBouncer, secret *core.Secret) error {
+//	log.Infoln("Waiting for fallback Admin secret")
+//	return wait.PollImmediate(kutil.RetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
+//		_, err := c.Client.CoreV1().Secrets(secret.Namespace).Get(secret.Name, v1.GetOptions{})
+//		if err == nil {
+//			return true, nil
+//		}
+//		if kerr.IsNotFound(err) {
+//			return false, nil
+//		}
+//		return false, err
+//	})
+//}
+
+func (c *Controller) isUserSecretExists(pgbouncer *api.PgBouncer) (bool, *core.Secret, error) {
+	if pgbouncer.Spec.UserListSecretRef == nil && pgbouncer.Spec.UserListSecretRef.Name == "" {
+		return false, nil, nil
+	}
+	secret, err := c.Client.CoreV1().Secrets(pgbouncer.Namespace).Get(pgbouncer.Spec.UserListSecretRef.Name, v1.GetOptions{})
+	if err == nil {
+		return true, secret, nil
+	} else if kerr.IsNotFound(err) {
+		return false, nil, nil
+	}
+	return false, nil, err
+}
+
+func (c *Controller) getUserListSecretData(userSecret *core.Secret, key string) []byte {
+	if key == "" { //no key provided, return any
+		for _, value := range userSecret.Data {
+			return value
 		}
 	}
-
-	return nil
+	//if key is given send value of that specific key
+	return userSecret.Data[key]
 }
+
+func (c *Controller) removeDefaultSecret(namespace string, name string) error {
+	return c.Client.CoreV1().Secrets(namespace).Delete(name, &v1.DeleteOptions{})
+}
+
+//func (c *Controller) createOrPatchDefaultSecret(pgbouncer *api.PgBouncer, adminSecretExists bool)  error{
+//
+//}

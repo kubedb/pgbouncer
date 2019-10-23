@@ -1,0 +1,31 @@
+apiVersion: kubedb.com/v1alpha1
+kind: PgBouncer
+metadata:
+  name: pgbouncer-server-2
+  namespace: demo
+spec:
+  version: "latest"
+  replicas: 3
+  databases:
+    - alias: "postgres"
+      databaseName: "postgres"
+      appBindingName: "quick-postgress"
+      appBindingNamespace: "demo"
+  connectionPool:
+    listenPort: 5432
+    adminUsers:
+      - admin
+      - admin1
+  userList:
+    name: db-user-pass
+    namespace: demo
+  monitor:
+    agent: prometheus.io/builtin
+
+  monitor:
+    agent: prometheus.io/coreos-operator
+    prometheus:
+      namespace: demo
+      labels:
+        k8s-app: prometheus
+      interval: 10s
