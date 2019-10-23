@@ -4,19 +4,13 @@ go 1.12
 
 require (
 	contrib.go.opencensus.io/exporter/ocagent v0.4.12 // indirect
-	github.com/Azure/azure-pipeline-go v0.1.9 // indirect
-	github.com/Azure/azure-storage-blob-go v0.6.0 // indirect
 	github.com/appscode/go v0.0.0-20191016085057-e186b6c94a3b
 	github.com/codeskyblue/go-sh v0.0.0-20190412065543-76bd3d59ff27
 	github.com/coreos/prometheus-operator v0.30.1
-	github.com/go-ini/ini v1.25.4 // indirect
 	github.com/go-xorm/xorm v0.7.3
-	github.com/golang/snappy v0.0.1 // indirect
-	github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible // indirect
 	github.com/lib/pq v1.1.0
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
-	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v0.9.4 // indirect
 	github.com/spf13/afero v1.2.2
 	github.com/spf13/cobra v0.0.5
@@ -34,8 +28,8 @@ require (
 	kmodules.xyz/monitoring-agent-api v0.0.0-20190808150221-601a4005b7f7
 	kmodules.xyz/offshoot-api v0.0.0-20190901210649-de049192326c
 	kmodules.xyz/webhook-runtime v0.0.0-20190808145328-4186c470d56b
-	kubedb.dev/apimachinery v0.13.0-rc.1.0.20191023013417-6fa677b305c3
-	stash.appscode.dev/stash v0.9.0-rc.1.0.20191023043152-8ce4ab865ccb
+	kubedb.dev/apimachinery v0.13.0-rc.2
+	stash.appscode.dev/stash v0.9.0-rc.2
 )
 
 replace (
