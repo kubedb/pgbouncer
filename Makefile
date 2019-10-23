@@ -84,8 +84,8 @@ BUILD_DIRS  := bin/$(OS)_$(ARCH)     \
                $(HOME)/.kube         \
                $(HOME)/.minikube
 
-DOCKERFILE_PROD  = hack/docker/pgbouncer-operator/Dockerfile.in
-DOCKERFILE_DBG   = hack/docker/pgbouncer-operator/Dockerfile.dbg
+DOCKERFILE_PROD  = Dockerfile.in
+DOCKERFILE_DBG   = Dockerfile.dbg
 
 # If you want to build all binaries, see the 'all-build' rule.
 # If you want to build all containers, see the 'all-container' rule.

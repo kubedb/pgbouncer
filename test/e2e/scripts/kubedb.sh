@@ -151,7 +151,6 @@ show_help() {
   echo "    --enable-validating-webhook        enable/disable validating webhooks for KubeDB CRDs"
   echo "    --enable-mutating-webhook          enable/disable mutating webhooks for KubeDB CRDs"
   echo "    --bypass-validating-webhook-xray   if true, bypasses validating webhook xray checks"
-  echo "    --enable-status-subresource        if enabled, uses status sub resource for KubeDB crds"
   echo "    --use-kubeapiserver-fqdn-for-aks   if true, uses kube-apiserver FQDN for AKS cluster to workaround https://github.com/Azure/AKS/issues/522 (default true)"
   echo "    --enable-analytics                 send usage events to Google Analytics (default: true)"
   echo "    --install-catalog                  installs KubeDB database version catalog (default: all)"
@@ -213,13 +212,6 @@ while test $# -gt 0; do
         export KUBEDB_BYPASS_VALIDATING_WEBHOOK_XRAY=false
       else
         export KUBEDB_BYPASS_VALIDATING_WEBHOOK_XRAY=true
-      fi
-      shift
-      ;;
-    --enable-status-subresource*)
-      val=$(echo $1 | sed -e 's/^[^=]*=//g')
-      if [ "$val" = "false" ]; then
-        export KUBEDB_ENABLE_STATUS_SUBRESOURCE=false
       fi
       shift
       ;;
