@@ -38,23 +38,6 @@ var _ = Describe("PgBouncer", func() {
 		dbName string
 		dbUser string
 	)
-	//var kubeConfigFile = filepath.Join(homedir.HomeDir(), ".kube/config")
-	//var uninstallKubeDB = func() {
-	//	err := sh.Command("bash", "scripts/kubedb.sh", "--uninstall", "--purge", "--kubeconfig="+kubeConfigFile).Run()
-	//	Expect(err).NotTo(HaveOccurred())
-	//}
-	//
-	//var installKubeDB = func() {
-	//	err := sh.Command("bash", "scripts/kubedb.sh", "--kubeconfig="+kubeConfigFile).Run()
-	//	Expect(err).NotTo(HaveOccurred())
-	//	time.Sleep(time.Minute * 5)
-	//	uninstallKubeDB()
-	//}
-
-	//var uninstallKubeDB = func() {
-	//	err := sh.Command("bash", "scripts/kubedb.sh", "--uninstall", "--purge", "--kubeconfig="+kubeConfigFile).Run()
-	//	Expect(err).NotTo(HaveOccurred())
-	//}
 
 	BeforeEach(func() {
 		f = root.Invoke()
@@ -151,7 +134,7 @@ var _ = Describe("PgBouncer", func() {
 
 		Context("General", func() {
 			It("Should have a running postgres", checkPostgres)
-			It("Should ping pgbouncer server", func() {
+			FIt("Should ping pgbouncer server", func() {
 				createAndRunPgBouncer()
 				By("Ping PgBouncer")
 				err = f.EventuallyPingPgBouncerServer(pgbouncer.ObjectMeta)

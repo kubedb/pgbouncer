@@ -3,6 +3,7 @@ package framework
 import (
 	"errors"
 	"fmt"
+	"kmodules.xyz/client-go/tools/exec"
 	"strings"
 	"time"
 
@@ -104,21 +105,42 @@ func (f *Framework) EventuallyPingPgBouncerServer(meta metav1.ObjectMeta) error 
 			return false, nil
 		}
 		defer tunnel.Close()
-		pingResult := f.PingPgBouncerServer(tunnel.Local)
+		pingResult := f.PingPgBouncerServer(meta, tunnel.Local)
 		return pingResult, nil
 	})
 }
 
-func (f *Framework) PingPgBouncerServer(port int) bool {
+func (f *Framework) PingPgBouncerServer(meta metav1.ObjectMeta,port int) bool {
+	pod, err := f.kubeClient.CoreV1().Pods(meta.Namespace).Get(meta.Name+"-0", metav1.GetOptions{})
+	if err != nil {
+		log.Infoln(err)
+		return false
+	}
+	options := []func(options *exec.Options){
+		exec.Command([]string{"cat","/var/run/pgbouncer/secret/pb-password)"}...),
+	}
+	outT, err := exec.ExecIntoPod(f.restConfig, pod, options...)
+	println(outT)
+
 	sh := shell.NewSession()
+	cmd := sh.Command("kubectl", "exec", "-i",
+		"-n", meta.Namespace, fmt.Sprintf("%s-0", meta.Name),
+		"-c", api.ResourceSingularPgBouncer, "--",
+		"cat", "/var/run/pgbouncer/secret/pb-password")
+	out, err := cmd.Output()
+	if err != nil {
+		log.Infoln(err)
+		return false
+	}
+	password := strings.TrimSpace(string(out))
 	pgbouncer := api.ResourceSingularPgBouncer
-	cmd := sh.Command("docker", "run",
-		"-e", fmt.Sprintf("%s=%s", "PGPASSWORD", "kubedb"),
+	cmd = sh.Command("docker", "run",
+		"-e", fmt.Sprintf("%s=%s", "PGPASSWORD", password),
 		"--network=host",
 		"postgres:11.1-alpine", "psql",
 		"--host=localhost", fmt.Sprintf("--port=%d", port),
-		fmt.Sprintf("--username=%s", pgbouncer), pgbouncer, "--command=RELOAD")
-	out, err := cmd.Output()
+		fmt.Sprintf("--username=%s", "kubedb"), pgbouncer, "--command=RELOAD")
+	out, err = cmd.Output()
 	if err != nil {
 		log.Infoln("CMD out err = ", err)
 		return false
@@ -325,17 +347,44 @@ func (f *Framework) ApplyCMD(username, password, sqlCommand, dbName string, port
 }
 
 func (f *Framework) waitUntilPatchedConfigMapReady(meta metav1.ObjectMeta) error {
-	return wait.PollImmediate(kutil.RetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
-		service, err := f.kubeClient.CoreV1().Services(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
-		print(".")
+	sh := shell.NewSession()
+
+	return wait.PollImmediate(time.Second, kutil.ReadinessTimeout, func() (bool, error) {
+		cmd := sh.Command("kubectl", "exec", "-i",
+			"-n", meta.Namespace, fmt.Sprintf("%s-0", meta.Name),
+			"-c", api.ResourceSingularPgBouncer, "--",
+			"cat", "/var/run/pgbouncer/pb_status")
+		out, err := cmd.Output()
 		if err != nil {
 			return false, err
 		}
-		antn := service.GetObjectMeta().GetAnnotations()
-		if antn["podConfigMap"] == "patched" {
+		outText := strings.TrimSpace(string(out))
+
+		if outText == "RELOADED" {
 			println(". Done!")
 			return true, nil
 		}
 		return false, nil
 	})
 }
+
+/*
+	pod, err := f.kubeClient.CoreV1().Pods(meta.Namespace).Get(meta.Name+"-0", metav1.GetOptions{})
+	if err != nil {
+		log.Infoln(err)
+		return false
+	}
+	pgbouncer := api.ResourceSingularPgBouncer
+	options := []func(options *exec.Options){
+		exec.Command([]string{"env","PGPASSWORD=$(cat /var/run/pgbouncer/secret/pb-password)","psql",
+		"--host=localhost", fmt.Sprintf("--port=%d", port),
+		fmt.Sprintf("--username=%s", "kubedb"), pgbouncer, "--command=RELOAD"}...),
+	}
+	outText, err := exec.ExecIntoPod(f.restConfig, pod, options...)
+	println(outText)
+	if outText != CmdReload {
+		return false
+	}
+	return true
+
+*/

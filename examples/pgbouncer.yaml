@@ -1,17 +1,17 @@
 apiVersion: kubedb.com/v1alpha1
 kind: PgBouncer
 metadata:
-  name: pgbouncer-server-x
+  name: pgbouncer-server
   namespace: demo
 spec:
-  version: "1.11.0"
+  version: "1.12.0"
   replicas: 1
   databases:
   - alias: "postgres"
     databaseName: "postgres"
     databaseRef:
       name: "quick-postgress"
-  - alias: "postgres2"
+  - alias: "postgress"
     databaseName: "tmpdb"
     databaseRef:
       name: "quick-postgress"

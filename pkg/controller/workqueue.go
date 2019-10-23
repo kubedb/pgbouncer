@@ -1,11 +1,14 @@
 package controller
 
 import (
+	"errors"
 	"github.com/appscode/go/log"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core_util "kmodules.xyz/client-go/core/v1"
 	"kmodules.xyz/client-go/tools/queue"
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
+	"strings"
 )
 
 const (
@@ -22,7 +25,7 @@ const (
 
 func (c *Controller) initWatcher() {
 	c.pgInformer = c.KubedbInformerFactory.Kubedb().V1alpha1().PgBouncers().Informer()
-	c.pgQueue = queue.New("PgBouncer", c.MaxNumRequeues, c.NumThreads, c.runPgBouncer)
+	c.pgQueue = queue.New("PgBouncer", c.MaxNumRequeues, c.NumThreads, c.managePgBouncerEvent)
 	c.pbLister = c.KubedbInformerFactory.Kubedb().V1alpha1().PgBouncers().Lister()
 	c.pgInformer.AddEventHandler(queue.NewObservableUpdateHandler(c.pgQueue.GetQueue(), true))
 }
@@ -41,7 +44,7 @@ func (c *Controller) initAppBindingWatcher() {
 	c.appBindingInformer.AddEventHandler(queue.DefaultEventHandler(c.appBindingQueue.GetQueue()))
 }
 
-func (c *Controller) runPgBouncer(key string) error {
+func (c *Controller) managePgBouncerEvent(key string) error {
 	log.Debugln("started processing, key:", key)
 	obj, exists, err := c.pgInformer.GetIndexer().GetByKey(key)
 	if err != nil {
@@ -50,6 +53,20 @@ func (c *Controller) runPgBouncer(key string) error {
 	}
 	if !exists {
 		log.Debugf("PgBouncer %s does not exist anymore", key)
+		splitKey := strings.Split(key, "/")
+
+		if len(splitKey) != 2 || splitKey[0] == "" || splitKey[1] == "" {
+			return errors.New("received unknown key")
+		}
+		//Now we are interested in this particular secret
+		pgbouncerNamespace := splitKey[0]
+		pgbouncerName := splitKey[1]
+		_, err := c.Client.CoreV1().Secrets(pgbouncerNamespace).Get(pgbouncerName+"-auth", v1.GetOptions{})
+		if err == nil {
+			return c.removeDefaultSecret(pgbouncerNamespace, pgbouncerName+"-auth")
+		}
+		log.Infoln("pgbouncer default secret not found")
+
 	} else {
 		// Note that you also have to check the uid if you have a local controlled resource, which
 		// is dependent on the actual instance, to detect that a PgBouncer was recreated with the same name

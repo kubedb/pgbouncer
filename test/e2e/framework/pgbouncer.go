@@ -19,7 +19,7 @@ import (
 const (
 	kindEviction = "Eviction"
 	PostgresName = "postgres-for-pgbouncer-test"
-	pbVersion    = "1.9.0-r"
+	pbVersion    = "1.12.0"
 	CmdReload    = "RELOAD"
 	cityName     = "Dhaka"
 	cityLocation = "random Co-ordinates"

@@ -171,7 +171,7 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 		return kutil.VerbUnchanged, rerr
 	}
 
-	cfgMap, vt, err := core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
+	_, vt, err := core_util.CreateOrPatchConfigMap(c.Client, configMapMeta, func(in *core.ConfigMap) *core.ConfigMap {
 		in.Labels = pgbouncer.OffshootLabels()
 		core_util.EnsureOwnerReference(&in.ObjectMeta, ref)
 		in.Data = map[string]string{
@@ -180,18 +180,19 @@ func (c *Controller) ensureConfigMapFromCRD(pgbouncer *api.PgBouncer) (kutil.Ver
 		return in
 	})
 	if vt == kutil.VerbPatched {
-		err = c.waitUntilPatchedConfigMapReady(pgbouncer, cfgMap)
-		if err != nil {
-			return vt, err
-		}
-		err = c.reloadPgBouncer(pgbouncer)
-		if err != nil {
-			//error is non blocking
-			log.Infoln(err)
-		} else {
-			log.Infoln("PgBouncer reloaded successfully")
-		}
-		err = c.AnnotateService(pgbouncer, "patched")
+		println("Configmap patched")
+		//err = c.waitUntilPatchedConfigMapReady(pgbouncer, cfgMap)
+		//if err != nil {
+		//	return vt, err
+		//}
+		//err = c.reloadPgBouncer(pgbouncer)
+		//if err != nil {
+		//	//error is non blocking
+		//	log.Infoln(err)
+		//} else {
+		//	log.Infoln("PgBouncer reloaded successfully")
+		//}
+		//err = c.AnnotateService(pgbouncer, "patched")
 
 	} else {
 		err = c.AnnotateService(pgbouncer, "ready")

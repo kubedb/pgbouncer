@@ -27,7 +27,7 @@ func (c *Controller) manageUserSecretEvent(key string) error {
 	splitKey := strings.Split(key, "/")
 
 	if len(splitKey) != 2 || splitKey[0] == "" || splitKey[1] == "" {
-		return nil
+		return errors.New("received unknown key")
 	}
 	//Now we are interested in this particular secret
 	secretInfo := make(map[string]string)
@@ -76,7 +76,6 @@ func (c *Controller) checkForPgBouncerSecret(pgbouncer *api.PgBouncer, secretInf
 		// in case there is an update of the user provided secret
 		//ensure that the default secret is updated as well
 		println("====> Update for user Secret")
-		println("====> user Secret exists = ", secretExists)
 		if _, err := c.CreateOrPatchDefaultSecret(pgbouncer); err != nil {
 			return err
 		}
@@ -212,29 +211,28 @@ func (c *Controller) CreateOrPatchDefaultSecret(pgbouncer *api.PgBouncer) (kutil
 		myUserSecertData := fmt.Sprintln(myPgBouncerAdminData) + string(userSecretData)
 		//i := map[string]string{pbUserData: myUserSecertData}
 		//mySecretData = core_util.UpsertMap(mySecretData,i)
-		mySecretData = map[string]string{
-			pbAdminData:     myPgBouncerAdminData,
-			pbAdminPassword: myPgBouncerPass,
-			pbUserData:      myUserSecertData,
-		}
+		//mySecretData = map[string]string{
+		//	pbAdminData:     myPgBouncerAdminData,
+		//	pbAdminPassword: myPgBouncerPass,
+		//	pbUserData:      myUserSecertData,
+		//}
+		mySecretData[pbUserData] = myUserSecertData
 	}
 
 	log.Infoln("User Secret finally = ", mySecretData)
-
+	secretSpec.StringData = mySecretData
 	//_, vt, err := core_util.CreateOrPatchSecret(c.Client, secretSpec.ObjectMeta, func(in *core.Secret) *core.Secret {
 	//	in.StringData = mySecretData
 	//	return in
 	//}, true)
-	secretSpec.StringData = mySecretData
+
 	if adminSecretExists {
 		var mismatch = false
 		if len(secret.Data) != len(mySecretData) {
-			println("===========1 mismatch found!!!!")
 			mismatch = true
 		} else {
 			for key, value := range secret.Data {
 				if string(value) != mySecretData[key] {
-					println("===========2 mismatch found!!!!")
 					mismatch = true
 					break
 				}
@@ -242,7 +240,6 @@ func (c *Controller) CreateOrPatchDefaultSecret(pgbouncer *api.PgBouncer) (kutil
 		}
 
 		if mismatch {
-			println("===========3 mismatch confirmed!!!!")
 			err = c.Client.CoreV1().Secrets(pgbouncer.Namespace).Delete(secret.Name, &v1.DeleteOptions{})
 			if err != nil {
 				return "", err
@@ -262,9 +259,6 @@ func (c *Controller) CreateOrPatchDefaultSecret(pgbouncer *api.PgBouncer) (kutil
 		}
 		vt = kutil.VerbCreated
 	}
-
-	println("======vt = ", vt)
-	println("======err = ", err)
 	return vt, err
 }
 
@@ -304,7 +298,10 @@ func (c *Controller) getUserListSecretData(userSecret *core.Secret, key string) 
 	return userSecret.Data[key]
 }
 
-func (c *Controller) removeDefaultSecret(pgbouncer *api.PgBouncer) error {
-	secretSpec := c.GetDefaultSecretSpec(pgbouncer)
-	return c.Client.CoreV1().Secrets(secretSpec.Namespace).Delete(secretSpec.Name, &v1.DeleteOptions{})
+func (c *Controller) removeDefaultSecret(namespace string, name string) error {
+	return c.Client.CoreV1().Secrets(namespace).Delete(name, &v1.DeleteOptions{})
 }
+
+//func (c *Controller) createOrPatchDefaultSecret(pgbouncer *api.PgBouncer, adminSecretExists bool)  error{
+//
+//}

@@ -5,7 +5,6 @@ import (
 
 	"github.com/appscode/go/log"
 	"github.com/appscode/go/types"
-	"github.com/aws/aws-sdk-go/aws"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
@@ -120,18 +119,18 @@ func (c *Controller) ensureStatefulSet(
 				//Args: append([]string{
 				//	fmt.Sprintf(`--enable-analytics=%v`, c.EnableAnalytics),
 				//}, c.LoggerOptions.ToFlags()...),
-				//Env: []core.EnvVar{
-				//	{
-				//		Name:  analytics.Key,
-				//		Value: c.AnalyticsClientID,
-				//	},
-				//},
+				Env: []core.EnvVar{
+					{
+						Name:  "PGBOUNCER_PORT",
+						Value: fmt.Sprintf("%d",*pgbouncer.Spec.ConnectionPool.Port),
+					},
+				},
 
 				Image:           image,
 				ImagePullPolicy: core.PullIfNotPresent,
-				SecurityContext: &core.SecurityContext{
-					RunAsUser: aws.Int64(securityContextCode),
-				},
+				//SecurityContext: &core.SecurityContext{
+				//	RunAsUser: aws.Int64(securityContextCode),
+				//},
 				VolumeMounts: volumeMounts,
 
 				Resources:      pgbouncer.Spec.PodTemplate.Spec.Resources,

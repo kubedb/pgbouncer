@@ -77,8 +77,7 @@ func (c *Controller) terminate(pgbouncer *api.PgBouncer) error {
 			return nil
 		}
 	}
-	err := c.removeDefaultSecret(pgbouncer)
-	return err
+	return nil
 }
 
 func (c *Controller) removeOwnerReferenceFromOffshoots(pgbouncer *api.PgBouncer, ref *core.ObjectReference) error {
