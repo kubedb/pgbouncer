@@ -7,6 +7,8 @@ import (
 	"text/template"
 	"time"
 
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+
 	"github.com/appscode/go/log"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
@@ -19,7 +21,6 @@ import (
 	kutil "kmodules.xyz/client-go"
 	core_util "kmodules.xyz/client-go/core/v1"
 	"kmodules.xyz/client-go/tools/exec"
-	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 )
 
 const (

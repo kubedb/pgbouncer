@@ -4,6 +4,10 @@ import (
 	"flag"
 	"time"
 
+	cs "kubedb.dev/apimachinery/client/clientset/versioned"
+	kubedbinformers "kubedb.dev/apimachinery/client/informers/externalversions"
+	"kubedb.dev/pgbouncer/pkg/controller"
+
 	prom "github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
 	"github.com/spf13/pflag"
 	core "k8s.io/api/core/v1"
@@ -15,9 +19,6 @@ import (
 	"kmodules.xyz/client-go/tools/cli"
 	appcat_cs "kmodules.xyz/custom-resources/client/clientset/versioned"
 	appcat_in "kmodules.xyz/custom-resources/client/informers/externalversions"
-	cs "kubedb.dev/apimachinery/client/clientset/versioned"
-	kubedbinformers "kubedb.dev/apimachinery/client/informers/externalversions"
-	"kubedb.dev/pgbouncer/pkg/controller"
 )
 
 type ExtraOptions struct {

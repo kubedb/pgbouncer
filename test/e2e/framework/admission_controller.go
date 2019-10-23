@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+
 	shell "github.com/codeskyblue/go-sh"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -11,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kutil "kmodules.xyz/client-go"
-	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 )
 
 const (

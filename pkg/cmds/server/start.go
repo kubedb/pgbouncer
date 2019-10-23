@@ -5,14 +5,15 @@ import (
 	"io"
 	"net"
 
+	"kubedb.dev/pgbouncer/pkg/controller"
+	"kubedb.dev/pgbouncer/pkg/server"
+
 	"github.com/spf13/pflag"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	"kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/clientcmd"
-	"kubedb.dev/pgbouncer/pkg/controller"
-	"kubedb.dev/pgbouncer/pkg/server"
 )
 
 const defaultEtcdPathPrefix = "/registry/kubedb.com"

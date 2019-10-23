@@ -7,6 +7,11 @@ import (
 	"testing"
 	"time"
 
+	cs "kubedb.dev/apimachinery/client/clientset/versioned"
+	"kubedb.dev/apimachinery/client/clientset/versioned/scheme"
+	"kubedb.dev/pgbouncer/pkg/controller"
+	"kubedb.dev/pgbouncer/test/e2e/framework"
+
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
@@ -19,10 +24,6 @@ import (
 	"kmodules.xyz/client-go/logs"
 	"kmodules.xyz/client-go/tools/clientcmd"
 	appcat_cs "kmodules.xyz/custom-resources/client/clientset/versioned/typed/appcatalog/v1alpha1"
-	cs "kubedb.dev/apimachinery/client/clientset/versioned"
-	"kubedb.dev/apimachinery/client/clientset/versioned/scheme"
-	"kubedb.dev/pgbouncer/pkg/controller"
-	"kubedb.dev/pgbouncer/test/e2e/framework"
 	scs "stash.appscode.dev/stash/client/clientset/versioned"
 )
 

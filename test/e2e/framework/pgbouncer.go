@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
+
 	"github.com/appscode/go/crypto/rand"
 	"github.com/appscode/go/types"
 	. "github.com/onsi/gomega"
@@ -12,8 +15,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	appcat "kmodules.xyz/custom-resources/apis/appcatalog/v1alpha1"
-	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
-	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
 )
 
 const (

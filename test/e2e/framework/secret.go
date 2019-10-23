@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	"kubedb.dev/pgbouncer/pkg/controller"
+
 	"github.com/appscode/go/log"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
@@ -11,8 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	core_util "kmodules.xyz/client-go/core/v1"
-	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
-	"kubedb.dev/pgbouncer/pkg/controller"
 )
 
 const (

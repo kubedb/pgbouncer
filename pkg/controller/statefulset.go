@@ -3,6 +3,10 @@ package controller
 import (
 	"fmt"
 
+	catalog "kubedb.dev/apimachinery/apis/catalog/v1alpha1"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	"kubedb.dev/apimachinery/pkg/eventer"
+
 	"github.com/appscode/go/log"
 	"github.com/appscode/go/types"
 	apps "k8s.io/api/apps/v1"
@@ -15,9 +19,6 @@ import (
 	app_util "kmodules.xyz/client-go/apps/v1"
 	core_util "kmodules.xyz/client-go/core/v1"
 	mona "kmodules.xyz/monitoring-agent-api/api/v1"
-	catalog "kubedb.dev/apimachinery/apis/catalog/v1alpha1"
-	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
-	"kubedb.dev/apimachinery/pkg/eventer"
 )
 
 const (
@@ -122,7 +123,7 @@ func (c *Controller) ensureStatefulSet(
 				Env: []core.EnvVar{
 					{
 						Name:  "PGBOUNCER_PORT",
-						Value: fmt.Sprintf("%d",*pgbouncer.Spec.ConnectionPool.Port),
+						Value: fmt.Sprintf("%d", *pgbouncer.Spec.ConnectionPool.Port),
 					},
 				},
 

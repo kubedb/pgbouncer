@@ -3,10 +3,11 @@ package cmds
 import (
 	"io"
 
+	"kubedb.dev/pgbouncer/pkg/cmds/server"
+
 	"github.com/spf13/cobra"
 	"kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/cli"
-	"kubedb.dev/pgbouncer/pkg/cmds/server"
 )
 
 func NewCmdRun(version string, out, errOut io.Writer, stopCh <-chan struct{}) *cobra.Command {

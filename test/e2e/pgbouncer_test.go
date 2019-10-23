@@ -1,14 +1,15 @@
 package e2e_test
 
 import (
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	"kubedb.dev/pgbouncer/test/e2e/framework"
+
 	"github.com/appscode/go/log"
 	"github.com/appscode/go/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
-	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
-	"kubedb.dev/pgbouncer/test/e2e/framework"
 )
 
 const (

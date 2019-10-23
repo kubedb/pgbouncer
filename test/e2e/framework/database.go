@@ -3,9 +3,11 @@ package framework
 import (
 	"errors"
 	"fmt"
-	"kmodules.xyz/client-go/tools/exec"
 	"strings"
 	"time"
+
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	"kubedb.dev/pgbouncer/pkg/controller"
 
 	"github.com/appscode/go/log"
 	shell "github.com/codeskyblue/go-sh"
@@ -15,10 +17,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kutil "kmodules.xyz/client-go"
+	"kmodules.xyz/client-go/tools/exec"
 	"kmodules.xyz/client-go/tools/portforward"
 	appcat "kmodules.xyz/custom-resources/apis/appcatalog/v1alpha1"
-	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
-	"kubedb.dev/pgbouncer/pkg/controller"
 )
 
 const (
@@ -110,14 +111,14 @@ func (f *Framework) EventuallyPingPgBouncerServer(meta metav1.ObjectMeta) error 
 	})
 }
 
-func (f *Framework) PingPgBouncerServer(meta metav1.ObjectMeta,port int) bool {
+func (f *Framework) PingPgBouncerServer(meta metav1.ObjectMeta, port int) bool {
 	pod, err := f.kubeClient.CoreV1().Pods(meta.Namespace).Get(meta.Name+"-0", metav1.GetOptions{})
 	if err != nil {
 		log.Infoln(err)
 		return false
 	}
 	options := []func(options *exec.Options){
-		exec.Command([]string{"cat","/var/run/pgbouncer/secret/pb-password)"}...),
+		exec.Command([]string{"cat", "/var/run/pgbouncer/secret/pb-password)"}...),
 	}
 	outT, err := exec.ExecIntoPod(f.restConfig, pod, options...)
 	println(outT)

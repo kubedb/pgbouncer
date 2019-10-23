@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+
 	"github.com/appscode/go/crypto/rand"
 	"github.com/appscode/go/log"
 	core "k8s.io/api/core/v1"
@@ -13,7 +15,6 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kutil "kmodules.xyz/client-go"
-	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 )
 
 func (c *Controller) manageUserSecretEvent(key string) error {
