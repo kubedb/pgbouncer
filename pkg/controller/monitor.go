@@ -38,7 +38,6 @@ func (c *Controller) addOrUpdateMonitor(pgbouncer *api.PgBouncer) (kutil.VerbTyp
 }
 
 func (c *Controller) deleteMonitor(pgbouncer *api.PgBouncer) (kutil.VerbType, error) {
-	println("========deleteMonitor was called")
 	agent, err := c.newMonitorController(pgbouncer)
 	if err != nil {
 		return kutil.VerbUnchanged, err

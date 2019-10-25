@@ -19,10 +19,6 @@ import (
 	ofst "kmodules.xyz/offshoot-api/api/v1"
 )
 
-var (
-	NodeRole = "kubedb.com/role"
-)
-
 const (
 	PgBouncerPortName = "api"
 )

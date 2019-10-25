@@ -64,7 +64,7 @@ import (
 func (c *Controller) manageAppBindingEvent(key string) error {
 	//wait for pgboncer to ber ready
 	log.Debugln("started processing appBindings, key:", key)
-	_, exists, err := c.appBindingInformer.GetIndexer().GetByKey(key)
+	_, _, err := c.appBindingInformer.GetIndexer().GetByKey(key)
 	if err != nil {
 		log.Errorf("Fetching appBinding with key %s from store failed with %v", key, err)
 		return err
@@ -81,19 +81,14 @@ func (c *Controller) manageAppBindingEvent(key string) error {
 	if appBindingInfo[namespaceKey] == systemNamespace || appBindingInfo[namespaceKey] == publicNamespace {
 		return nil
 	}
-	if !exists {
-		log.Debugf("PgBouncer Secret %s deleted.", key)
 
-	} else {
-		log.Debugf("Updates for PgBouncer Secret %s received.", key)
-	}
 	pgBouncerList, err := c.ExtClient.KubedbV1alpha1().PgBouncers(core.NamespaceAll).List(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
 	for _, pgBouncer := range pgBouncerList.Items {
 		if pgBouncer.GetNamespace() == appBindingInfo[namespaceKey] {
-			err := c.checkAppBindingsInPgBouncerDatabases(appBindingInfo, &pgBouncer)
+			err := c.checkAppBindingsInPgBouncerSpec(appBindingInfo, &pgBouncer)
 			if err != nil {
 				log.Warning(err)
 			}
@@ -102,11 +97,10 @@ func (c *Controller) manageAppBindingEvent(key string) error {
 	return nil
 }
 
-func (c *Controller) checkAppBindingsInPgBouncerDatabases(appBindingInfo map[string]string, pgbouncer *api.PgBouncer) error {
+func (c *Controller) checkAppBindingsInPgBouncerSpec(appBindingInfo map[string]string, pgbouncer *api.PgBouncer) error {
 	if pgbouncer.Spec.Databases != nil && len(pgbouncer.Spec.Databases) > 0 {
 		for _, db := range pgbouncer.Spec.Databases {
 			if db.DatabaseRef.Name == appBindingInfo[nameKey] {
-				log.Infoln("A matching appBinding is found.")
 				err := c.manageService(pgbouncer)
 				if err != nil {
 					return err

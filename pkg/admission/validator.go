@@ -62,7 +62,6 @@ func (a *PgBouncerValidator) Initialize(config *rest.Config, stopCh <-chan struc
 
 func (pbValidator *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *admission.AdmissionResponse {
 	status := &admission.AdmissionResponse{}
-	log.Info("Validator.go >>>  Admit ====")
 
 	if (req.Operation != admission.Create && req.Operation != admission.Update && req.Operation != admission.Delete) ||
 		len(req.SubResource) != 0 ||
@@ -134,7 +133,7 @@ func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbo
 		if pgbouncer.Spec.UserListSecretRef != nil && pgbouncer.Spec.UserListSecretRef.Name != "" {
 			if pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any" {
 				if _, err := client.CoreV1().Secrets(pgbouncer.GetNamespace()).Get(pgbouncer.Spec.UserListSecretRef.Name, metav1.GetOptions{}); err != nil {
-					log.Infoln("userlist secret " + pgbouncer.Spec.UserListSecretRef.Name + " not found, using fallback secret")
+					log.Infoln("userlist secret " + pgbouncer.Spec.UserListSecretRef.Name + " not found in the ",pgbouncer.Namespace, " namespace")
 				}
 			}
 		}

@@ -328,12 +328,8 @@ func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pg
 func upsertEnv(statefulSet *apps.StatefulSet, pgbouncer *api.PgBouncer, envs []core.EnvVar) *apps.StatefulSet {
 	envList := []core.EnvVar{
 		{
-			Name: "NAMESPACE",
-			ValueFrom: &core.EnvVarSource{
-				FieldRef: &core.ObjectFieldSelector{
-					FieldPath: "metadata.namespace",
-				},
-			},
+			Name:  "NAMESPACE",
+			Value: pgbouncer.Namespace,
 		},
 		{
 			Name:  "PRIMARY_HOST",
@@ -343,7 +339,7 @@ func upsertEnv(statefulSet *apps.StatefulSet, pgbouncer *api.PgBouncer, envs []c
 
 	envList = append(envList, envs...)
 
-	// To do this, Upsert Container first
+	// To do this, upsert Container first
 	for i, container := range statefulSet.Spec.Template.Spec.Containers {
 		if container.Name == api.ResourceSingularPgBouncer {
 			statefulSet.Spec.Template.Spec.Containers[i].Env = core_util.UpsertEnvVars(container.Env, envList...)

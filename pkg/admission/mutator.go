@@ -6,7 +6,6 @@ import (
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	cs "kubedb.dev/apimachinery/client/clientset/versioned"
 
-	"github.com/appscode/go/log"
 	"github.com/appscode/go/types"
 	admission "k8s.io/api/admission/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -59,7 +58,6 @@ func (a *PgBouncerMutator) Initialize(config *rest.Config, stopCh <-chan struct{
 }
 
 func (a *PgBouncerMutator) Admit(req *admission.AdmissionRequest) *admission.AdmissionResponse {
-	log.Info("Mutator.go >>>  Admit ====")
 	status := &admission.AdmissionResponse{}
 
 	// N.B.: No Mutating for delete
@@ -103,7 +101,7 @@ func setDefaultValues(pgbouncer *api.PgBouncer) runtime.Object {
 		pgbouncer.Spec.Replicas = types.Int32P(1)
 	}
 
-	//TODO: Make sure image an image path is set
+	//TODO: Make sure an image path is set
 
 	if pgbouncer.Spec.ConnectionPool != nil {
 		if pgbouncer.Spec.ConnectionPool.Port == nil {

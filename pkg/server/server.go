@@ -209,7 +209,7 @@ func (c completedConfig) New() (*PgBouncerServer, error) {
 		//		return nil
 		//	},
 		//)
-		log.Infoln("No PostStartHook for PgBouncer")
+		log.Infoln("Webhook validated. No Post-Start hook is needed for PgBouncer")
 	}
 	return s, nil
 }

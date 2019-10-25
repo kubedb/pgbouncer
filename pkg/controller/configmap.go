@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"text/template"
-	"time"
 
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 
@@ -22,7 +21,6 @@ import (
 const (
 	PostgresPassword = "POSTGRES_PASSWORD"
 	PostgresUser     = "POSTGRES_USER"
-	PbRetryInterval  = time.Second * 5
 	DefaultHostPort  = 5432
 	pbConfigFile     = "pgbouncer.ini"
 )
@@ -121,10 +119,6 @@ func (c *Controller) generateConfig(pgbouncer *api.PgBouncer) (string, error) {
 		}
 	}
 
-	if pgbouncer.Spec.UserListSecretRef == nil {
-		log.Infoln("PgBouncer doesn't have a userlist")
-	}
-
 	buf.WriteString("\n[pgbouncer]\n")
 	buf.WriteString("logfile = /tmp/pgbouncer.log\n") // TODO: send log to stdout ?
 	buf.WriteString("pidfile = /tmp/pgbouncer.pid\n")
@@ -136,7 +130,6 @@ func (c *Controller) generateConfig(pgbouncer *api.PgBouncer) (string, error) {
 	if secretFileName == "" {
 		secretFileName = pbAdminData
 	}
-	println("AuthFileName = ", secretFileName)
 
 	if pgbouncer.Spec.ConnectionPool == nil || (pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any") {
 		buf.WriteString(fmt.Sprintln("auth_file = ", filepath.Join(userListMountPath, secretFileName)))
