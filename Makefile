@@ -332,7 +332,7 @@ $(BUILD_DIRS):
 .PHONY: install-postgres-operator
 install-postgres-operator:
 	@cd ../installer; \
-	APPSCODE_ENV=dev KUBEDB_CATALOG=postgres ./deploy/kubedb.sh --operator-name=postgres
+	KUBEDB_CATALOG=postgres ./deploy/kubedb.sh --operator-name=pg-operator --enable-validating-webhook=false --enable-mutating-webhook=false
 
 .PHONY: install
 install:
