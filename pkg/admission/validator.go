@@ -30,11 +30,6 @@ type PgBouncerValidator struct {
 
 var _ hookapi.AdmissionHook = &PgBouncerValidator{}
 
-//var forbiddenEnvVars = []string{
-//	"POSTGRES_PASSWORD",
-//	"POSTGRES_USER",
-//}
-
 func (a *PgBouncerValidator) Resource() (plural schema.GroupVersionResource, singular string) {
 	return schema.GroupVersionResource{
 			Group:    "validators.kubedb.com",
@@ -129,15 +124,6 @@ func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbo
 	}
 
 	if strictValidation {
-		// Check if usrlist is absent.
-		if pgbouncer.Spec.UserListSecretRef != nil && pgbouncer.Spec.UserListSecretRef.Name != "" {
-			if pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any" {
-				if _, err := client.CoreV1().Secrets(pgbouncer.GetNamespace()).Get(pgbouncer.Spec.UserListSecretRef.Name, metav1.GetOptions{}); err != nil {
-					log.Infoln("userlist secret " + pgbouncer.Spec.UserListSecretRef.Name + " not found in the ",pgbouncer.Namespace, " namespace")
-				}
-			}
-		}
-
 		// Check if pgbouncerVersion is absent or deprecated.
 		// If deprecated, return error
 		pgbouncerVersion, err := extClient.CatalogV1alpha1().PgBouncerVersions().Get(string(pgbouncer.Spec.Version), metav1.GetOptions{})
@@ -181,7 +167,7 @@ func getPreconditionFunc() []mergepatch.PreconditionFunc {
 }
 
 var preconditionSpecFields = []string{
-	"spec.podTemplate.spec.nodeSelector",
+	// nothing to check yet
 }
 
 func preconditionFailedError(kind string) error {

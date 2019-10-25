@@ -89,7 +89,7 @@ func (c *Controller) checkForPgBouncerSecret(pgbouncer *api.PgBouncer, secretInf
 		return err
 	}
 
-	if vt != kutil.VerbUnchanged{
+	if vt != kutil.VerbUnchanged {
 		log.Infoln("default secret ", vt)
 	}
 	return nil

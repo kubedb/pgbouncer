@@ -207,6 +207,19 @@ func (c *Controller) manageValidation(pgbouncer *api.PgBouncer) error {
 		// stop Scheduler in case there is any.
 		return nil // user error so just record error and don't retry.
 	}
+
+	// Check if usrlist is absent.
+	if pgbouncer.Spec.UserListSecretRef != nil && pgbouncer.Spec.UserListSecretRef.Name != "" {
+		if pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any" {
+			if _, err := c.Client.CoreV1().Secrets(pgbouncer.GetNamespace()).Get(pgbouncer.Spec.UserListSecretRef.Name, metav1.GetOptions{}); err != nil {
+				c.recorder.Eventf(
+					pgbouncer,
+					core.EventTypeWarning,
+					"UserListMissing",
+					"userlist secret %s not found", pgbouncer.Spec.UserListSecretRef.Name)
+			}
+		}
+	}
 	return nil //if no err
 }
 
