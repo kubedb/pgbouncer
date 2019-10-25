@@ -329,6 +329,11 @@ lint: $(BUILD_DIRS)
 $(BUILD_DIRS):
 	@mkdir -p $@
 
+.PHONY: install-postgres-operator
+install-postgres-operator:
+	@cd ../installer; \
+	APPSCODE_ENV=dev KUBEDB_CATALOG=postgres ./deploy/kubedb.sh --operator-name=postgres
+
 .PHONY: install
 install:
 	@cd ../installer; \

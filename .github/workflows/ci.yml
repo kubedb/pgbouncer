@@ -74,7 +74,7 @@ jobs:
         cd ..
         git clone https://github.com/kubedb/installer.git
         cd installer
-        git checkout master
+        git checkout pgbouncer
 
     - name: Run e2e tests
       env:
@@ -89,6 +89,7 @@ jobs:
         echo -n "$TEST_CREDENTIALS" > hack/config/.env
         echo >> hack/config/.env
         echo "GOOGLE_SERVICE_ACCOUNT_JSON_KEY=$(echo $GOOGLE_SERVICE_ACCOUNT_JSON_KEY)" >> hack/config/.env
+        make install-postgres-operator
         make install
         echo
         make e2e-tests
