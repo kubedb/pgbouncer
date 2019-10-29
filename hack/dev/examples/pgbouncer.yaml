@@ -18,7 +18,7 @@ spec:
       name: "quick-postgress"
       namespace: demo
   connectionPool:
-    port
+    port: 5432
     maxClientConn: 20
     reservePoolSize: 5
     adminUsers:
