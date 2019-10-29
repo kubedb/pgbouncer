@@ -87,10 +87,6 @@ github.com/census-instrumentation/opencensus-proto/gen-go/agent/trace/v1
 github.com/census-instrumentation/opencensus-proto/gen-go/metrics/v1
 github.com/census-instrumentation/opencensus-proto/gen-go/resource/v1
 github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1
-# github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0
-github.com/codegangsta/inject
-# github.com/codeskyblue/go-sh v0.0.0-20190412065543-76bd3d59ff27
-github.com/codeskyblue/go-sh
 # github.com/coreos/etcd v3.3.13+incompatible
 github.com/coreos/etcd/clientv3
 github.com/coreos/etcd/pkg/transport
@@ -552,6 +548,7 @@ k8s.io/apimachinery/pkg/util/yaml
 k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/util/rand
 k8s.io/apimachinery/pkg/util/httpstream
+k8s.io/apimachinery/pkg/util/remotecommand
 k8s.io/apimachinery/pkg/util/httpstream/spdy
 k8s.io/apimachinery/pkg/apis/meta/v1/unstructured/unstructuredscheme
 k8s.io/apimachinery/third_party/forked/golang/netutil
@@ -747,6 +744,7 @@ k8s.io/client-go/tools/record/util
 k8s.io/client-go/tools/watch
 k8s.io/client-go/util/workqueue
 k8s.io/client-go/util/homedir
+k8s.io/client-go/tools/remotecommand
 k8s.io/client-go/tools/portforward
 k8s.io/client-go/transport/spdy
 k8s.io/client-go/pkg/apis/clientauthentication
@@ -791,6 +789,7 @@ k8s.io/client-go/plugin/pkg/client/auth/azure
 k8s.io/client-go/plugin/pkg/client/auth/gcp
 k8s.io/client-go/plugin/pkg/client/auth/oidc
 k8s.io/client-go/plugin/pkg/client/auth/openstack
+k8s.io/client-go/util/exec
 k8s.io/client-go/listers/admissionregistration/v1beta1
 k8s.io/client-go/listers/auditregistration/v1alpha1
 k8s.io/client-go/tools/clientcmd/api/v1
@@ -863,6 +862,7 @@ kmodules.xyz/client-go/core/v1
 kmodules.xyz/client-go/discovery
 kmodules.xyz/client-go/tools/queue
 kmodules.xyz/client-go/dynamic
+kmodules.xyz/client-go/tools/exec
 kmodules.xyz/client-go/tools/portforward
 kmodules.xyz/client-go/tools/analytics
 kmodules.xyz/client-go/apiregistration/v1beta1

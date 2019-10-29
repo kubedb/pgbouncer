@@ -108,16 +108,18 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	if !framework.SelfHostedOperator {
-		By("Delete Admission Controller Configs")
-		root.CleanAdmissionConfigs()
-	}
+	//if !framework.SelfHostedOperator {
+	//	By("Delete Admission Controller Configs")
+	//	root.CleanAdmissionConfigs()
+	//}
 	By("Delete left over PgBouncer objects")
 	root.CleanPgBouncer()
+	By("Delete left over Postgres objects")
+	root.CleanPostgres()
 	By("Delete left over workloads if exists any")
 	root.CleanWorkloadLeftOvers()
-	By("Delete Operator")
-	root.DeleteOperatorAndServer()
+	//By("Delete Operator")
+	//root.DeleteOperatorAndServer()
 	By("Delete Namespace")
 	err := root.DeleteNamespace()
 	Expect(err).NotTo(HaveOccurred())

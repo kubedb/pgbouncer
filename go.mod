@@ -8,7 +8,6 @@ require (
 	github.com/Azure/azure-pipeline-go v0.1.9 // indirect
 	github.com/Azure/azure-storage-blob-go v0.6.0 // indirect
 	github.com/appscode/go v0.0.0-20191016085057-e186b6c94a3b
-	github.com/codeskyblue/go-sh v0.0.0-20190412065543-76bd3d59ff27
 	github.com/coreos/prometheus-operator v0.30.1
 	github.com/go-ini/ini v1.25.4 // indirect
 	github.com/go-xorm/xorm v0.7.3

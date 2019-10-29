@@ -6,7 +6,6 @@ import (
 
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 
-	shell "github.com/codeskyblue/go-sh"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
@@ -83,14 +82,13 @@ func (f *Framework) CleanAdmissionConfigs() {
 	time.Sleep(time.Second * 1) // let the kube-server know it!!
 }
 
-func (f *Framework) DeleteOperatorAndServer() {
-	sh := shell.NewSession()
-	//args := []interface{}{"--minikube", fmt.Sprintf("--docker-registry=%v", DockerRegistry)
-	sh.ShowCMD = true
-	By("Creating API server and webhook stuffs")
-	sh.SetDir("../../")
-	cmd := sh.Command("make", "uninstall")
-	By("Starting Server and Operator")
-	err := cmd.Run()
-	Expect(err).ShouldNot(HaveOccurred())
-}
+//func (f *Framework) DeleteOperatorAndServer() {
+//	sh := shell.NewSession()
+//	//args := []interface{}{"--minikube", fmt.Sprintf("--docker-registry=%v", DockerRegistry)
+//	sh.ShowCMD = true
+//	By("Deleteing Operator")
+//	sh.SetDir("../../")
+//	cmd := sh.Command("make", "uninstall")
+//	err := cmd.Run()
+//	Expect(err).ShouldNot(HaveOccurred())
+//}

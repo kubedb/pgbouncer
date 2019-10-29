@@ -332,12 +332,14 @@ $(BUILD_DIRS):
 .PHONY: install-postgres-operator
 install-postgres-operator:
 	@cd ../installer; \
+	git checkout v0.13.0-rc.0; \
 	KUBEDB_CATALOG=postgres ./deploy/kubedb.sh --operator-name=pg-operator --enable-validating-webhook=false --enable-mutating-webhook=false
 
 .PHONY: install
 install:
 	@cd ../installer; \
-	APPSCODE_ENV=dev KUBEDB_OPERATOR_TAG=$(TAG) KUBEDB_CATALOG=pgbouncer ./deploy/kubedb.sh --operator-name=$(BIN) --docker-registry=$(REGISTRY) --image-pull-secret=$(REGISTRY_SECRET)
+		git checkout pgbouncer; \
+		APPSCODE_ENV=dev KUBEDB_OPERATOR_TAG=$(TAG) KUBEDB_CATALOG=pgbouncer ./deploy/kubedb.sh --operator-name=$(BIN) --docker-registry=$(REGISTRY) --image-pull-secret=$(REGISTRY_SECRET)
 	@echo "updating validating and mutating webhooks"
 	kubectl apply -f ./hack/dev/webhook.yaml
 

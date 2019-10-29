@@ -10,12 +10,12 @@ spec:
   - alias: "postgres"
     databaseName: "postgres"
     databaseRef:
-      name: "quick-postgress"
+      name: "quick-postgres"
       namespace: demo
   - alias: "postgress"
     databaseName: "tmpdb"
     databaseRef:
-      name: "quick-postgress"
+      name: "quick-postgres"
       namespace: demo
   connectionPool:
     port: 5432

@@ -2,6 +2,7 @@ package framework
 
 import (
 	"fmt"
+	v1 "k8s.io/api/apps/v1"
 	"strconv"
 	"time"
 
@@ -44,6 +45,11 @@ func (i *Invocation) Postgres() *api.Postgres {
 				},
 				StorageClassName: types.StringP(i.StorageClass),
 			},
+			StorageType: api.StorageTypeDurable,
+			UpdateStrategy: v1.StatefulSetUpdateStrategy{
+				Type: v1.RollingUpdateStatefulSetStrategyType,
+			},
+			TerminationPolicy: api.TerminationPolicyWipeOut,
 		},
 	}
 }
