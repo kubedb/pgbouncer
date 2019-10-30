@@ -19,7 +19,6 @@ import (
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/pgbouncer/test/e2e/framework"
 
-	"github.com/appscode/go/log"
 	"github.com/appscode/go/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -51,10 +50,10 @@ var _ = Describe("PgBouncer", func() {
 	})
 
 	var createAndRunPgBouncer = func() {
-		By("Addind postgres to userlist from: " + postgres.Name)
+		By("Create userList secret")
 		err := f.CreateUserListSecret()
 		Expect(err).NotTo(HaveOccurred())
-		By("Creating PgBouncer: " + pgbouncer.Name)
+		By("Create PgBouncer")
 		err = f.CreatePgBouncer(pgbouncer)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -63,12 +62,11 @@ var _ = Describe("PgBouncer", func() {
 	}
 
 	var checkPostgres = func() {
-		By("Waiting for database to be ready")
+		By("Wait for database to be ready")
 		f.EventuallyPingDatabase(postgres.ObjectMeta, dbName, dbUser).Should(BeTrue())
 
 		By("Wait for AppBindings to create")
 		f.EventuallyAppBinding(postgres.ObjectMeta).Should(BeTrue())
-		//f.EventuallyAppBinding(pgbouncer.ObjectMeta).Should(BeTrue())
 
 		By("Check valid AppBinding Spec")
 		err := f.CheckPostgresAppBindingSpec(postgres.ObjectMeta)
@@ -100,18 +98,13 @@ var _ = Describe("PgBouncer", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		By("Delete pgbouncer: " + pgbouncer.Name)
+		By("Delete " + pgbouncer.Name)
 		err = f.DeletePgBouncer(pgbouncer.ObjectMeta)
 		if err != nil {
-			if kerr.IsNotFound(err) {
-				// PgBouncer was not created. Hence, rest of cleanup is not necessary.
-				log.Infof("Skipping rest of cleanup. Reason: PgBouncer %s is not found.", pgbouncer.Name)
-				return
-			}
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		By("Wait for pgbouncer resources to be wipedOut")
+		By("Wait for PgBouncer resources to be wipedOut")
 		f.EventuallyWipedOut(pgbouncer.ObjectMeta).Should(Succeed())
 	}
 
@@ -158,7 +151,7 @@ var _ = Describe("PgBouncer", func() {
 				createAndRunPgBouncer()
 				By("Check for existing postgres")
 				checkPostgres()
-				By("Check Pooling via PgBouncer")
+				By("Check Connection-pooling via PgBouncer")
 				err := f.CreateUserAndDatabaseViaPgBouncer(pgbouncer.ObjectMeta)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -167,7 +160,6 @@ var _ = Describe("PgBouncer", func() {
 		})
 
 		Context("PDB", func() {
-
 			It("should run evictions successfully", func() {
 				// Create PgBouncer
 				pgbouncer.Spec.Replicas = types.Int32P(3)
