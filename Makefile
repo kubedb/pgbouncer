@@ -84,8 +84,8 @@ BUILD_DIRS  := bin/$(OS)_$(ARCH)     \
                $(HOME)/.kube         \
                $(HOME)/.minikube
 
-DOCKERFILE_PROD  = in.Dockerfile
-DOCKERFILE_DBG   = dbg.Dockerfile
+DOCKERFILE_PROD  = Dockerfile.in
+DOCKERFILE_DBG   = Dockerfile.dbg
 
 DOCKER_REPO_ROOT := /go/src/$(GO_PKG)/$(REPO)
 
@@ -340,7 +340,7 @@ install-postgres-operator:
 .PHONY: install
 install:
 	@cd ../installer; \
-		git checkout pgbouncer; \
+		git checkout master; \
 		APPSCODE_ENV=dev KUBEDB_OPERATOR_TAG=$(TAG) KUBEDB_CATALOG=pgbouncer ./deploy/kubedb.sh --operator-name=$(BIN) --docker-registry=$(REGISTRY) --image-pull-secret=$(REGISTRY_SECRET)
 	@echo "updating validating and mutating webhooks"
 	kubectl apply -f ./hack/dev/webhook.yaml
