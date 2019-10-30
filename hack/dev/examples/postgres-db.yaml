@@ -1,10 +1,10 @@
 apiVersion: kubedb.com/v1alpha1
 kind: Postgres
 metadata:
-  name: quick-postgress
+  name: quick-postgres
   namespace: demo
 spec:
-  replicas: 2
+  replicas: 1
   version: "11.1-v1"
   storageType: Durable
   storage:
@@ -14,4 +14,6 @@ spec:
     resources:
       requests:
         storage: 50Mi
+  updateStrategy:
+      type: RollingUpdate
   terminationPolicy: WipeOut

@@ -1,3 +1,18 @@
+/*
+Copyright The KubeDB Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 package controller
 
 import (
@@ -328,12 +343,8 @@ func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pg
 func upsertEnv(statefulSet *apps.StatefulSet, pgbouncer *api.PgBouncer, envs []core.EnvVar) *apps.StatefulSet {
 	envList := []core.EnvVar{
 		{
-			Name: "NAMESPACE",
-			ValueFrom: &core.EnvVarSource{
-				FieldRef: &core.ObjectFieldSelector{
-					FieldPath: "metadata.namespace",
-				},
-			},
+			Name:  "NAMESPACE",
+			Value: pgbouncer.Namespace,
 		},
 		{
 			Name:  "PRIMARY_HOST",
@@ -343,7 +354,7 @@ func upsertEnv(statefulSet *apps.StatefulSet, pgbouncer *api.PgBouncer, envs []c
 
 	envList = append(envList, envs...)
 
-	// To do this, Upsert Container first
+	// To do this, upsert Container first
 	for i, container := range statefulSet.Spec.Template.Spec.Containers {
 		if container.Name == api.ResourceSingularPgBouncer {
 			statefulSet.Spec.Template.Spec.Containers[i].Env = core_util.UpsertEnvVars(container.Env, envList...)

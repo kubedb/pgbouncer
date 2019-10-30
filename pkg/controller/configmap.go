@@ -1,3 +1,18 @@
+/*
+Copyright The KubeDB Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 package controller
 
 import (
@@ -5,7 +20,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"text/template"
-	"time"
 
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 
@@ -22,7 +36,6 @@ import (
 const (
 	PostgresPassword = "POSTGRES_PASSWORD"
 	PostgresUser     = "POSTGRES_USER"
-	PbRetryInterval  = time.Second * 5
 	DefaultHostPort  = 5432
 	pbConfigFile     = "pgbouncer.ini"
 )
@@ -121,10 +134,6 @@ func (c *Controller) generateConfig(pgbouncer *api.PgBouncer) (string, error) {
 		}
 	}
 
-	if pgbouncer.Spec.UserListSecretRef == nil {
-		log.Infoln("PgBouncer doesn't have a userlist")
-	}
-
 	buf.WriteString("\n[pgbouncer]\n")
 	buf.WriteString("logfile = /tmp/pgbouncer.log\n") // TODO: send log to stdout ?
 	buf.WriteString("pidfile = /tmp/pgbouncer.pid\n")
@@ -136,7 +145,6 @@ func (c *Controller) generateConfig(pgbouncer *api.PgBouncer) (string, error) {
 	if secretFileName == "" {
 		secretFileName = pbAdminData
 	}
-	println("AuthFileName = ", secretFileName)
 
 	if pgbouncer.Spec.ConnectionPool == nil || (pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any") {
 		buf.WriteString(fmt.Sprintln("auth_file = ", filepath.Join(userListMountPath, secretFileName)))

@@ -4,18 +4,21 @@ metadata:
   name: pgbouncer-server
   namespace: demo
 spec:
-  version: "1.12.0"
+  version: "1.7"
   replicas: 1
   databases:
   - alias: "postgres"
     databaseName: "postgres"
     databaseRef:
-      name: "quick-postgress"
+      name: "quick-postgres"
+      namespace: demo
   - alias: "postgress"
     databaseName: "tmpdb"
     databaseRef:
-      name: "quick-postgress"
+      name: "quick-postgres"
+      namespace: demo
   connectionPool:
+    port: 5432
     maxClientConn: 20
     reservePoolSize: 5
     adminUsers:

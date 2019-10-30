@@ -1,3 +1,18 @@
+/*
+Copyright The KubeDB Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 package admission
 
 import (
@@ -30,11 +45,6 @@ type PgBouncerValidator struct {
 
 var _ hookapi.AdmissionHook = &PgBouncerValidator{}
 
-//var forbiddenEnvVars = []string{
-//	"POSTGRES_PASSWORD",
-//	"POSTGRES_USER",
-//}
-
 func (a *PgBouncerValidator) Resource() (plural schema.GroupVersionResource, singular string) {
 	return schema.GroupVersionResource{
 			Group:    "validators.kubedb.com",
@@ -62,7 +72,6 @@ func (a *PgBouncerValidator) Initialize(config *rest.Config, stopCh <-chan struc
 
 func (pbValidator *PgBouncerValidator) Admit(req *admission.AdmissionRequest) *admission.AdmissionResponse {
 	status := &admission.AdmissionResponse{}
-	log.Info("Validator.go >>>  Admit ====")
 
 	if (req.Operation != admission.Create && req.Operation != admission.Update && req.Operation != admission.Delete) ||
 		len(req.SubResource) != 0 ||
@@ -130,15 +139,6 @@ func ValidatePgBouncer(client kubernetes.Interface, extClient cs.Interface, pgbo
 	}
 
 	if strictValidation {
-		// Check if usrlist is absent.
-		if pgbouncer.Spec.UserListSecretRef != nil && pgbouncer.Spec.UserListSecretRef.Name != "" {
-			if pgbouncer.Spec.ConnectionPool != nil && pgbouncer.Spec.ConnectionPool.AuthType != "any" {
-				if _, err := client.CoreV1().Secrets(pgbouncer.GetNamespace()).Get(pgbouncer.Spec.UserListSecretRef.Name, metav1.GetOptions{}); err != nil {
-					log.Infoln("userlist secret " + pgbouncer.Spec.UserListSecretRef.Name + " not found, using fallback secret")
-				}
-			}
-		}
-
 		// Check if pgbouncerVersion is absent or deprecated.
 		// If deprecated, return error
 		pgbouncerVersion, err := extClient.CatalogV1alpha1().PgBouncerVersions().Get(string(pgbouncer.Spec.Version), metav1.GetOptions{})
@@ -182,7 +182,7 @@ func getPreconditionFunc() []mergepatch.PreconditionFunc {
 }
 
 var preconditionSpecFields = []string{
-	"spec.podTemplate.spec.nodeSelector",
+	// nothing to check yet
 }
 
 func preconditionFailedError(kind string) error {

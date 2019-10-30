@@ -1,3 +1,18 @@
+/*
+Copyright The KubeDB Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 package framework
 
 import (
@@ -6,7 +21,6 @@ import (
 
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 
-	shell "github.com/codeskyblue/go-sh"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
@@ -20,31 +34,20 @@ const (
 )
 
 func (f *Framework) InstallKubeDBOperators(kubeconfigPath string) {
-	sh := shell.NewSession()
+	//sh := shell.NewSession()
 
-	By("Installing Posgtres Operator")
-	sh.SetDir("../../../postgres")
-	err := sh.Command("env", "REGISTRY=rezoan", "make", "install").Run()
-	Expect(err).ShouldNot(HaveOccurred())
+	//By("Installing Posgtres Operator")
+	//sh.SetDir("../../../postgres")
+	//err := sh.Command("env", "REGISTRY=rezoan", "make", "install").Run()
+	//Expect(err).ShouldNot(HaveOccurred())
 
 	By("Setup postgres")
 	postgres := f.Invoke().Postgres()
-	err = f.CreatePostgres(postgres)
+	err := f.CreatePostgres(postgres)
 	Expect(err).ShouldNot(HaveOccurred())
 	By("Waiting for running Postgres")
 	err = f.WaitUntilPostgresReady(postgres.Name)
 	Expect(err).ShouldNot(HaveOccurred())
-	By("Uninstall Postgres Operator")
-	err = sh.Command("env", "REGISTRY=rezoan", "make", "uninstall").Run()
-	Expect(err).NotTo(HaveOccurred())
-
-	By("Installing PgBouncer operator")
-	sh = shell.NewSession()
-	sh.SetDir("../../")
-	cmd := sh.Command("env", "REGISTRY=rezoan", "make", "install")
-	err = cmd.Run()
-	Expect(err).ShouldNot(HaveOccurred())
-	By("PgBouncer operator installed")
 }
 func (f *Framework) WaitUntilPostgresReady(name string) error {
 	return wait.PollImmediate(operatorGetRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
@@ -94,14 +97,13 @@ func (f *Framework) CleanAdmissionConfigs() {
 	time.Sleep(time.Second * 1) // let the kube-server know it!!
 }
 
-func (f *Framework) DeleteOperatorAndServer() {
-	sh := shell.NewSession()
-	//args := []interface{}{"--minikube", fmt.Sprintf("--docker-registry=%v", DockerRegistry)
-	sh.ShowCMD = true
-	By("Creating API server and webhook stuffs")
-	sh.SetDir("../../")
-	cmd := sh.Command("make", "uninstall")
-	By("Starting Server and Operator")
-	err := cmd.Run()
-	Expect(err).ShouldNot(HaveOccurred())
-}
+//func (f *Framework) DeleteOperatorAndServer() {
+//	sh := shell.NewSession()
+//	//args := []interface{}{"--minikube", fmt.Sprintf("--docker-registry=%v", DockerRegistry)
+//	sh.ShowCMD = true
+//	By("Deleteing Operator")
+//	sh.SetDir("../../")
+//	cmd := sh.Command("make", "uninstall")
+//	err := cmd.Run()
+//	Expect(err).ShouldNot(HaveOccurred())
+//}

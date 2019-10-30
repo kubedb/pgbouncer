@@ -1,16 +1,34 @@
+/*
+Copyright The KubeDB Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 package server
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/apimachinery/pkg/admission/namespace"
+	"kubedb.dev/apimachinery/pkg/eventer"
 	mgAdmsn "kubedb.dev/pgbouncer/pkg/admission"
 	"kubedb.dev/pgbouncer/pkg/controller"
 
 	"github.com/appscode/go/log"
 	admission "k8s.io/api/admission/v1beta1"
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -19,8 +37,15 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
+	"k8s.io/client-go/kubernetes"
+	reg_util "kmodules.xyz/client-go/admissionregistration/v1beta1"
+	dynamic_util "kmodules.xyz/client-go/dynamic"
 	hooks "kmodules.xyz/webhook-runtime/admission/v1beta1"
 	admissionreview "kmodules.xyz/webhook-runtime/registry/admissionreview/v1beta1"
+)
+
+const (
+	apiserviceName = "v1alpha1.validators.kubedb.com"
 )
 
 var (
@@ -175,41 +200,41 @@ func (c completedConfig) New() (*PgBouncerServer, error) {
 	}
 
 	if c.OperatorConfig.EnableValidatingWebhook {
-		//s.GenericAPIServer.AddPostStartHookOrDie("validating-webhook-xray",
-		//	func(context genericapiserver.PostStartHookContext) error {
-		//		go func() {
-		//			xray := reg_util.NewCreateValidatingWebhookXray(c.OperatorConfig.ClientConfig, apiserviceName, &api.PgBouncer{
-		//				TypeMeta: metav1.TypeMeta{
-		//					APIVersion: api.SchemeGroupVersion.String(),
-		//					Kind:       api.ResourceKindPgBouncer,
-		//				},
-		//				ObjectMeta: metav1.ObjectMeta{
-		//					Name:      "test-pgbouncer-for-webhook-xray",
-		//					Namespace: "default",
-		//				},
-		//			}, context.StopCh)
-		//			if err := xray.IsActive(); err != nil {
-		//				w, _, e2 := dynamic_util.DetectWorkload(
-		//					c.OperatorConfig.ClientConfig,
-		//					core.SchemeGroupVersion.WithResource("pods"),
-		//					os.Getenv("MY_POD_NAMESPACE"),
-		//					os.Getenv("MY_POD_NAME"))
-		//				if e2 == nil {
-		//					eventer.CreateEventWithLog(
-		//						kubernetes.NewForConfigOrDie(c.OperatorConfig.ClientConfig),
-		//						"pgbouncer-operator",
-		//						w,
-		//						core.EventTypeWarning,
-		//						eventer.EventReasonAdmissionWebhookNotActivated,
-		//						err.Error())
-		//				}
-		//				panic(err)
-		//			}
-		//		}()
-		//		return nil
-		//	},
-		//)
-		log.Infoln("No PostStartHook for PgBouncer")
+		s.GenericAPIServer.AddPostStartHookOrDie("validating-webhook-xray",
+			func(context genericapiserver.PostStartHookContext) error {
+				go func() {
+					xray := reg_util.NewCreateValidatingWebhookXray(c.OperatorConfig.ClientConfig, apiserviceName, &api.PgBouncer{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: api.SchemeGroupVersion.String(),
+							Kind:       api.ResourceKindPgBouncer,
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-pgbouncer-for-webhook-xray",
+							Namespace: "default",
+						},
+					}, context.StopCh)
+					if err := xray.IsActive(); err != nil {
+						w, _, e2 := dynamic_util.DetectWorkload(
+							c.OperatorConfig.ClientConfig,
+							core.SchemeGroupVersion.WithResource("pods"),
+							os.Getenv("MY_POD_NAMESPACE"),
+							os.Getenv("MY_POD_NAME"))
+						if e2 == nil {
+							eventer.CreateEventWithLog(
+								kubernetes.NewForConfigOrDie(c.OperatorConfig.ClientConfig),
+								"pgbouncer-operator",
+								w,
+								core.EventTypeWarning,
+								eventer.EventReasonAdmissionWebhookNotActivated,
+								err.Error())
+						}
+						panic(err)
+					}
+				}()
+				return nil
+			},
+		)
+		log.Infoln("Webhook validated. No Post-Start hook is needed for PgBouncer")
 	}
 	return s, nil
 }

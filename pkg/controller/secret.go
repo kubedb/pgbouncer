@@ -1,3 +1,18 @@
+/*
+Copyright The KubeDB Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 package controller
 
 import (
@@ -56,6 +71,8 @@ func (c *Controller) checkForPgBouncerSecret(pgbouncer *api.PgBouncer, secretInf
 	if pgbouncer.GetNamespace() != secretInfo[namespaceKey] {
 		return nil
 	}
+	vt := kutil.VerbUnchanged
+	var err error
 	//three possibilities:
 	//1. it may or may not be fallback secret
 	//2a. There might be no secret associated with this pg bouncer
@@ -63,8 +80,9 @@ func (c *Controller) checkForPgBouncerSecret(pgbouncer *api.PgBouncer, secretInf
 
 	if fSecretSpec := c.GetDefaultSecretSpec(pgbouncer); fSecretSpec.Name == secretInfo[nameKey] {
 		//its an event for fallback secret, which must always stay in kubedb provided form
-		println("====> Update for admin Secret")
-		if _, err := c.CreateOrPatchDefaultSecret(pgbouncer); err != nil {
+		log.Infoln("received updates for default secret : " + secretInfo[namespaceKey] + "/" + secretInfo[nameKey])
+		vt, err = c.CreateOrPatchDefaultSecret(pgbouncer)
+		if err != nil {
 			return err
 		}
 	} else if pgbouncer.Spec.UserListSecretRef == nil || pgbouncer.Spec.UserListSecretRef.Name == "" {
@@ -73,8 +91,8 @@ func (c *Controller) checkForPgBouncerSecret(pgbouncer *api.PgBouncer, secretInf
 		//ensure that default admin credentials are set
 		// in case there is an update of the user provided secret
 		//ensure that the default secret is updated as well
-		println("====> Update for user Secret")
-		if _, err := c.CreateOrPatchDefaultSecret(pgbouncer); err != nil {
+		log.Infoln("received updates for userlist secret : " + secretInfo[namespaceKey] + "/" + secretInfo[nameKey])
+		if vt, err = c.CreateOrPatchDefaultSecret(pgbouncer); err != nil {
 			return err
 		}
 	}
@@ -82,10 +100,13 @@ func (c *Controller) checkForPgBouncerSecret(pgbouncer *api.PgBouncer, secretInf
 	//if err := c.manageStatefulSet(pgbouncer); err != nil {
 	//	return err
 	//}
-	if err := c.manageConfigMap(pgbouncer); err != nil {
+	if err = c.manageConfigMap(pgbouncer); err != nil {
 		return err
 	}
-	println("Secret update managed")
+
+	if vt != kutil.VerbUnchanged {
+		log.Infoln("default secret ", vt)
+	}
 	return nil
 }
 
@@ -123,7 +144,6 @@ func (c *Controller) CreateOrPatchDefaultSecret(pgbouncer *api.PgBouncer) (kutil
 	if err != nil {
 		return "", err
 	}
-	println("++++++userSecretExists= ", userSecretExists)
 	if userSecretExists {
 		mySecretData[pbUserData] = fmt.Sprintln(myPgBouncerAdminData) + string(c.getUserListSecretData(userSecret, ""))
 	}
@@ -166,20 +186,6 @@ func (c *Controller) CreateOrPatchDefaultSecret(pgbouncer *api.PgBouncer) (kutil
 	}
 	return vt, err
 }
-
-//func (c *Controller) waitUntilAdminSecretReady(pgbouncer *api.PgBouncer, secret *core.Secret) error {
-//	log.Infoln("Waiting for fallback Admin secret")
-//	return wait.PollImmediate(kutil.RetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
-//		_, err := c.Client.CoreV1().Secrets(secret.Namespace).Get(secret.Name, v1.GetOptions{})
-//		if err == nil {
-//			return true, nil
-//		}
-//		if kerr.IsNotFound(err) {
-//			return false, nil
-//		}
-//		return false, err
-//	})
-//}
 
 func (c *Controller) isUserSecretExists(pgbouncer *api.PgBouncer) (bool, *core.Secret, error) {
 	if pgbouncer.Spec.UserListSecretRef == nil && pgbouncer.Spec.UserListSecretRef.Name == "" {

@@ -3,26 +3,22 @@ module kubedb.dev/pgbouncer
 go 1.12
 
 require (
-	contrib.go.opencensus.io/exporter/ocagent v0.4.12 // indirect
 	github.com/appscode/go v0.0.0-20191016085057-e186b6c94a3b
-	github.com/codeskyblue/go-sh v0.0.0-20190412065543-76bd3d59ff27
 	github.com/coreos/prometheus-operator v0.30.1
-	github.com/go-xorm/xorm v0.7.3
+	github.com/go-xorm/xorm v0.7.4
 	github.com/lib/pq v1.1.0
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
-	github.com/prometheus/client_golang v0.9.4 // indirect
 	github.com/spf13/afero v1.2.2
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.3
 	gomodules.xyz/cert v1.0.0
-	google.golang.org/genproto v0.0.0-20190508193815-b515fa19cec8 // indirect
 	k8s.io/api v0.0.0-20190503110853-61630f889b3c
 	k8s.io/apiextensions-apiserver v0.0.0-20190516231611-bf6753f2aa24
 	k8s.io/apimachinery v0.0.0-20190508063446-a3da69d3723c
 	k8s.io/apiserver v0.0.0-20190516230822-f89599b3f645
 	k8s.io/client-go v11.0.0+incompatible
-	k8s.io/kube-aggregator v0.0.0-20190508224022-f9852b6d3a84
+	k8s.io/kube-aggregator v0.0.0-20190314000639-da8327669ac5
 	kmodules.xyz/client-go v0.0.0-20191023042933-b12d1ccfaf57
 	kmodules.xyz/custom-resources v0.0.0-20190927035424-65fe358bb045
 	kmodules.xyz/monitoring-agent-api v0.0.0-20190808150221-601a4005b7f7
@@ -34,7 +30,6 @@ require (
 
 replace (
 	cloud.google.com/go => cloud.google.com/go v0.34.0
-	git.apache.org/thrift.git => github.com/apache/thrift v0.12.0
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v12.4.2+incompatible
 	k8s.io/api => k8s.io/api v0.0.0-20190313235455-40a48860b5ab
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190315093550-53c4693659ed

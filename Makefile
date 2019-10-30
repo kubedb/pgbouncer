@@ -87,6 +87,8 @@ BUILD_DIRS  := bin/$(OS)_$(ARCH)     \
 DOCKERFILE_PROD  = Dockerfile.in
 DOCKERFILE_DBG   = Dockerfile.dbg
 
+DOCKER_REPO_ROOT := /go/src/$(GO_PKG)/$(REPO)
+
 # If you want to build all binaries, see the 'all-build' rule.
 # If you want to build all containers, see the 'all-container' rule.
 # If you want to build AND push all containers, see the 'all-push' rule.
@@ -329,10 +331,19 @@ lint: $(BUILD_DIRS)
 $(BUILD_DIRS):
 	@mkdir -p $@
 
+.PHONY: install-postgres-operator
+install-postgres-operator:
+	@cd ../installer; \
+		git checkout v0.13.0-rc.0; \
+		KUBEDB_CATALOG=postgres ./deploy/kubedb.sh --operator-name=pg-operator --enable-validating-webhook=false --enable-mutating-webhook=false
+
 .PHONY: install
 install:
 	@cd ../installer; \
-	APPSCODE_ENV=dev KUBEDB_OPERATOR_TAG=$(TAG) KUBEDB_CATALOG=pgbouncer ./deploy/kubedb.sh --operator-name=$(BIN) --docker-registry=$(REGISTRY) --image-pull-secret=$(REGISTRY_SECRET)
+		git checkout master; \
+		APPSCODE_ENV=dev KUBEDB_OPERATOR_TAG=$(TAG) KUBEDB_CATALOG=pgbouncer ./deploy/kubedb.sh --operator-name=$(BIN) --docker-registry=$(REGISTRY) --image-pull-secret=$(REGISTRY_SECRET)
+	@echo "updating validating and mutating webhooks"
+	kubectl apply -f ./hack/dev/webhook.yaml
 
 .PHONY: uninstall
 uninstall:
@@ -365,8 +376,21 @@ verify-gen: gen fmt
 		echo "files are out of date, run make gen fmt"; exit 1; \
 	fi
 
+.PHONY: check-license
+check-license:
+	@echo "Checking files have proper license header"
+	@docker run --rm 	                                 \
+		-u $$(id -u):$$(id -g)                           \
+		-v /tmp:/.cache                                  \
+		-v $$(pwd):$(DOCKER_REPO_ROOT)                   \
+		-w $(DOCKER_REPO_ROOT)                           \
+		--env HTTP_PROXY=$(HTTP_PROXY)                   \
+		--env HTTPS_PROXY=$(HTTPS_PROXY)                 \
+		$(BUILD_IMAGE)                                   \
+		ltag -t "./hack/license" --excludes "vendor contrib libbuild" --check -v
+
 .PHONY: ci
-ci: verify lint build unit-tests #cover
+ci: verify check-license lint build unit-tests #cover
 
 .PHONY: qa
 qa:

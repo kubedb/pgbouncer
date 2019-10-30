@@ -1,5 +1,5 @@
 "user1" "user1"
-"postgres" "1wNkU9k8JWRxxhMA"
+"postgres" "OjJtpxGVPeBPGbUS"
 "pgbouncer" "kubedb123"
 "rezoan" "rezoan"
 "admin1" "admin"
