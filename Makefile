@@ -334,8 +334,8 @@ $(BUILD_DIRS):
 .PHONY: install-postgres-operator
 install-postgres-operator:
 	@cd ../installer; \
-	git checkout v0.13.0-rc.0; \
-	KUBEDB_CATALOG=postgres ./deploy/kubedb.sh --operator-name=pg-operator --enable-validating-webhook=false --enable-mutating-webhook=false
+		git checkout v0.13.0-rc.0; \
+		KUBEDB_CATALOG=postgres ./deploy/kubedb.sh --operator-name=pg-operator --enable-validating-webhook=false --enable-mutating-webhook=false
 
 .PHONY: install
 install:

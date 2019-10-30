@@ -79,7 +79,6 @@ jobs:
     - name: Install PostgreSQL operator
       run: |
         export KUBECONFIG="$(kind get kubeconfig-path)"
-        pushd ../installer && git checkout v0.13.0-rc.0 && popd
         make install-postgres-operator
 
     - name: Run e2e tests
@@ -95,11 +94,12 @@ jobs:
         echo -n "$TEST_CREDENTIALS" > hack/config/.env
         echo >> hack/config/.env
         echo "GOOGLE_SERVICE_ACCOUNT_JSON_KEY=$(echo $GOOGLE_SERVICE_ACCOUNT_JSON_KEY)" >> hack/config/.env
-        pushd ../installer && git checkout pgbouncer && popd
         make install
         echo "operator logs"
         kubectl logs -n kube-system deployment/kubedb-pgbouncer-operator -c operator
         echo
         make e2e-tests
-        echo "operator logs"
+        echo "operator logs _____________________"
         kubectl logs -n kube-system deployment/kubedb-pgbouncer-operator -c operator
+        echo "cluster events _____________________"
+        kubectl get events
