@@ -135,7 +135,7 @@ var _ = Describe("PgBouncer", func() {
 
 		Context("General", func() {
 			It("Should have a running postgres", checkPostgres)
-			It("Should ping pgbouncer server", func() {
+			FIt("Should ping pgbouncer server", func() {
 				createAndRunPgBouncer()
 				By("Ping PgBouncer")
 				err = f.EventuallyPingPgBouncerServer(pgbouncer.ObjectMeta)

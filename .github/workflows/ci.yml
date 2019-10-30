@@ -97,5 +97,9 @@ jobs:
         echo "GOOGLE_SERVICE_ACCOUNT_JSON_KEY=$(echo $GOOGLE_SERVICE_ACCOUNT_JSON_KEY)" >> hack/config/.env
         pushd ../installer && git checkout pgbouncer && popd
         make install
+        echo "operator logs"
+        kubectl logs -n kube-system deployment/kubedb-pgbouncer-operator -c operator
         echo
         make e2e-tests
+        echo "operator logs"
+        kubectl logs -n kube-system deployment/kubedb-pgbouncer-operator -c operator
