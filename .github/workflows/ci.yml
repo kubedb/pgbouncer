@@ -26,11 +26,11 @@ jobs:
     - name: Available platforms
       run: echo ${{ steps.buildx.outputs.platforms }}
 
-    # - name: Run checks
-    #   run: |
-    #     sudo apt-get -qq update
-    #     sudo apt-get install -y bzr
-    #     make ci
+    - name: Run checks
+      run: |
+        sudo apt-get -qq update
+        sudo apt-get install -y bzr
+        make ci
 
     - name: Build
       env:
