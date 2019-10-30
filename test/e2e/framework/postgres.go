@@ -17,7 +17,6 @@ package framework
 
 import (
 	"fmt"
-	v1 "k8s.io/api/apps/v1"
 	"strconv"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	jtypes "github.com/appscode/go/encoding/json/types"
 	"github.com/appscode/go/types"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"

@@ -20,6 +20,10 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	"kubedb.dev/pgbouncer/pkg/controller"
+
 	"github.com/go-xorm/xorm"
 	_ "github.com/lib/pq"
 	. "github.com/onsi/gomega"
@@ -30,8 +34,6 @@ import (
 	"kmodules.xyz/client-go/tools/exec"
 	"kmodules.xyz/client-go/tools/portforward"
 	appcat "kmodules.xyz/custom-resources/apis/appcatalog/v1alpha1"
-	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
-	"kubedb.dev/pgbouncer/pkg/controller"
 )
 
 const (
@@ -274,7 +276,7 @@ func (f *Framework) CreateUserViaPgBouncer(meta metav1.ObjectMeta, username, pas
 }
 
 func (f *Framework) ApplyCMD(meta metav1.ObjectMeta, username, password, sqlCommand, dbName string) (string, error) {
-	pod,_,port32, err := f.getPodPassPort(meta)
+	pod, _, port32, err := f.getPodPassPort(meta)
 	if err != nil {
 		return "", err
 	}
