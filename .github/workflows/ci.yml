@@ -98,7 +98,7 @@ jobs:
         echo "operator logs"
         kubectl logs -n kube-system deployment/kubedb-pgbouncer-operator -c operator
         echo
-        make e2e-tests
+        make e2e-tests || true
         echo "operator logs _____________________"
         kubectl logs -n kube-system deployment/kubedb-pgbouncer-operator -c operator
         echo "cluster events _____________________"
