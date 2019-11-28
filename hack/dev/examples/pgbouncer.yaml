@@ -19,8 +19,8 @@ spec:
       namespace: demo
   connectionPool:
     port: 5432
-    maxClientConn: 20
-    reservePoolSize: 5
+    maxClientConnections: 20
+    reservePoolSize: 7
     adminUsers:
     - admin
     - admin1

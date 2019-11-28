@@ -42,22 +42,24 @@ const (
 	testDB   = "tmpdb"
 )
 
-func (f *Framework) ForwardPort(meta metav1.ObjectMeta) (*portforward.Tunnel, error) {
-	postgres, err := f.GetPostgres(meta)
-	if err != nil {
-		return nil, err
+func (f *Framework) ForwardPort(meta metav1.ObjectMeta, port *int) (*portforward.Tunnel, error) {
+	var defaultPort = controller.DefaultHostPort
+	if port != nil {
+		defaultPort = *port
 	}
-
-	clientPodName := fmt.Sprintf("%v-0", postgres.Name)
+	println("default port = ", defaultPort)
+	clientPodName := fmt.Sprintf("%v-0", meta.Name)
 	tunnel := portforward.NewTunnel(
 		f.kubeClient.CoreV1().RESTClient(),
 		f.restConfig,
-		postgres.Namespace,
+		meta.Namespace,
 		clientPodName,
-		controller.DefaultHostPort,
+		defaultPort,
 	)
 	if err := tunnel.ForwardPort(); err != nil {
 		return nil, err
+	} else {
+		println("So fat no err till ForwardPort func")
 	}
 	return tunnel, nil
 }
@@ -70,7 +72,7 @@ func (f *Framework) GetPostgresClient(tunnel *portforward.Tunnel, dbName string,
 func (f *Framework) EventuallyPingDatabase(meta metav1.ObjectMeta, dbName string, userName string) GomegaAsyncAssertion {
 	return Eventually(
 		func() bool {
-			tunnel, err := f.ForwardPort(meta)
+			tunnel, err := f.ForwardPort(meta, nil)
 			if err != nil {
 				return false
 			}

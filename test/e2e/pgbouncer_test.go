@@ -170,5 +170,19 @@ var _ = Describe("PgBouncer", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
+
+		Context("Exporter", func() {
+			It("should export selected metrics", func() {
+				By("Add monitoring configurations to pgbouncer")
+				f.AddMonitor(pgbouncer)
+				// Create PgBouncer
+				createAndRunPgBouncer()
+				By("Verify exporter")
+				err = f.VerifyExporter(pgbouncer.ObjectMeta)
+				Expect(err).NotTo(HaveOccurred())
+				//Now port forward
+				//check whether we can connect to it
+			})
+		})
 	})
 })

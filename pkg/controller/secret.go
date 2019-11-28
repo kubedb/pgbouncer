@@ -28,6 +28,7 @@ import (
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	kutil "kmodules.xyz/client-go"
 )
 
@@ -96,10 +97,7 @@ func (c *Controller) checkForPgBouncerSecret(pgbouncer *api.PgBouncer, secretInf
 			return err
 		}
 	}
-	//need to ensure statefulset to mount volume containing the list, and configmap to load userlist from that path
-	//if err := c.manageStatefulSet(pgbouncer); err != nil {
-	//	return err
-	//}
+
 	if err = c.manageConfigMap(pgbouncer); err != nil {
 		return err
 	}
@@ -212,6 +210,19 @@ func (c *Controller) getUserListSecretData(userSecret *core.Secret, key string) 
 
 func (c *Controller) removeDefaultSecret(namespace string, name string) error {
 	return c.Client.CoreV1().Secrets(namespace).Delete(name, &v1.DeleteOptions{})
+}
+
+func (c *Controller) waitUntilSecretReady(meta metav1.ObjectMeta) error {
+	return wait.PollImmediate(kutil.RetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
+		_, err := c.Client.CoreV1().Secrets(meta.Namespace).Get(meta.Name, v1.GetOptions{})
+		if err == nil {
+			return true, nil
+		}
+		if kerr.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	})
 }
 
 //func (c *Controller) createOrPatchDefaultSecret(pgbouncer *api.PgBouncer, adminSecretExists bool)  error{
