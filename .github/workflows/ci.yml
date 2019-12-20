@@ -45,6 +45,7 @@ jobs:
       id: kind
       uses: engineerd/setup-kind@v0.1.0
       with:
+        version: v0.6.1
         config: hack/kubernetes/kind.yaml
 
     - name: Prepare cluster for testing
@@ -66,6 +67,9 @@ jobs:
         kubectl wait --for=condition=Ready pods -n local-path-storage --all --timeout=5m
         kubectl apply -f hack/kubernetes/storageclass/standard.yaml
         echo
+        echo "install helm 3"
+        curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+        echo
         echo "create docker-registry secret"
         kubectl create secret docker-registry ${REGISTRY_SECRET} --namespace=kube-system --docker-server=https://index.docker.io/v1/ --docker-username=${USERNAME} --docker-password=${DOCKER_TOKEN}
 
@@ -79,7 +83,7 @@ jobs:
     - name: Install PostgreSQL operator
       run: |
         export KUBECONFIG="$(kind get kubeconfig-path)"
-        make install-postgres-operator
+        make postgres-install
 
     - name: Run e2e tests
       env:
