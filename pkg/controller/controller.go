@@ -116,8 +116,7 @@ func (c *Controller) EnsureCustomResourceDefinitions() error {
 		catalog.PgBouncerVersion{}.CustomResourceDefinition(),
 		appcat_util.AppBinding{}.CustomResourceDefinition(),
 	}
-	err := apiext_util.RegisterCRDs(c.ApiExtKubeClient, crds)
-	return err
+	return apiext_util.RegisterCRDs(c.Client.Discovery(), c.ApiExtKubeClient, crds)
 }
 
 // InitInformer initializes PgBouncer, DormantDB amd Snapshot watcher

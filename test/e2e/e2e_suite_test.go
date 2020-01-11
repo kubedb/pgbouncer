@@ -66,7 +66,6 @@ func init() {
 	flag.StringVar(&storageClass, "storageclass", storageClass, "Kubernetes StorageClass name")
 	flag.StringVar(&framework.DockerRegistry, "docker-registry", framework.DockerRegistry, "User provided docker repository")
 	flag.StringVar(&framework.DBCatalogName, "db-catalog", framework.DBCatalogName, "PgBouncer version")
-	flag.BoolVar(&framework.SelfHostedOperator, "selfhosted-operator", framework.SelfHostedOperator, "Enable this for self-hosted operator")
 }
 
 const (
@@ -114,19 +113,10 @@ var _ = BeforeSuite(func() {
 	By("Setup Operators")
 	root.InstallKubeDBOperators(kubeconfigPath)
 
-	//if !framework.SelfHostedOperator {
-	//	stopCh := genericapiserver.SetupSignalHandler()
-	//	go root.RunPgBouncerOperatorAndServer(config, kubeconfigPath, stopCh)
-	//}
-
 	root.EventuallyCRD().Should(Succeed())
 })
 
 var _ = AfterSuite(func() {
-	//if !framework.SelfHostedOperator {
-	//	By("Delete Admission Controller Configs")
-	//	root.CleanAdmissionConfigs()
-	//}
 	By("Delete left over PgBouncer objects")
 	root.CleanPgBouncer()
 	By("Delete left over Postgres objects")
