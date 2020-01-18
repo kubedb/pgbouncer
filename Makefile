@@ -339,6 +339,8 @@ else
 	IMAGE_PULL_SECRETS = --set imagePullSecrets[0]=$(REGISTRY_SECRET)
 endif
 
+POSTGRES_TAG ?= v0.13.0-rc.0
+
 .PHONY: postgres-install
 postgres-install:
 	@cd ../installer; \
@@ -346,12 +348,13 @@ postgres-install:
 		--namespace=kube-system \
 		--set kubedb.registry=$(REGISTRY) \
 		--set kubedb.repository=pg-operator \
-		--set kubedb.tag=v0.13.0-rc.0 \
+		--set kubedb.tag=$(POSTGRES_TAG) \
 		--set apiserver.enableMutatingWebhook=false \
 		--set apiserver.enableValidatingWebhook=false \
 		--set imagePullPolicy=Always \
 		$(IMAGE_PULL_SECRETS); \
 	kubectl wait --for=condition=Ready pods -n kube-system -l app=kubedb --timeout=5m; \
+	until kubectl get crds -l app=kubedb -o=jsonpath='{.items[0].metadata.name}' &> /dev/null; do sleep 1; done; \
 	kubectl wait --for=condition=Established crds -l app=kubedb --timeout=5m; \
 	helm install kubedb-postgres-catalog charts/kubedb-catalog \
 		--namespace=kube-system \
@@ -372,12 +375,13 @@ install:
 	helm install kubedb charts/kubedb \
 		--namespace=kube-system \
 		--set kubedb.registry=$(REGISTRY) \
-		--set kubedb.repository=proxysql-operator \
+		--set kubedb.repository=pgbouncer-operator \
 		--set kubedb.tag=$(TAG) \
 		--set imagePullPolicy=Always \
 		$(IMAGE_PULL_SECRETS); \
 	kubectl wait --for=condition=Ready pods -n kube-system -l app=kubedb --timeout=5m; \
 	kubectl wait --for=condition=Available apiservice -l app=kubedb --timeout=5m; \
+	until kubectl get crds pgbouncers.kubedb.com -o=jsonpath='{.items[0].metadata.name}' &> /dev/null; do sleep 1; done; \
 	helm install kubedb-catalog charts/kubedb-catalog \
 		--namespace=kube-system \
 		--set catalog.elasticsearch=false \

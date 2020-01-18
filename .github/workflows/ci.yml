@@ -93,7 +93,7 @@ jobs:
 
     - name: Install PostgreSQL operator
       run: |
-        make postgres-install
+        make postgres-install POSTGRES_TAG=v0.13.0-rc.0-15-gfa55b472_linux_amd64
 
     - name: Run e2e tests
       env:
