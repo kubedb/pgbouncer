@@ -64,8 +64,8 @@ func (i *Invocation) PgBouncer() *api.PgBouncer {
 			},
 
 			ConnectionPool: &api.ConnectionPoolConfig{
-				ReservePoolSize:      types.IntP(ReservePoolSize),
-				MaxClientConnections: types.IntP(MaxClientConnections),
+				ReservePoolSize:      types.Int64P(ReservePoolSize),
+				MaxClientConnections: types.Int64P(MaxClientConnections),
 				AdminUsers: []string{
 					"admin1",
 				},

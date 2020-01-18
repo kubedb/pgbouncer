@@ -95,7 +95,7 @@ func (f *Framework) EventuallyPingDatabase(meta metav1.ObjectMeta, dbName string
 }
 
 func (f *Framework) EventuallyPingPgBouncerServer(meta metav1.ObjectMeta) error {
-	return wait.PollImmediate(operatorGetRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
+	return wait.PollImmediate(time.Second, kutil.ReadinessTimeout, func() (bool, error) {
 		return f.PingPgBouncerServer(meta)
 	})
 }

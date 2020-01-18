@@ -122,11 +122,13 @@ func (c *Controller) generateConfig(pgbouncer *api.PgBouncer) (string, error) {
 				//Reminder URL should contain host=localhost port=5432
 				buf.WriteString(fmt.Sprint(db.Alias + " = " + *(appBinding.Spec.ClientConfig.URL) + " dbname=" + db.DatabaseName))
 			}
-			if db.UserName != "" {
-				buf.WriteString(fmt.Sprint(" user=", db.UserName))
-			}
-			if db.Password != "" {
-				buf.WriteString(fmt.Sprint(" password=", db.Password))
+			if db.DatabaseSecretRef != nil {
+				secret, err := c.Client.CoreV1().Secrets(pgbouncer.Namespace).Get(db.DatabaseSecretRef.Name, metav1.GetOptions{})
+				if err == nil {
+					buf.WriteString(fmt.Sprint(" user=", string(secret.Data["username"])))
+					buf.WriteString(fmt.Sprint(" password=", string(secret.Data["password"])))
+				}
+				//TODO: add to doc that the secret has `user` and `password` fields
 			}
 			buf.WriteRune('\n')
 		}
