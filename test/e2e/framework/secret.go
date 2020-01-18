@@ -22,6 +22,7 @@ import (
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/pgbouncer/pkg/controller"
 
+	"github.com/appscode/go/crypto/rand"
 	"github.com/appscode/go/log"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
@@ -40,28 +41,26 @@ func (f *Framework) CreateSecret(obj *core.Secret) error {
 	return err
 }
 
-func (f *Framework) CreateUserListSecret() error {
+func (f *Framework) GetUserListSecret() *core.Secret {
 	username, password, err := f.GetPostgresCredentials()
 	if err != nil {
-		return err
+		log.Infoln(err)
 	}
-	useListSecretSpec := &core.Secret{
+	userListSecretSpec := &core.Secret{
 		StringData: map[string]string{
 			"userlist.txt": fmt.Sprintf(`"%s" "%s"
 "%s" "%s"`, username, password, testUser, testPass),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      PgBouncerUserListSecret,
+			Name:      rand.WithUniqSuffix(PgBouncerUserListSecret),
 			Namespace: f.namespace,
 		},
-		//TypeMeta: metav1.TypeMeta{},
 	}
-	_, err = f.kubeClient.CoreV1().Secrets(f.namespace).Create(useListSecretSpec)
-	return err
+	return userListSecretSpec
 }
 
-func (f *Framework) AddUserToUserListSecret(username, password string) error {
-	sec, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(PgBouncerUserListSecret, metav1.GetOptions{})
+func (f *Framework) AddUserToUserListSecret(meta metav1.ObjectMeta, username, password string) error {
+	sec, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(meta.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -130,14 +129,13 @@ func (f *Framework) CheckSecret() error {
 	return err
 }
 
-func (f *Framework) CheckUserListSecret() error {
-	_, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(PgBouncerUserListSecret, metav1.GetOptions{})
+func (f *Framework) CheckUserListSecret(meta metav1.ObjectMeta) error {
+	_, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(meta.Name, metav1.GetOptions{})
 	return err
 }
 
-func (f *Framework) DeleteUserListSecret() error {
-	err := f.kubeClient.CoreV1().Secrets(f.namespace).Delete(PgBouncerUserListSecret, &metav1.DeleteOptions{})
-	return err
+func (f *Framework) DeleteUserListSecret(meta metav1.ObjectMeta) error {
+	return f.kubeClient.CoreV1().Secrets(f.namespace).Delete(meta.Name, &metav1.DeleteOptions{})
 }
 
 func (f *Framework) GetPostgresCredentials() (string, string, error) {

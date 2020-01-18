@@ -18,16 +18,20 @@ package framework
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 	"kubedb.dev/pgbouncer/pkg/controller"
 
+	"github.com/appscode/go/types"
 	"github.com/go-xorm/xorm"
 	_ "github.com/lib/pq"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kutil "kmodules.xyz/client-go"
@@ -42,23 +46,24 @@ const (
 	testDB   = "tmpdb"
 )
 
-func (f *Framework) ForwardPort(meta metav1.ObjectMeta) (*portforward.Tunnel, error) {
-	postgres, err := f.GetPostgres(meta)
-	if err != nil {
-		return nil, err
+func (f *Framework) ForwardPort(meta metav1.ObjectMeta, port *int) (*portforward.Tunnel, error) {
+	var defaultPort = controller.DefaultHostPort
+	if port != nil {
+		defaultPort = *port
 	}
 
-	clientPodName := fmt.Sprintf("%v-0", postgres.Name)
+	clientPodName := fmt.Sprintf("%v-0", meta.Name)
 	tunnel := portforward.NewTunnel(
 		f.kubeClient.CoreV1().RESTClient(),
 		f.restConfig,
-		postgres.Namespace,
+		meta.Namespace,
 		clientPodName,
-		controller.DefaultHostPort,
+		defaultPort,
 	)
 	if err := tunnel.ForwardPort(); err != nil {
 		return nil, err
 	}
+
 	return tunnel, nil
 }
 
@@ -70,7 +75,7 @@ func (f *Framework) GetPostgresClient(tunnel *portforward.Tunnel, dbName string,
 func (f *Framework) EventuallyPingDatabase(meta metav1.ObjectMeta, dbName string, userName string) GomegaAsyncAssertion {
 	return Eventually(
 		func() bool {
-			tunnel, err := f.ForwardPort(meta)
+			tunnel, err := f.ForwardPort(meta, nil)
 			if err != nil {
 				return false
 			}
@@ -97,11 +102,16 @@ func (f *Framework) EventuallyPingPgBouncerServer(meta metav1.ObjectMeta) error 
 		return f.PingPgBouncerServer(meta)
 	})
 }
+func (f *Framework) EventuallyPingPgBouncerServerOverTLS(meta metav1.ObjectMeta) error {
+	return wait.PollImmediate(operatorGetRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
+		return f.PingPgBouncerServerOverTLS(meta)
+	})
+}
 
 func (f *Framework) PingPgBouncerServer(meta metav1.ObjectMeta) (bool, error) {
 	pod, password, port32, err := f.getPodPassPort(meta)
 	if err != nil {
-		return false, err
+		return false, nil
 	}
 	port := int(*port32)
 
@@ -109,18 +119,35 @@ func (f *Framework) PingPgBouncerServer(meta metav1.ObjectMeta) (bool, error) {
 	outText, err := exec.ExecIntoPod(f.restConfig, pod, exec.Command("env", fmt.Sprintf("PGPASSWORD=%s", password),
 		"psql", "--host=localhost", fmt.Sprintf("--port=%d", port), "--user=kubedb", pgbouncer, "--command=RELOAD"))
 	if err != nil {
-		return false, err
+		return false, nil
 	}
 
-	return strings.TrimSpace(outText) == CmdReload, nil
+	return strings.TrimSpace(outText) == reloadCMD, nil
+}
+
+func (f *Framework) PingPgBouncerServerOverTLS(meta metav1.ObjectMeta) (bool, error) {
+	pod, password, port32, err := f.getPodPassPort(meta)
+	if err != nil {
+		return false, nil
+	}
+
+	port := int(*port32)
+	pgbouncer := api.ResourceSingularPgBouncer
+
+	outText, err := exec.ExecIntoPod(f.restConfig, pod, exec.Command("psql",
+		fmt.Sprintf("host=localhost port=%d user=kubedb password=%s dbname=%s sslcert=%s sslkey=%s sslrootcert=%s sslmode=verify-full",
+			port, password, pgbouncer, filepath.Join(controller.ServingClientCertMountPath, "tls.crt"), filepath.Join(controller.ServingClientCertMountPath, "tls.key"),
+			filepath.Join(controller.ServingClientCertMountPath, "ca.crt")),
+		"--command=RELOAD"))
+	if err != nil {
+		return false, nil
+	}
+
+	return strings.TrimSpace(outText) == reloadCMD, nil
 }
 
 func (f *Framework) CheckPostgres(db *xorm.Engine) error {
 	return db.Ping()
-}
-
-type PgStatArchiver struct {
-	ArchivedCount int
 }
 
 func (f *Framework) PoolViaPgBouncer(meta metav1.ObjectMeta) error {
@@ -151,7 +178,6 @@ func (f *Framework) PoolViaPgBouncer(meta metav1.ObjectMeta) error {
 
 func (f *Framework) CreateTableViaPgBouncer(meta metav1.ObjectMeta, username, password, dbName string) error {
 	sqlCommand := "CREATE TABLE cities (name varchar(80), location varchar(80));"
-
 	outText, err := f.ApplyCMD(meta, username, password, sqlCommand, dbName)
 	if err != nil {
 		return err
@@ -177,6 +203,7 @@ func (f *Framework) CheckTableViaPgBouncer(meta metav1.ObjectMeta, username, pas
 	if !strings.Contains(outText, cityName) || !strings.Contains(outText, cityLocation) {
 		return errors.New("can't find data")
 	}
+
 	return nil
 }
 
@@ -189,6 +216,7 @@ func (f *Framework) DropTableViaPgBouncer(meta metav1.ObjectMeta, username, pass
 	if outText != "DROP TABLE" {
 		return errors.New("can't drop table")
 	}
+
 	return nil
 }
 
@@ -212,14 +240,14 @@ func (f *Framework) CreateUserAndDatabaseViaPgBouncer(meta metav1.ObjectMeta) er
 	if err != nil {
 		return err
 	}
-
 	//Add database info to pgbouncer
 	_, err = f.PatchPgBouncer(meta, func(in *api.PgBouncer) *api.PgBouncer {
 		tmpDB := api.Databases{
 			Alias:        testDB,
 			DatabaseName: testDB,
 			DatabaseRef: appcat.AppReference{
-				Name: PostgresName,
+				Name:      PostgresName,
+				Namespace: meta.Namespace,
 			},
 		}
 		in.Spec.Databases = append(in.Spec.Databases, tmpDB)
@@ -228,13 +256,11 @@ func (f *Framework) CreateUserAndDatabaseViaPgBouncer(meta metav1.ObjectMeta) er
 	if err != nil {
 		return err
 	}
-	err = f.waitUntilPatchedConfigMapReady(meta)
-	if err != nil {
+	if err = f.waitUntilPatchedConfigMapReady(meta); err != nil {
 		return err
 	}
 
-	err = f.CreateTableViaPgBouncer(meta, testUser, testPass, testDB)
-	if err != nil {
+	if err = f.CreateTableViaPgBouncer(meta, testUser, testPass, testDB); err != nil {
 		return err
 	}
 
@@ -260,6 +286,7 @@ func (f *Framework) CreateDatabaseViaPgBouncer(meta metav1.ObjectMeta, username,
 	if outText != "CREATE DATABASE" {
 		return errors.New("can't create database")
 	}
+
 	return nil
 }
 
@@ -272,6 +299,7 @@ func (f *Framework) CreateUserViaPgBouncer(meta metav1.ObjectMeta, username, pas
 	if outText != "CREATE ROLE" {
 		return errors.New("can't create user")
 	}
+
 	return nil
 }
 
@@ -281,14 +309,13 @@ func (f *Framework) ApplyCMD(meta metav1.ObjectMeta, username, password, sqlComm
 		return "", err
 	}
 	port := int(*port32)
-
 	outText, err := exec.ExecIntoPod(f.restConfig, pod, exec.Command("env", fmt.Sprintf("PGPASSWORD=%s", password),
 		"psql", "--host=localhost", fmt.Sprintf("--port=%d", port), fmt.Sprintf("--user=%s", username), dbName, fmt.Sprintf("--command=%s", sqlCommand)))
 	if err != nil {
 		return "", err
 	}
 
-	return strings.TrimSpace(string(outText)), nil
+	return strings.TrimSpace(outText), nil
 }
 
 func (f *Framework) waitUntilPatchedConfigMapReady(meta metav1.ObjectMeta) error {
@@ -296,6 +323,7 @@ func (f *Framework) waitUntilPatchedConfigMapReady(meta metav1.ObjectMeta) error
 	if err != nil {
 		return err
 	}
+
 	return wait.PollImmediate(time.Second, kutil.ReadinessTimeout, func() (bool, error) {
 		outText, err := exec.ExecIntoPod(f.restConfig, pod, exec.Command("cat", "/var/run/pgbouncer/pb_status"))
 		if err != nil {
@@ -308,8 +336,8 @@ func (f *Framework) waitUntilPatchedConfigMapReady(meta metav1.ObjectMeta) error
 	})
 }
 
+// getPodPassPort returns the pgbouncer pod, pgbouncer admin pass, and pgbouncer listen port
 func (f *Framework) getPodPassPort(meta metav1.ObjectMeta) (*v1.Pod, string, *int32, error) {
-	//returns the pgbouncer pod, pgbouncer admin pass, and pgbouncer listen port
 	pb, err := f.dbClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", nil, err
@@ -319,10 +347,38 @@ func (f *Framework) getPodPassPort(meta metav1.ObjectMeta) (*v1.Pod, string, *in
 	if err != nil {
 		return nil, "", nil, err
 	}
-	pass, err := exec.ExecIntoPod(f.restConfig, pod, exec.Command("cat", "/var/run/pgbouncer/secret/pb-password"))
+
+	pass, err := exec.ExecIntoPod(f.restConfig, pod, exec.Command("cat", filepath.Join(controller.UserListMountPath, "pb-password")))
 	if err != nil {
 		return nil, "", nil, err
 	}
-	return pod, strings.TrimSpace(pass), pb.Spec.ConnectionPool.Port, nil
 
+	return pod, strings.TrimSpace(pass), pb.Spec.ConnectionPool.Port, nil
+}
+
+func (f *Framework) WaitUntilPrimaryContainerReady(meta metav1.ObjectMeta) error {
+	// primary container may a while to serve responses after pulling the image
+	sts, err := f.kubeClient.AppsV1().StatefulSets(f.namespace).Get(meta.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	err = wait.PollImmediate(time.Second, kutil.ReadinessTimeout, func() (bool, error) {
+		for i := 0; i < int(types.Int32(sts.Spec.Replicas)); i++ {
+			pod, err := f.kubeClient.CoreV1().Pods(meta.Namespace).Get(meta.Name+"-"+strconv.Itoa(i), metav1.GetOptions{})
+			if err != nil {
+				if kerr.IsNotFound(err) {
+					return false, nil
+				} else {
+					return false, err
+				}
+			}
+			_, err = exec.ExecIntoPod(f.restConfig, pod, exec.Command("cat", filepath.Join(controller.UserListMountPath, "pb-password")))
+			if err != nil {
+				return false, nil
+			}
+		}
+		return true, nil
+	})
+	return err
 }

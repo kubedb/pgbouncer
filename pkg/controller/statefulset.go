@@ -293,11 +293,12 @@ func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pg
 		}
 
 		adminSecretSpec := c.GetDefaultSecretSpec(pgbouncer)
-		adminSecret, err := c.Client.CoreV1().Secrets(adminSecretSpec.Namespace).Get(adminSecretSpec.Name, metav1.GetOptions{})
+		err := c.waitUntilSecretReady(adminSecretSpec.ObjectMeta)
 		if err != nil {
 			log.Infoln(err)
+			//Dont make changes if error occurs
+			return statefulSet
 		}
-		adminPassword := string(adminSecret.Data[pbAdminPassword])
 
 		container := core.Container{
 			Name: "exporter",
@@ -322,10 +323,20 @@ func (c *Controller) upsertMonitoringContainer(statefulSet *apps.StatefulSet, pg
 		envList := []core.EnvVar{
 			{
 				Name:  "DATA_SOURCE_NAME",
-				Value: fmt.Sprintf("postgres://%s:%s@localhost:%d/%s?sslmode=disable", pbAdminUser, adminPassword, *pgbouncer.Spec.ConnectionPool.Port, pbAdminDatabase),
+				Value: fmt.Sprintf("postgres://%s:@localhost:%d/%s?sslmode=disable", pbAdminUser, *pgbouncer.Spec.ConnectionPool.Port, pbAdminDatabase),
+				//format = "postgres://YourUserName:YourPassword@YourHost:5432/databseName";
 			},
-
-			//format = "postgres://YourUserName:YourPassword@YourHost:5432/databseName";
+			{
+				Name: "PGPASSWORD",
+				ValueFrom: &core.EnvVarSource{
+					SecretKeyRef: &core.SecretKeySelector{
+						LocalObjectReference: core.LocalObjectReference{
+							Name: adminSecretSpec.Name,
+						},
+						Key: pbAdminPassword,
+					},
+				},
+			},
 		}
 		container.Env = core_util.UpsertEnvVars(container.Env, envList...)
 		containers := statefulSet.Spec.Template.Spec.Containers

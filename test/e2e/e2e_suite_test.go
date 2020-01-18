@@ -39,14 +39,13 @@ import (
 	"kmodules.xyz/client-go/logs"
 	"kmodules.xyz/client-go/tools/clientcmd"
 	appcat_cs "kmodules.xyz/custom-resources/client/clientset/versioned/typed/appcatalog/v1alpha1"
-	scs "stash.appscode.dev/stash/client/clientset/versioned"
 )
 
 // To Run E2E tests:
-//
-// 1. ./hack/make.py test e2e
-//
-// 2. ./hack/make.py test e2e --v=1  --docker-registry=kubedbci --db-catalog=10.2-v1 --db-version=10.2-v2 --db-tools=10.2-v2 --selfhosted-operator=true
+// 1. have kubedb operator (or postgres+pgbouncer operators) running
+//  - make install-postgres-operator
+//  - make install
+// 2. make e2e-tests
 
 var (
 	storageClass   = "standard"
@@ -66,7 +65,6 @@ func init() {
 	flag.StringVar(&storageClass, "storageclass", storageClass, "Kubernetes StorageClass name")
 	flag.StringVar(&framework.DockerRegistry, "docker-registry", framework.DockerRegistry, "User provided docker repository")
 	flag.StringVar(&framework.DBCatalogName, "db-catalog", framework.DBCatalogName, "PgBouncer version")
-	flag.BoolVar(&framework.SelfHostedOperator, "selfhosted-operator", framework.SelfHostedOperator, "Enable this for self-hosted operator")
 }
 
 const (
@@ -101,40 +99,28 @@ var _ = BeforeSuite(func() {
 	kaClient := ka.NewForConfigOrDie(config)
 	appCatalogClient := appcat_cs.NewForConfigOrDie(config)
 	aPIExtKubeClient := kext_cs.NewForConfigOrDie(config)
-	stashClient := scs.NewForConfigOrDie(config)
 
 	// Framework
-	root = framework.New(config, kubeClient, aPIExtKubeClient, dbClient, kaClient, appCatalogClient, stashClient, storageClass)
+	root = framework.New(config, kubeClient, aPIExtKubeClient, dbClient, kaClient, appCatalogClient, storageClass)
 
 	// Create namespace
 	By("Using namespace " + root.Namespace())
 	err = root.CreateNamespace()
 	Expect(err).NotTo(HaveOccurred())
 
-	By("Setup Operators")
-	root.InstallKubeDBOperators(kubeconfigPath)
-
-	//if !framework.SelfHostedOperator {
-	//	stopCh := genericapiserver.SetupSignalHandler()
-	//	go root.RunPgBouncerOperatorAndServer(config, kubeconfigPath, stopCh)
-	//}
+	By("Setup postgres resources")
+	root.SetupPostgresResources(kubeconfigPath)
 
 	root.EventuallyCRD().Should(Succeed())
 })
 
 var _ = AfterSuite(func() {
-	//if !framework.SelfHostedOperator {
-	//	By("Delete Admission Controller Configs")
-	//	root.CleanAdmissionConfigs()
-	//}
 	By("Delete left over PgBouncer objects")
 	root.CleanPgBouncer()
 	By("Delete left over Postgres objects")
 	root.CleanPostgres()
 	By("Delete left over workloads if exists any")
 	root.CleanWorkloadLeftOvers()
-	//By("Delete Operator")
-	//root.DeleteOperatorAndServer()
 	By("Delete Namespace")
 	err := root.DeleteNamespace()
 	Expect(err).NotTo(HaveOccurred())

@@ -25,23 +25,28 @@ import (
 	"github.com/appscode/go/crypto/rand"
 	"github.com/appscode/go/types"
 	. "github.com/onsi/gomega"
+	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
+	kutil "kmodules.xyz/client-go"
+	core_util "kmodules.xyz/client-go/core/v1"
 	appcat "kmodules.xyz/custom-resources/apis/appcatalog/v1alpha1"
 )
 
 const (
 	kindEviction = "Eviction"
 	PostgresName = "postgres-for-pgbouncer-test"
-	pbVersion    = "1.12.0"
-	CmdReload    = "RELOAD"
+	pbVersion    = "1.10.0"
+	reloadCMD    = "RELOAD"
 	cityName     = "Dhaka"
 	cityLocation = "random Co-ordinates"
 )
 
-func (i *Invocation) PgBouncer() *api.PgBouncer {
+func (i *Invocation) PgBouncer(secret *core.Secret) *api.PgBouncer {
 	return &api.PgBouncer{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      rand.WithUniqSuffix(api.ResourceSingularPgBouncer),
@@ -58,19 +63,22 @@ func (i *Invocation) PgBouncer() *api.PgBouncer {
 					Alias:        api.ResourceSingularPostgres,
 					DatabaseName: api.ResourceSingularPostgres,
 					DatabaseRef: appcat.AppReference{
-						Name: PostgresName,
+						Name:      PostgresName,
+						Namespace: i.namespace,
 					},
 				},
 			},
 
 			ConnectionPool: &api.ConnectionPoolConfig{
+				ReservePoolSize:      types.Int64P(ReservePoolSize),
+				MaxClientConnections: types.Int64P(MaxClientConnections),
 				AdminUsers: []string{
 					"admin1",
 				},
 			},
 
 			UserListSecretRef: &core.LocalObjectReference{
-				Name: PgBouncerUserListSecret,
+				Name: secret.Name,
 			},
 		},
 	}
@@ -157,6 +165,60 @@ func (f *Framework) EventuallyPgBouncerRunning(meta metav1.ObjectMeta) GomegaAsy
 	)
 }
 
+func (f *Framework) EventuallyPodReadyForPgBouncer(meta metav1.ObjectMeta) GomegaAsyncAssertion {
+	return Eventually(
+		func() bool {
+			st, err := f.kubeClient.AppsV1().StatefulSets(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+			err = f.CheckStatefulSetPodStatus(st)
+			return err == nil
+		},
+		time.Minute*15,
+		time.Second*5,
+	)
+}
+
+func (f *Framework) CheckStatefulSetPodStatus(statefulSet *apps.StatefulSet) error {
+	err := WaitUntilPodRunningBySelector(
+		f.kubeClient,
+		statefulSet.Namespace,
+		statefulSet.Spec.Selector,
+		int(types.Int32(statefulSet.Spec.Replicas)),
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func WaitUntilPodRunningBySelector(kubeClient kubernetes.Interface, namespace string, selector *metav1.LabelSelector, count int) error {
+	r, err := metav1.LabelSelectorAsSelector(selector)
+	if err != nil {
+		return err
+	}
+
+	return wait.PollImmediate(kutil.RetryInterval, kutil.GCTimeout, func() (bool, error) {
+		podList, err := kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{
+			LabelSelector: r.String(),
+		})
+		if err != nil {
+			return true, nil
+		}
+
+		if len(podList.Items) != count {
+			return true, nil
+		}
+
+		for _, pod := range podList.Items {
+			runningAndReady, _ := core_util.PodRunningAndReady(pod)
+			if !runningAndReady {
+				return false, nil
+			}
+		}
+		return true, nil
+	})
+}
+
 func (f *Framework) CleanPgBouncer() {
 	pgbouncerList, err := f.dbClient.KubedbV1alpha1().PgBouncers(f.namespace).List(metav1.ListOptions{})
 	if err != nil {
@@ -176,72 +238,12 @@ func (f *Framework) CleanPgBouncer() {
 	}
 }
 
-//func (f *Framework) EvictPodsFromStatefulSet(meta metav1.ObjectMeta) error {
-//	var err error
-//	labelSelector := labels.Set{
-//		meta_util.ManagedByLabelKey: api.GenericKey,
-//		api.LabelDatabaseKind:       api.ResourceKindPgBouncer,
-//		api.LabelDatabaseName:       meta.GetName(),
-//	}
-//	// get sts in the namespace
-//	stsList, err := f.kubeClient.AppsV1().StatefulSets(meta.Namespace).List(metav1.ListOptions{LabelSelector: labelSelector.String()})
-//	if err != nil {
-//		return err
-//	}
-//	for _, sts := range stsList.Items {
-//		// if PDB is not found, send error
-//		var pdb *policy.PodDisruptionBudget
-//		pdb, err = f.kubeClient.PolicyV1beta1().PodDisruptionBudgets(sts.Namespace).Get(sts.Name, metav1.GetOptions{})
-//		if err != nil {
-//			return err
-//		}
-//		eviction := &policy.Eviction{
-//			TypeMeta: metav1.TypeMeta{
-//				APIVersion: policy.SchemeGroupVersion.String(),
-//				Kind:       kindEviction,
-//			},
-//			ObjectMeta: metav1.ObjectMeta{
-//				Name:      sts.Name,
-//				Namespace: sts.Namespace,
-//			},
-//			DeleteOptions: &metav1.DeleteOptions{},
-//		}
-//
-//		if pdb.Spec.MaxUnavailable == nil {
-//			return fmt.Errorf("found pdb %s spec.maxUnavailable nil", pdb.Name)
-//		}
-//
-//		// try to evict as many pod as allowed in pdb. No err should occur
-//		maxUnavailable := pdb.Spec.MaxUnavailable.IntValue()
-//		for i := 0; i < maxUnavailable; i++ {
-//			eviction.Name = sts.Name + "-" + strconv.Itoa(i)
-//
-//			err := f.kubeClient.PolicyV1beta1().Evictions(eviction.Namespace).Evict(eviction)
-//			if err != nil {
-//				return err
-//			}
-//		}
-//
-//		// try to evict one extra pod. TooManyRequests err should occur
-//		eviction.Name = sts.Name + "-" + strconv.Itoa(maxUnavailable)
-//		err = f.kubeClient.PolicyV1beta1().Evictions(eviction.Namespace).Evict(eviction)
-//		if kerr.IsTooManyRequests(err) {
-//			err = nil
-//		} else if err != nil {
-//			return err
-//		} else {
-//			return fmt.Errorf("expected pod %s/%s to be not evicted due to pdb %s", sts.Namespace, eviction.Name, pdb.Name)
-//		}
-//	}
-//	return err
-//}
-
 func (f *Framework) EventuallyWipedOut(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	return Eventually(
 		func() error {
 			labelMap := map[string]string{
 				api.LabelDatabaseName: meta.Name,
-				api.LabelDatabaseKind: api.ResourceKindPostgres,
+				api.LabelDatabaseKind: api.ResourceKindPgBouncer,
 			}
 			labelSelector := labels.SelectorFromSet(labelMap)
 
@@ -257,20 +259,6 @@ func (f *Framework) EventuallyWipedOut(meta metav1.ObjectMeta) GomegaAsyncAssert
 			if len(pvcList.Items) > 0 {
 				fmt.Println("PVCs have not wiped out yet")
 				return fmt.Errorf("PVCs have not wiped out yet")
-			}
-
-			// check if snapshot is wiped out
-			snapshotList, err := f.dbClient.KubedbV1alpha1().Snapshots(meta.Namespace).List(
-				metav1.ListOptions{
-					LabelSelector: labelSelector.String(),
-				},
-			)
-			if err != nil {
-				return err
-			}
-			if len(snapshotList.Items) > 0 {
-				fmt.Println("all snapshots have not wiped out yet")
-				return fmt.Errorf("all snapshots have not wiped out yet")
 			}
 
 			// check if secrets are wiped out

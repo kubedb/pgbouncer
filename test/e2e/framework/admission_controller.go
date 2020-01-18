@@ -33,25 +33,23 @@ const (
 	operatorGetRetryInterval = time.Second * 5
 )
 
-func (f *Framework) InstallKubeDBOperators(kubeconfigPath string) {
-	//sh := shell.NewSession()
-
-	//By("Installing Posgtres Operator")
-	//sh.SetDir("../../../postgres")
-	//err := sh.Command("env", "REGISTRY=rezoan", "make", "install").Run()
-	//Expect(err).ShouldNot(HaveOccurred())
-
+func (f *Framework) SetupPostgresResources(kubeconfigPath string) {
 	By("Setup postgres")
 	postgres := f.Invoke().Postgres()
-	err := f.CreatePostgres(postgres)
-	Expect(err).ShouldNot(HaveOccurred())
+	_, err := f.GetPostgres(postgres.ObjectMeta)
+	if kerr.IsNotFound(err) {
+		err := f.CreatePostgres(postgres)
+		Expect(err).ShouldNot(HaveOccurred())
+	}
 	By("Waiting for running Postgres")
 	err = f.WaitUntilPostgresReady(postgres.Name)
 	Expect(err).ShouldNot(HaveOccurred())
 }
+
 func (f *Framework) WaitUntilPostgresReady(name string) error {
 	return wait.PollImmediate(operatorGetRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
-		if pg, err := f.dbClient.KubedbV1alpha1().Postgreses(f.Namespace()).Get(name, metav1.GetOptions{}); err == nil {
+		pg, err := f.dbClient.KubedbV1alpha1().Postgreses(f.Namespace()).Get(name, metav1.GetOptions{})
+		if err == nil {
 			if pg.Status.Phase == api.DatabasePhaseRunning {
 				return true, nil
 			}
@@ -96,14 +94,3 @@ func (f *Framework) CleanAdmissionConfigs() {
 
 	time.Sleep(time.Second * 1) // let the kube-server know it!!
 }
-
-//func (f *Framework) DeleteOperatorAndServer() {
-//	sh := shell.NewSession()
-//	//args := []interface{}{"--minikube", fmt.Sprintf("--docker-registry=%v", DockerRegistry)
-//	sh.ShowCMD = true
-//	By("Deleteing Operator")
-//	sh.SetDir("../../")
-//	cmd := sh.Command("make", "uninstall")
-//	err := cmd.Run()
-//	Expect(err).ShouldNot(HaveOccurred())
-//}

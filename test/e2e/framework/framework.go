@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package framework
 
 import (
@@ -30,13 +31,11 @@ import (
 	"k8s.io/client-go/rest"
 	ka "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	appcat_cs "kmodules.xyz/custom-resources/client/clientset/versioned/typed/appcatalog/v1alpha1"
-	scs "stash.appscode.dev/stash/client/clientset/versioned"
 )
 
 var (
-	DockerRegistry     = "kubedbci"
-	SelfHostedOperator = false
-	DBCatalogName      = "10.2-v4"
+	DockerRegistry = "kubedbci"
+	DBCatalogName  = "10.2-v4"
 )
 
 type Framework struct {
@@ -46,7 +45,6 @@ type Framework struct {
 	dbClient         cs.Interface
 	kaClient         ka.Interface
 	appCatalogClient appcat_cs.AppcatalogV1alpha1Interface
-	stashClient      scs.Interface
 	namespace        string
 	name             string
 	StorageClass     string
@@ -60,8 +58,8 @@ func New(
 	dbClient cs.Interface,
 	kaClient ka.Interface,
 	appCatalogClient appcat_cs.AppcatalogV1alpha1Interface,
-	stashClient scs.Interface,
 	storageClass string,
+
 ) *Framework {
 	store, err := certstore.NewCertStore(afero.NewMemMapFs(), filepath.Join("", "pki"))
 	Expect(err).NotTo(HaveOccurred())
@@ -75,7 +73,6 @@ func New(
 		dbClient:         dbClient,
 		kaClient:         kaClient,
 		appCatalogClient: appCatalogClient,
-		stashClient:      stashClient,
 		name:             "pgbouncer-operator",
 		namespace:        rand.WithUniqSuffix(api.ResourceSingularPgBouncer),
 		StorageClass:     storageClass,
