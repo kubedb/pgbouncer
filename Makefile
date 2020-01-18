@@ -352,6 +352,7 @@ postgres-install:
 		--set imagePullPolicy=Always \
 		$(IMAGE_PULL_SECRETS); \
 	kubectl wait --for=condition=Ready pods -n kube-system -l app=kubedb --timeout=5m; \
+	kubectl wait --for=condition=Established crds -l app=kubedb --timeout=5m; \
 	helm install kubedb-postgres-catalog charts/kubedb-catalog \
 		--namespace=kube-system \
 		--set catalog.elasticsearch=false \
