@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/wait"
 	meta_util "kmodules.xyz/client-go/meta"
 )
 
@@ -229,60 +230,61 @@ func (f *Framework) EvictPodsFromStatefulSet(meta metav1.ObjectMeta) error {
 }
 
 func (f *Framework) EvictPgBouncerPods(meta metav1.ObjectMeta) error {
-	var err error
-	labelSelector := labels.Set{
-		meta_util.ManagedByLabelKey: api.GenericKey,
-		api.LabelDatabaseKind:       api.ResourceKindPgBouncer,
-		api.LabelDatabaseName:       meta.GetName(),
-	}
-	// get sts in the namespace
-	stsList, err := f.kubeClient.AppsV1().StatefulSets(meta.Namespace).List(metav1.ListOptions{LabelSelector: labelSelector.String()})
+	sts, err := f.kubeClient.AppsV1().StatefulSets(f.namespace).Get(meta.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
-	for _, sts := range stsList.Items {
-		// if PDB is not found, send error
-		var pdb *policy.PodDisruptionBudget
-		pdb, err = f.kubeClient.PolicyV1beta1().PodDisruptionBudgets(sts.Namespace).Get(sts.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		eviction := &policy.Eviction{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: policy.SchemeGroupVersion.String(),
-				Kind:       kindEviction,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      sts.Name,
-				Namespace: sts.Namespace,
-			},
-			DeleteOptions: &metav1.DeleteOptions{},
-		}
 
-		if pdb.Spec.MaxUnavailable == nil {
-			return fmt.Errorf("found pdb %s spec.maxUnavailable nil", pdb.Name)
-		}
-
-		// try to evict as many pod as allowed in pdb. No err should occur
-		maxUnavailable := pdb.Spec.MaxUnavailable.IntValue()
-		for i := 0; i < maxUnavailable; i++ {
-			eviction.Name = sts.Name + "-" + strconv.Itoa(i)
-			err := f.kubeClient.PolicyV1beta1().Evictions(eviction.Namespace).Evict(eviction)
+	// try to evict as many pod as allowed in pdb. No err should occur
+	eviction := &policy.Eviction{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: policy.SchemeGroupVersion.String(),
+			Kind:       kindEviction,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      sts.Name,
+			Namespace: sts.Namespace,
+		},
+		DeleteOptions: &metav1.DeleteOptions{},
+	}
+	pdb, err := f.kubeClient.PolicyV1beta1().PodDisruptionBudgets(sts.Namespace).Get(sts.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	if pdb.Spec.MaxUnavailable == nil {
+		return fmt.Errorf("found pdb %s spec.maxUnavailable nil", pdb.Name)
+	}
+	// pdb may take a few seconds to update current number of healthy pods
+	if pdb.Status.ExpectedPods != pdb.Status.CurrentHealthy {
+		_ = wait.PollImmediate(time.Second, time.Minute*3, func() (bool, error) {
+			pdb, err := f.kubeClient.PolicyV1beta1().PodDisruptionBudgets(sts.Namespace).Get(sts.Name, metav1.GetOptions{})
 			if err != nil {
-				return err
+				return false, err
 			}
-		}
+			if pdb.Status.ExpectedPods != pdb.Status.CurrentHealthy {
+				return false, nil
+			}
+			return true, nil
+		})
+	}
 
-		// try to evict one extra pod. TooManyRequests err should occur
-		eviction.Name = sts.Name + "-" + strconv.Itoa(maxUnavailable)
-		err = f.kubeClient.PolicyV1beta1().Evictions(eviction.Namespace).Evict(eviction)
-		if kerr.IsTooManyRequests(err) {
-			err = nil
-		} else if err != nil {
-			return err
-		} else {
-			return fmt.Errorf("expected pod %s/%s to be not evicted due to pdb %s", sts.Namespace, eviction.Name, pdb.Name)
+	for i := 0; i < pdb.Spec.MaxUnavailable.IntValue(); i++ {
+		eviction.Name = sts.Name + "-" + strconv.Itoa(i)
+
+		err := f.kubeClient.PolicyV1beta1().Evictions(eviction.Namespace).Evict(eviction)
+		if err != nil {
+			return fmt.Errorf("eviction of pod %s/%s was expected for pdb %s (status: %+v), err = %s", sts.Namespace, eviction.Name, pdb.Name, pdb.Status, err)
 		}
 	}
+
+	// try to evict one extra pod. TooManyRequests err should occur
+	eviction.Name = sts.Name + "-" + strconv.Itoa(int(pdb.Status.ExpectedPods)-1)
+	err = f.kubeClient.PolicyV1beta1().Evictions(eviction.Namespace).Evict(eviction)
+	if kerr.IsTooManyRequests(err) {
+		err = nil
+	} else {
+		return fmt.Errorf("expected pod %s/%s to be not evicted due to pdb %s", sts.Namespace, eviction.Name, pdb.Name)
+	}
+
 	return err
 }

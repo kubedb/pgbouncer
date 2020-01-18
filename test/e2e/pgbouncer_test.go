@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package e2e_test
 
 import (
@@ -28,48 +29,33 @@ import (
 
 var _ = Describe("PgBouncer", func() {
 	var (
-		err              error
-		f                *framework.Invocation
-		pgbouncer        *api.PgBouncer
-		postgres         *api.Postgres
-		garbagePgBouncer *api.PgBouncerList
-		secret           *core.Secret
-
-		dbName string
-		dbUser string
+		err            error
+		f              *framework.Invocation
+		pgbouncer      *api.PgBouncer
+		userlistSecret *core.Secret
+		clientCASecret *core.Secret
 	)
 
 	BeforeEach(func() {
 		f = root.Invoke()
-		pgbouncer = f.PgBouncer()
-		postgres = f.Postgres()
-		garbagePgBouncer = new(api.PgBouncerList)
-		secret = nil
-		dbName = "postgres"
-		dbUser = "postgres"
+		userlistSecret = f.GetUserListSecret()
+		pgbouncer = f.PgBouncer(userlistSecret)
+		clientCASecret = nil
 	})
 
 	var createAndRunPgBouncer = func() {
 		By("Create userList secret")
-		err := f.CreateUserListSecret()
+		err := f.CreateSecret(userlistSecret)
 		Expect(err).NotTo(HaveOccurred())
 		By("Create PgBouncer")
 		err = f.CreatePgBouncer(pgbouncer)
 		Expect(err).NotTo(HaveOccurred())
-
 		By("Wait for Running PgBouncer")
 		f.EventuallyPgBouncerRunning(pgbouncer.ObjectMeta).Should(BeTrue())
-	}
-
-	var checkPostgres = func() {
-		By("Wait for database to be ready")
-		f.EventuallyPingDatabase(postgres.ObjectMeta, dbName, dbUser).Should(BeTrue())
-
-		By("Wait for AppBindings to create")
-		f.EventuallyAppBinding(postgres.ObjectMeta).Should(BeTrue())
-
-		By("Check valid AppBinding Spec")
-		err := f.CheckPostgresAppBindingSpec(postgres.ObjectMeta)
+		By("Wait for Pods to be available")
+		f.EventuallyPgBouncerPodCount(pgbouncer.ObjectMeta)
+		By("Wait for primary container to be ready")
+		err = f.WaitUntilPrimaryContainerReady(pgbouncer.ObjectMeta)
 		Expect(err).NotTo(HaveOccurred())
 	}
 
@@ -77,15 +63,11 @@ var _ = Describe("PgBouncer", func() {
 		if pgbouncer == nil {
 			Skip("Skipping")
 		}
-		By("Check if userlist secret exists.")
-		err = f.CheckUserListSecret()
+
+		By("Delete " + pgbouncer.Name)
+		err = f.DeletePgBouncer(pgbouncer.ObjectMeta)
 		if err != nil {
-			if !kerr.IsNotFound(err) {
-				Expect(err).NotTo(HaveOccurred())
-			}
-		} else {
-			By("Delete  userlist secret")
-			err = f.DeleteUserListSecret()
+			Expect(err).NotTo(HaveOccurred())
 		}
 
 		By("Check if PgBouncer " + pgbouncer.Name + " exists.")
@@ -98,9 +80,15 @@ var _ = Describe("PgBouncer", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		By("Delete " + pgbouncer.Name)
-		err = f.DeletePgBouncer(pgbouncer.ObjectMeta)
+		By("Check if userlist secret exists.")
+		err = f.CheckUserListSecret(userlistSecret.ObjectMeta)
 		if err != nil {
+			if !kerr.IsNotFound(err) {
+				Expect(err).NotTo(HaveOccurred())
+			}
+		} else {
+			By("Delete userlist secret")
+			err = f.DeleteUserListSecret(userlistSecret.ObjectMeta)
 			Expect(err).NotTo(HaveOccurred())
 		}
 
@@ -109,54 +97,22 @@ var _ = Describe("PgBouncer", func() {
 	}
 
 	AfterEach(func() {
-		// Delete test resource
-		deleteTestResource()
-
-		for _, pg := range garbagePgBouncer.Items {
-			*pgbouncer = pg
-			// Delete test resource
-			deleteTestResource()
-		}
-
-		if secret != nil {
-			err := f.DeleteSecret(secret.ObjectMeta)
+		if clientCASecret != nil {
+			err := f.DeleteSecret(clientCASecret.ObjectMeta)
 			Expect(err).NotTo(HaveOccurred())
 		}
+		// Delete test resource
+		deleteTestResource()
 	})
 
 	Describe("Test", func() {
-
 		Context("General", func() {
-			It("Should have a running postgres", checkPostgres)
-			It("Should ping pgbouncer server", func() {
+			It("Should ping PgBouncer", func() {
 				createAndRunPgBouncer()
 				By("Ping PgBouncer")
 				err = f.EventuallyPingPgBouncerServer(pgbouncer.ObjectMeta)
 				Expect(err).NotTo(HaveOccurred())
 			})
-		})
-
-		Context("Connection Pool", func() {
-			It("Should write to, and read from database", func() {
-				By("Create and Run PgBouncer")
-				createAndRunPgBouncer()
-				By("Check for existing postgres")
-				checkPostgres()
-				By("Check Pooling via PgBouncer")
-				err := f.PoolViaPgBouncer(pgbouncer.ObjectMeta)
-				Expect(err).NotTo(HaveOccurred())
-			})
-			It("Should add new user and database", func() {
-				By("Create and Run PgBouncer")
-				createAndRunPgBouncer()
-				By("Check for existing postgres")
-				checkPostgres()
-				By("Check Connection-pooling via PgBouncer")
-				err := f.CreateUserAndDatabaseViaPgBouncer(pgbouncer.ObjectMeta)
-				Expect(err).NotTo(HaveOccurred())
-
-			})
-
 		})
 
 		Context("PDB", func() {
@@ -165,7 +121,7 @@ var _ = Describe("PgBouncer", func() {
 				pgbouncer.Spec.Replicas = types.Int32P(3)
 				createAndRunPgBouncer()
 				//Evict a PgBouncer pod
-				By("Evict Pods")
+				By("Evict pods")
 				err := f.EvictPgBouncerPods(pgbouncer.ObjectMeta)
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -180,9 +136,26 @@ var _ = Describe("PgBouncer", func() {
 				By("Verify exporter")
 				err = f.VerifyExporter(pgbouncer.ObjectMeta)
 				Expect(err).NotTo(HaveOccurred())
-				//Now port forward
-				//check whether we can connect to it
 			})
+		})
+
+		Context("Pooling", func() {
+			It("Should write to, and read from database", func() {
+				By("Create and Run PgBouncer")
+				createAndRunPgBouncer()
+				By("Check Pooling via PgBouncer")
+				err := f.PoolViaPgBouncer(pgbouncer.ObjectMeta)
+				Expect(err).NotTo(HaveOccurred())
+			})
+			It("Should add new user and database", func() {
+				pgbouncer = f.PgBouncer(userlistSecret)
+				By("Create and run PgBouncer")
+				createAndRunPgBouncer()
+				By("Check connection-pooling via PgBouncer")
+				err := f.CreateUserAndDatabaseViaPgBouncer(pgbouncer.ObjectMeta)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
 		})
 	})
 })

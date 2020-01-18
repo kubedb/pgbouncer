@@ -1,0 +1,96 @@
+/*
+Copyright The KubeDB Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+package framework
+
+import (
+	"fmt"
+	"time"
+
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	kerr "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	kutil "kmodules.xyz/client-go"
+)
+
+const (
+	operatorGetRetryInterval = time.Second * 5
+)
+
+func (f *Framework) SetupPostgresResources(kubeconfigPath string) {
+	By("Setup postgres")
+	postgres := f.Invoke().Postgres()
+	_, err := f.GetPostgres(postgres.ObjectMeta)
+	if kerr.IsNotFound(err) {
+		err := f.CreatePostgres(postgres)
+		Expect(err).ShouldNot(HaveOccurred())
+	}
+	By("Waiting for running Postgres")
+	err = f.WaitUntilPostgresReady(postgres.Name)
+	Expect(err).ShouldNot(HaveOccurred())
+}
+
+func (f *Framework) WaitUntilPostgresReady(name string) error {
+	return wait.PollImmediate(operatorGetRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
+		pg, err := f.dbClient.KubedbV1alpha1().Postgreses(f.Namespace()).Get(name, metav1.GetOptions{})
+		if err == nil {
+			if pg.Status.Phase == api.DatabasePhaseRunning {
+				return true, nil
+			}
+		}
+		return false, nil
+	})
+}
+
+func (f *Framework) CleanAdmissionConfigs() {
+	// delete validating Webhook
+	if err := f.kubeClient.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().DeleteCollection(deleteInForeground(), metav1.ListOptions{
+		LabelSelector: "app=kubedb",
+	}); err != nil && !kerr.IsNotFound(err) {
+		fmt.Printf("error in deletion of Validating Webhook. Error: %v", err)
+	}
+
+	// delete mutating Webhook
+	if err := f.kubeClient.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().DeleteCollection(deleteInForeground(), metav1.ListOptions{
+		LabelSelector: "app=kubedb",
+	}); err != nil && !kerr.IsNotFound(err) {
+		fmt.Printf("error in deletion of Mutating Webhook. Error: %v", err)
+	}
+
+	// Delete APIService
+	if err := f.kaClient.ApiregistrationV1beta1().APIServices().DeleteCollection(deleteInForeground(), metav1.ListOptions{
+		LabelSelector: "app=kubedb",
+	}); err != nil && !kerr.IsNotFound(err) {
+		fmt.Printf("error in deletion of APIService. Error: %v", err)
+	}
+
+	// Delete Service
+	if err := f.kubeClient.CoreV1().Services("kube-system").Delete("kubedb-operator", &metav1.DeleteOptions{}); err != nil && !kerr.IsNotFound(err) {
+		fmt.Printf("error in deletion of Service. Error: %v", err)
+	}
+
+	// Delete EndPoints
+	if err := f.kubeClient.CoreV1().Endpoints("kube-system").DeleteCollection(deleteInForeground(), metav1.ListOptions{
+		LabelSelector: "app=kubedb",
+	}); err != nil && !kerr.IsNotFound(err) {
+		fmt.Printf("error in deletion of Endpoints. Error: %v", err)
+	}
+
+	time.Sleep(time.Second * 1) // let the kube-server know it!!
+}

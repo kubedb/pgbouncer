@@ -19,15 +19,17 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"time"
 
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 
 	"github.com/appscode/go/sets"
 	"github.com/aws/aws-sdk-go/aws"
-	dto "github.com/prometheus/client_model/go"
+	promClient "github.com/prometheus/client_model/go"
 	"github.com/prometheus/prom2json"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
+	kutil "kmodules.xyz/client-go"
 	v1 "kmodules.xyz/monitoring-agent-api/api/v1"
 )
 
@@ -56,32 +58,35 @@ func (f *Framework) VerifyExporter(meta metav1.ObjectMeta) error {
 		return err
 	}
 	defer tunnel.Close()
+	return wait.PollImmediate(time.Second, kutil.ReadinessTimeout, func() (bool, error) {
+		metricsURL := fmt.Sprintf("http://127.0.0.1:%d/metrics", tunnel.Local)
+		mfChan := make(chan *promClient.MetricFamily, 1024)
+		transport := makeTransport()
 
-	metricsURL := fmt.Sprintf("http://127.0.0.1:%d/metrics", tunnel.Local)
-
-	mfChan := make(chan *dto.MetricFamily, 1024)
-	transport := makeTransport()
-	go runtime.Must(func() error {
-		return prom2json.FetchMetricFamilies(metricsURL, mfChan, transport)
-	}())
-	expectedMetricNames := sets.NewString(pbReservePoolMetric, pbMaxClientMetric)
-	var expectedMetrics = map[string]int{
-		pbReservePoolMetric: ReservePoolSize,
-		pbMaxClientMetric:   MaxClientConnections,
-	}
-
-	var count = 0
-	for mf := range mfChan {
-		if expectedMetricNames.Has(*mf.Name) && expectedMetrics[*mf.Name] == int(*mf.Metric[0].Gauge.Value) {
-			count++
+		err := prom2json.FetchMetricFamilies(metricsURL, mfChan, transport)
+		if err != nil {
+			return false, nil
 		}
-	}
 
-	if count != metricsCount {
-		return fmt.Errorf("could not find %d metrics", metricsCount-count)
-	}
+		expectedMetricNames := sets.NewString(pbReservePoolMetric, pbMaxClientMetric)
+		var expectedMetrics = map[string]int{
+			pbReservePoolMetric: ReservePoolSize,
+			pbMaxClientMetric:   MaxClientConnections,
+		}
 
-	return nil
+		var count = 0
+		for mf := range mfChan {
+			if expectedMetricNames.Has(*mf.Name) && expectedMetrics[*mf.Name] == int(*mf.Metric[0].Gauge.Value) {
+				count++
+			}
+		}
+
+		if count != metricsCount {
+			return true, fmt.Errorf("could not find %d metrics", metricsCount-count)
+		}
+
+		return true, nil
+	})
 }
 
 func makeTransport() *http.Transport {
