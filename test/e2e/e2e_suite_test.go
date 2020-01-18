@@ -110,9 +110,6 @@ var _ = BeforeSuite(func() {
 	err = root.CreateNamespace()
 	Expect(err).NotTo(HaveOccurred())
 
-	By("Setup Operators")
-	root.InstallKubeDBOperators(kubeconfigPath)
-
 	root.EventuallyCRD().Should(Succeed())
 })
 
