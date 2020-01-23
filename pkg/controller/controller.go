@@ -57,8 +57,8 @@ type Controller struct {
 	selector labels.Selector
 
 	// PgBouncer
-	pgQueue    *queue.Worker
-	pgInformer cache.SharedIndexInformer
+	pbQueue    *queue.Worker
+	pbInformer cache.SharedIndexInformer
 	pbLister   api_listers.PgBouncerLister
 	// Secret
 	secretQueue    *queue.Worker
@@ -129,7 +129,7 @@ func (c *Controller) Init() error {
 
 // RunControllers runs queue.worker
 func (c *Controller) RunControllers(stopCh <-chan struct{}) {
-	c.pgQueue.Run(stopCh)
+	c.pbQueue.Run(stopCh)
 	c.secretQueue.Run(stopCh)
 	c.appBindingQueue.Run(stopCh)
 }

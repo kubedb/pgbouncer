@@ -35,7 +35,7 @@ import (
 
 func (c *Controller) managePgBouncerEvent(key string) error {
 	log.Debugln("started processing, key:", key)
-	obj, exists, err := c.pgInformer.GetIndexer().GetByKey(key)
+	obj, exists, err := c.pbInformer.GetIndexer().GetByKey(key)
 	if err != nil {
 		log.Errorf("Fetching object with key %s from store failed with %v", key, err)
 		return err

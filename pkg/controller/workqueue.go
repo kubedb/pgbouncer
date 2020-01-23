@@ -32,10 +32,10 @@ const (
 )
 
 func (c *Controller) initWatcher() {
-	c.pgInformer = c.KubedbInformerFactory.Kubedb().V1alpha1().PgBouncers().Informer()
-	c.pgQueue = queue.New("PgBouncer", c.MaxNumRequeues, c.NumThreads, c.managePgBouncerEvent)
+	c.pbInformer = c.KubedbInformerFactory.Kubedb().V1alpha1().PgBouncers().Informer()
+	c.pbQueue = queue.New("PgBouncer", c.MaxNumRequeues, c.NumThreads, c.managePgBouncerEvent)
 	c.pbLister = c.KubedbInformerFactory.Kubedb().V1alpha1().PgBouncers().Lister()
-	c.pgInformer.AddEventHandler(queue.NewReconcilableHandler(c.pgQueue.GetQueue()))
+	c.pbInformer.AddEventHandler(queue.NewReconcilableHandler(c.pbQueue.GetQueue()))
 }
 
 func (c *Controller) initSecretWatcher() {
