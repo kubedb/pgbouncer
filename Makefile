@@ -339,14 +339,15 @@ else
 	IMAGE_PULL_SECRETS = --set imagePullSecrets[0]=$(REGISTRY_SECRET)
 endif
 
-POSTGRES_TAG ?= v0.13.0-rc.0
+POSTGRES_REGISTRY ?= kubedb
+POSTGRES_TAG      ?= v0.13.0-rc.0-20-g18aba058_linux_amd64
 
 .PHONY: postgres-install
 postgres-install:
 	@cd ../installer; \
 	helm install kubedb-postgres charts/kubedb \
 		--namespace=kube-system \
-		--set kubedb.registry=$(REGISTRY) \
+		--set kubedb.registry=$(POSTGRES_REGISTRY) \
 		--set kubedb.repository=pg-operator \
 		--set kubedb.tag=$(POSTGRES_TAG) \
 		--set apiserver.enableMutatingWebhook=false \
@@ -377,6 +378,7 @@ install:
 		--set kubedb.registry=$(REGISTRY) \
 		--set kubedb.repository=pgbouncer-operator \
 		--set kubedb.tag=$(TAG) \
+		--set enterprise.enabled=true \
 		--set imagePullPolicy=Always \
 		$(IMAGE_PULL_SECRETS); \
 	kubectl wait --for=condition=Ready pods -n kube-system -l app=kubedb --timeout=5m; \

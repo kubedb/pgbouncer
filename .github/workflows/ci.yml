@@ -84,16 +84,21 @@ jobs:
         echo "create docker-registry secret"
         kubectl create secret docker-registry ${REGISTRY_SECRET} --namespace=kube-system --docker-server=https://index.docker.io/v1/ --docker-username=${USERNAME} --docker-password=${DOCKER_TOKEN}
 
+    - name: Install cert-manager
+      run: |
+        kubectl create namespace cert-manager
+        kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v0.12.0/cert-manager.yaml
+
     - name: Check out installer
       run: |
         cd ..
         git clone https://github.com/kubedb/installer.git
         cd installer
-        git checkout master
+        git checkout ent
 
     - name: Install PostgreSQL operator
       run: |
-        make postgres-install POSTGRES_TAG=v0.13.0-rc.0-15-gfa55b472_linux_amd64
+        make postgres-install
 
     - name: Run e2e tests
       env:
@@ -109,4 +114,4 @@ jobs:
         echo "GOOGLE_SERVICE_ACCOUNT_JSON_KEY=$(echo $GOOGLE_SERVICE_ACCOUNT_JSON_KEY)" >> hack/config/.env
         make install
         echo
-        make e2e-tests || (kubectl logs -n kube-system deployment/kubedb-pgbouncer-operator -c operator && false)
+        make e2e-tests || (kubectl logs -n kube-system deployment/kubedb -c operator && kubectl logs -n kube-system deployment/kubedb -c enterprise && false)

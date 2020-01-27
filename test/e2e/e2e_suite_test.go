@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package e2e_test
 
 import (
@@ -26,6 +27,7 @@ import (
 	"kubedb.dev/apimachinery/client/clientset/versioned/scheme"
 	"kubedb.dev/pgbouncer/test/e2e/framework"
 
+	cm "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
@@ -99,9 +101,10 @@ var _ = BeforeSuite(func() {
 	kaClient := ka.NewForConfigOrDie(config)
 	appCatalogClient := appcat_cs.NewForConfigOrDie(config)
 	aPIExtKubeClient := kext_cs.NewForConfigOrDie(config)
+	cerManagerClient := cm.NewForConfigOrDie(config)
 
 	// Framework
-	root = framework.New(config, kubeClient, aPIExtKubeClient, dbClient, kaClient, appCatalogClient, storageClass)
+	root = framework.New(config, kubeClient, aPIExtKubeClient, dbClient, kaClient, appCatalogClient, cerManagerClient, storageClass)
 
 	// Create namespace
 	By("Using namespace " + root.Namespace())

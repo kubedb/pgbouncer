@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package server
 
 import (
@@ -26,7 +27,6 @@ import (
 	mgAdmsn "kubedb.dev/pgbouncer/pkg/admission"
 	"kubedb.dev/pgbouncer/pkg/controller"
 
-	"github.com/appscode/go/log"
 	admission "k8s.io/api/admission/v1beta1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -234,7 +234,6 @@ func (c completedConfig) New() (*PgBouncerServer, error) {
 				return nil
 			},
 		)
-		log.Infoln("Webhook validated. No Post-Start hook is needed for PgBouncer")
 	}
 	return s, nil
 }

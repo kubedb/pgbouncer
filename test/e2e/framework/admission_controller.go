@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package framework
 
 import (
-	"fmt"
 	"time"
 
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
@@ -56,41 +56,4 @@ func (f *Framework) WaitUntilPostgresReady(name string) error {
 		}
 		return false, nil
 	})
-}
-
-func (f *Framework) CleanAdmissionConfigs() {
-	// delete validating Webhook
-	if err := f.kubeClient.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().DeleteCollection(deleteInForeground(), metav1.ListOptions{
-		LabelSelector: "app=kubedb",
-	}); err != nil && !kerr.IsNotFound(err) {
-		fmt.Printf("error in deletion of Validating Webhook. Error: %v", err)
-	}
-
-	// delete mutating Webhook
-	if err := f.kubeClient.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().DeleteCollection(deleteInForeground(), metav1.ListOptions{
-		LabelSelector: "app=kubedb",
-	}); err != nil && !kerr.IsNotFound(err) {
-		fmt.Printf("error in deletion of Mutating Webhook. Error: %v", err)
-	}
-
-	// Delete APIService
-	if err := f.kaClient.ApiregistrationV1beta1().APIServices().DeleteCollection(deleteInForeground(), metav1.ListOptions{
-		LabelSelector: "app=kubedb",
-	}); err != nil && !kerr.IsNotFound(err) {
-		fmt.Printf("error in deletion of APIService. Error: %v", err)
-	}
-
-	// Delete Service
-	if err := f.kubeClient.CoreV1().Services("kube-system").Delete("kubedb-operator", &metav1.DeleteOptions{}); err != nil && !kerr.IsNotFound(err) {
-		fmt.Printf("error in deletion of Service. Error: %v", err)
-	}
-
-	// Delete EndPoints
-	if err := f.kubeClient.CoreV1().Endpoints("kube-system").DeleteCollection(deleteInForeground(), metav1.ListOptions{
-		LabelSelector: "app=kubedb",
-	}); err != nil && !kerr.IsNotFound(err) {
-		fmt.Printf("error in deletion of Endpoints. Error: %v", err)
-	}
-
-	time.Sleep(time.Second * 1) // let the kube-server know it!!
 }

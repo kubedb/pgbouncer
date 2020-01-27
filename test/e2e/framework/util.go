@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package framework
 
 import (
@@ -22,6 +23,7 @@ import (
 
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
 
+	shell "github.com/codeskyblue/go-sh"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -80,5 +82,34 @@ func (f *Framework) CleanWorkloadLeftOvers() {
 		}).String(),
 	}); err != nil && !kerr.IsNotFound(err) {
 		fmt.Printf("error in deletion of PVC. Error: %v", err)
+	}
+}
+
+func (f *Framework) PrintDebugHelpers() {
+	sh := shell.NewSession()
+
+	fmt.Println("\n======================================[ Describe Pod ]===================================================")
+	if err := sh.Command("/usr/bin/kubectl", "describe", "po", "-n", f.Namespace(), f.name+"-0").Run(); err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println("\n======================================[ Describe PgBouncer ]===================================================")
+	if err := sh.Command("/usr/bin/kubectl", "describe", "pb", "-n", f.Namespace()).Run(); err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println("\n======================================[ Describe Roles ]===================================================")
+	if err := sh.Command("/usr/bin/kubectl", "describe", "roles", "-n", f.Namespace()).Run(); err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println("\n======================================[ Describe RoleBinding ]===================================================")
+	if err := sh.Command("/usr/bin/kubectl", "describe", "rolebindings", "-n", f.Namespace()).Run(); err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println("\n======================================[ Describe Nodes ]===================================================")
+	if err := sh.Command("/usr/bin/kubectl", "describe", "nodes").Run(); err != nil {
+		fmt.Println(err)
 	}
 }

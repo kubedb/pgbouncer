@@ -1,0 +1,32 @@
+apiVersion: kubedb.com/v1alpha1
+kind: PgBouncer
+metadata:
+  name: pgbouncer-tls
+  namespace: demo
+spec:
+  version: "1.7"
+  replicas: 1
+  databases:
+    - alias: "postgres"
+      databaseName: "postgres"
+      databaseRef:
+        name: "quick-postgres"
+        namespace: demo
+  connectionPool:
+    port: 5432
+    maxClientConnections: 20
+    reservePoolSize: 7
+    adminUsers:
+      - admin
+      - admin1
+      - admin2
+  userListSecretRef:
+    name: db-user-pass
+  tls:
+    client:
+      issuerRef:
+        name: ca-issuer
+        kind: Issuer
+        apiGroup: "cert-manager.io"
+  monitor:
+    agent: prometheus.io/builtin
