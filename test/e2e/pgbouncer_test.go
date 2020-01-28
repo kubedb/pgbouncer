@@ -21,6 +21,7 @@ import (
 	"kubedb.dev/pgbouncer/test/e2e/framework"
 
 	"github.com/appscode/go/types"
+	cm_api "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
@@ -97,6 +98,7 @@ var _ = Describe("PgBouncer", func() {
 	}
 
 	AfterEach(func() {
+		f.PrintDebugHelpers() // use to debug CI
 		if clientCASecret != nil {
 			err := f.DeleteSecret(clientCASecret.ObjectMeta)
 			Expect(err).NotTo(HaveOccurred())
@@ -156,6 +158,30 @@ var _ = Describe("PgBouncer", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
+		})
+
+		Context("TLS", func() {
+			It("Should ping PgBouncer over TLS", func() {
+				//create ca secret
+				clientCASecret = f.SelfSignedCASecret(pgbouncer.ObjectMeta)
+				err := f.CreateSecret(clientCASecret)
+				Expect(err).NotTo(HaveOccurred())
+				//create issuer
+				issuer := f.IssuerForPgBouncer(pgbouncer.ObjectMeta, clientCASecret.ObjectMeta)
+				err = f.CreateIssuer(issuer)
+				Expect(err).NotTo(HaveOccurred())
+				pgbouncer.Spec.TLS = &api.TLSConfig{
+					IssuerRef: &core.TypedLocalObjectReference{
+						Name:     issuer.Name,
+						Kind:     issuer.Kind,
+						APIGroup: types.StringP(cm_api.SchemeGroupVersion.Group), //cert-manger.io
+					},
+				}
+				createAndRunPgBouncer()
+				By("Ping PgBouncer")
+				err = f.EventuallyPingPgBouncerServerOverTLS(pgbouncer.ObjectMeta)
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 	})
 })

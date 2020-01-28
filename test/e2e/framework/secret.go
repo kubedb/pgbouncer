@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package framework
 
 import (
@@ -34,6 +35,7 @@ import (
 
 const (
 	PgBouncerUserListSecret = "pb-userlist-secret"
+	userListKey             = controller.UserListKey
 )
 
 func (f *Framework) CreateSecret(obj *core.Secret) error {
@@ -48,7 +50,7 @@ func (f *Framework) GetUserListSecret() *core.Secret {
 	}
 	userListSecretSpec := &core.Secret{
 		StringData: map[string]string{
-			"userlist.txt": fmt.Sprintf(`"%s" "%s"
+			userListKey: fmt.Sprintf(`"%s" "%s"
 "%s" "%s"`, username, password, testUser, testPass),
 		},
 		ObjectMeta: metav1.ObjectMeta{

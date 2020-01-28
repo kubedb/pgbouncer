@@ -23,6 +23,7 @@ import (
 	cs "kubedb.dev/apimachinery/client/clientset/versioned"
 
 	"github.com/appscode/go/crypto/rand"
+	cm "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/afero"
 	"gomodules.xyz/cert/certstore"
@@ -39,16 +40,17 @@ var (
 )
 
 type Framework struct {
-	restConfig       *rest.Config
-	kubeClient       kubernetes.Interface
-	apiExtKubeClient crd_cs.ApiextensionsV1beta1Interface
-	dbClient         cs.Interface
-	kaClient         ka.Interface
-	appCatalogClient appcat_cs.AppcatalogV1alpha1Interface
-	namespace        string
-	name             string
-	StorageClass     string
-	CertStore        *certstore.CertStore
+	restConfig        *rest.Config
+	kubeClient        kubernetes.Interface
+	apiExtKubeClient  crd_cs.ApiextensionsV1beta1Interface
+	dbClient          cs.Interface
+	kaClient          ka.Interface
+	appCatalogClient  appcat_cs.AppcatalogV1alpha1Interface
+	namespace         string
+	name              string
+	StorageClass      string
+	CertStore         *certstore.CertStore
+	certManagerClient cm.Interface
 }
 
 func New(
@@ -58,6 +60,7 @@ func New(
 	dbClient cs.Interface,
 	kaClient ka.Interface,
 	appCatalogClient appcat_cs.AppcatalogV1alpha1Interface,
+	certManagerClient cm.Interface,
 	storageClass string,
 
 ) *Framework {
@@ -67,16 +70,17 @@ func New(
 	err = store.InitCA()
 	Expect(err).NotTo(HaveOccurred())
 	return &Framework{
-		restConfig:       restConfig,
-		kubeClient:       kubeClient,
-		apiExtKubeClient: apiExtKubeClient,
-		dbClient:         dbClient,
-		kaClient:         kaClient,
-		appCatalogClient: appCatalogClient,
-		name:             "pgbouncer-operator",
-		namespace:        rand.WithUniqSuffix(api.ResourceSingularPgBouncer),
-		StorageClass:     storageClass,
-		CertStore:        store,
+		restConfig:        restConfig,
+		kubeClient:        kubeClient,
+		apiExtKubeClient:  apiExtKubeClient,
+		dbClient:          dbClient,
+		kaClient:          kaClient,
+		appCatalogClient:  appCatalogClient,
+		certManagerClient: certManagerClient,
+		name:              "pgbouncer-operator",
+		namespace:         rand.WithUniqSuffix(api.ResourceSingularPgBouncer),
+		StorageClass:      storageClass,
+		CertStore:         store,
 	}
 }
 

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package controller
 
 import (
@@ -26,6 +27,7 @@ func TestConfigGeneration(t *testing.T) {
 		name      string
 		pgbouncer *api.PgBouncer
 	}{
+		{name: "", pgbouncer: nil},
 		// TODO: test cases
 	}
 	for _, test := range tests {

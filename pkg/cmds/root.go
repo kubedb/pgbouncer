@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package cmds
 
 import (
@@ -24,6 +25,7 @@ import (
 	"github.com/appscode/go/flags"
 	"github.com/appscode/go/log/golog"
 	v "github.com/appscode/go/version"
+	cmscheme "github.com/jetstack/cert-manager/pkg/client/clientset/versioned/scheme"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	genericapiserver "k8s.io/apiserver/pkg/server"
@@ -43,6 +45,7 @@ func NewRootCmd(version string) *cobra.Command {
 
 			runtime.Must(scheme.AddToScheme(clientsetscheme.Scheme))
 			runtime.Must(appcatscheme.AddToScheme(clientsetscheme.Scheme))
+			runtime.Must(cmscheme.AddToScheme(clientsetscheme.Scheme))
 			cli.LoggerOptions = golog.ParseFlags(c.Flags())
 		},
 	}

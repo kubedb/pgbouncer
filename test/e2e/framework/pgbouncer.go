@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package framework
 
 import (
@@ -160,7 +161,7 @@ func (f *Framework) EventuallyPgBouncerRunning(meta metav1.ObjectMeta) GomegaAsy
 			Expect(err).NotTo(HaveOccurred())
 			return pgbouncer.Status.Phase == api.DatabasePhaseRunning
 		},
-		time.Minute*15,
+		time.Minute*5,
 		time.Second*5,
 	)
 }
