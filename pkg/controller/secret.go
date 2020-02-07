@@ -119,12 +119,7 @@ func (c *Controller) PgBouncerForSecret(s *core.Secret) (*api.PgBouncer, error) 
 
 	for _, pgbouncer := range pgbouncers {
 		if metav1.IsControlledBy(s, pgbouncer) {
-			_, err := c.ExtClient.KubedbV1alpha1().PgBouncers(pgbouncer.Namespace).Get(pgbouncer.Name, metav1.GetOptions{})
-			if err == nil {
-				return pgbouncer, nil
-			} else {
-				break
-			}
+			return pgbouncer, nil
 		}
 	}
 

@@ -179,18 +179,12 @@ func (c *Controller) ensureStatsService(pgbouncer *api.PgBouncer) (kutil.VerbTyp
 func (c *Controller) PgBouncerForService(s *core.Service) (*api.PgBouncer, error) {
 	pgbouncers, err := c.pbLister.PgBouncers(s.Namespace).List(labels.Everything())
 	if err != nil {
-		log.Debugln(err)
 		return nil, err
 	}
 
 	for _, pgbouncer := range pgbouncers {
 		if metav1.IsControlledBy(s, pgbouncer) {
-			_, err := c.ExtClient.KubedbV1alpha1().PgBouncers(pgbouncer.Namespace).Get(pgbouncer.Name, metav1.GetOptions{})
-			if err == nil {
-				return pgbouncer, nil
-			} else {
-				break
-			}
+			return pgbouncer, nil
 		}
 	}
 
