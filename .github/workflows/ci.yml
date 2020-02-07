@@ -94,7 +94,7 @@ jobs:
         cd ..
         git clone https://github.com/kubedb/installer.git
         cd installer
-        git checkout ent
+        git checkout master
 
     - name: Install PostgreSQL operator
       run: |
