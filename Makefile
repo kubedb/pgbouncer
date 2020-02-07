@@ -67,7 +67,7 @@ TAG              := $(VERSION)_$(OS)_$(ARCH)
 TAG_PROD         := $(TAG)
 TAG_DBG          := $(VERSION)-dbg_$(OS)_$(ARCH)
 
-GO_VERSION       ?= 1.13.5
+GO_VERSION       ?= 1.13.7
 BUILD_IMAGE      ?= appscode/golang-dev:$(GO_VERSION)
 
 OUTBIN = bin/$(OS)_$(ARCH)/$(BIN)
@@ -379,6 +379,7 @@ install:
 		--set kubedb.repository=pgbouncer-operator \
 		--set kubedb.tag=$(TAG) \
 		--set enterprise.enabled=true \
+		--set enterprise.tag=pb-cm_linux_amd64 \
 		--set imagePullPolicy=Always \
 		$(IMAGE_PULL_SECRETS); \
 	kubectl wait --for=condition=Ready pods -n kube-system -l app=kubedb --timeout=5m; \
