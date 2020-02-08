@@ -379,7 +379,7 @@ install:
 		--set kubedb.repository=pgbouncer-operator \
 		--set kubedb.tag=$(TAG) \
 		--set enterprise.enabled=true \
-		--set enterprise.tag=pb-cm_linux_amd64 \
+		--set enterprise.tag=c5436b50_linux_amd64 \
 		--set imagePullPolicy=Always \
 		$(IMAGE_PULL_SECRETS); \
 	kubectl wait --for=condition=Ready pods -n kube-system -l app=kubedb --timeout=5m; \
