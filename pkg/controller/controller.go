@@ -29,7 +29,6 @@ import (
 	pcm "github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
 	core "k8s.io/api/core/v1"
 	crd_api "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	ext_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	crd_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -77,7 +76,6 @@ func New(
 	appCatalogClient appcat_cs.Interface,
 	promClient pcm.MonitoringV1Interface,
 	opt amc.Config,
-	externalClient ext_cs.Interface,
 	topology *core_util.Topology,
 	recorder record.EventRecorder,
 ) *Controller {
@@ -89,7 +87,6 @@ func New(
 			ApiExtKubeClient: apiExtKubeClient,
 			DynamicClient:    dc,
 			AppCatalogClient: appCatalogClient,
-			ExternalClient:   externalClient,
 			ClusterTopology:  topology,
 		},
 		Config:     opt,
