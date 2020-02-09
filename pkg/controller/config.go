@@ -75,7 +75,6 @@ func (c *OperatorConfig) New() (*Controller, error) {
 		c.AppCatalogClient,
 		c.PromClient,
 		c.Config,
-		c.ExternalClient,
 		topology,
 		recorder,
 	)
