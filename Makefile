@@ -67,7 +67,7 @@ TAG              := $(VERSION)_$(OS)_$(ARCH)
 TAG_PROD         := $(TAG)
 TAG_DBG          := $(VERSION)-dbg_$(OS)_$(ARCH)
 
-GO_VERSION       ?= 1.14.3
+GO_VERSION       ?= 1.14
 BUILD_IMAGE      ?= appscode/golang-dev:$(GO_VERSION)
 
 OUTBIN = bin/$(OS)_$(ARCH)/$(BIN)
@@ -340,7 +340,7 @@ else
 endif
 
 POSTGRES_REGISTRY ?= kubedb
-POSTGRES_TAG      ?= v0.13.0-rc.0-20-g18aba058_linux_amd64
+POSTGRES_TAG      ?= v0.14.0-alpha.0
 
 .PHONY: install-postgres
 install-postgres:
@@ -369,6 +369,8 @@ install-postgres:
 		--set catalog.proxysql=false \
 		--set catalog.redis=false
 
+ENTERPRISE_TAG ?= v0.1.0-alpha.0
+
 .PHONY: install
 install:
 	@cd ../installer; \
@@ -378,7 +380,7 @@ install:
 		--set operator.repository=pgbouncer-operator \
 		--set operator.tag=$(TAG) \
 		--set enterprise.enabled=true \
-		--set enterprise.tag=b615b1ac_linux_amd64 \
+		--set enterprise.tag=$(ENTERPRISE_TAG) \
 		--set imagePullPolicy=Always \
 		$(IMAGE_PULL_SECRETS); \
 	kubectl wait --for=condition=Available apiservice -l 'app.kubernetes.io/name=kubedb,app.kubernetes.io/instance=kubedb' --timeout=5m; \
