@@ -17,6 +17,7 @@ limitations under the License.
 package framework
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -28,17 +29,13 @@ import (
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	meta_util "kmodules.xyz/client-go/meta"
 )
 
 const (
 	updateRetryInterval = 10 * 1000 * 1000 * time.Nanosecond
 	maxAttempts         = 5
 )
-
-func deleteInForeground() *metav1.DeleteOptions {
-	policy := metav1.DeletePropagationForeground
-	return &metav1.DeleteOptions{PropagationPolicy: &policy}
-}
 
 func (f *Invocation) GetCustomConfig(configs []string) *core.ConfigMap {
 	return &core.ConfigMap{
@@ -53,12 +50,12 @@ func (f *Invocation) GetCustomConfig(configs []string) *core.ConfigMap {
 }
 
 func (f *Invocation) CreateConfigMap(obj *core.ConfigMap) error {
-	_, err := f.kubeClient.CoreV1().ConfigMaps(obj.Namespace).Create(obj)
+	_, err := f.kubeClient.CoreV1().ConfigMaps(obj.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 	return err
 }
 
 func (f *Framework) DeleteConfigMap(meta metav1.ObjectMeta) error {
-	err := f.kubeClient.CoreV1().ConfigMaps(meta.Namespace).Delete(meta.Name, deleteInForeground())
+	err := f.kubeClient.CoreV1().ConfigMaps(meta.Namespace).Delete(context.TODO(), meta.Name, meta_util.DeleteInForeground())
 	if !kerr.IsNotFound(err) {
 		return err
 	}
@@ -67,7 +64,7 @@ func (f *Framework) DeleteConfigMap(meta metav1.ObjectMeta) error {
 
 func (f *Framework) CleanWorkloadLeftOvers() {
 	// delete statefulset
-	if err := f.kubeClient.AppsV1().StatefulSets(f.namespace).DeleteCollection(deleteInForeground(), metav1.ListOptions{
+	if err := f.kubeClient.AppsV1().StatefulSets(f.namespace).DeleteCollection(context.TODO(), meta_util.DeleteInForeground(), metav1.ListOptions{
 		LabelSelector: labels.SelectorFromSet(map[string]string{
 			api.LabelDatabaseKind: api.ResourceKindPgBouncer,
 		}).String(),
@@ -76,7 +73,7 @@ func (f *Framework) CleanWorkloadLeftOvers() {
 	}
 
 	// delete pvc
-	if err := f.kubeClient.CoreV1().PersistentVolumeClaims(f.namespace).DeleteCollection(deleteInForeground(), metav1.ListOptions{
+	if err := f.kubeClient.CoreV1().PersistentVolumeClaims(f.namespace).DeleteCollection(context.TODO(), meta_util.DeleteInForeground(), metav1.ListOptions{
 		LabelSelector: labels.SelectorFromSet(map[string]string{
 			api.LabelDatabaseKind: api.ResourceKindPgBouncer,
 		}).String(),

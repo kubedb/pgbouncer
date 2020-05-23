@@ -17,6 +17,7 @@ limitations under the License.
 package framework
 
 import (
+	"context"
 	"time"
 
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
@@ -48,7 +49,7 @@ func (f *Framework) SetupPostgresResources(kubeconfigPath string) {
 
 func (f *Framework) WaitUntilPostgresReady(name string) error {
 	return wait.PollImmediate(operatorGetRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
-		pg, err := f.dbClient.KubedbV1alpha1().Postgreses(f.Namespace()).Get(name, metav1.GetOptions{})
+		pg, err := f.dbClient.KubedbV1alpha1().Postgreses(f.Namespace()).Get(context.TODO(), name, metav1.GetOptions{})
 		if err == nil {
 			if pg.Status.Phase == api.DatabasePhaseRunning {
 				return true, nil

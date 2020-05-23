@@ -17,6 +17,7 @@ limitations under the License.
 package framework
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -339,12 +340,12 @@ func (f *Framework) waitUntilPatchedConfigMapReady(meta metav1.ObjectMeta) error
 
 // getPodPassPort returns the pgbouncer pod, pgbouncer admin pass, and pgbouncer listen port
 func (f *Framework) getPodPassPort(meta metav1.ObjectMeta) (*v1.Pod, string, *int32, error) {
-	pb, err := f.dbClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+	pb, err := f.dbClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", nil, err
 	}
 
-	pod, err := f.kubeClient.CoreV1().Pods(meta.Namespace).Get(meta.Name+"-0", metav1.GetOptions{})
+	pod, err := f.kubeClient.CoreV1().Pods(meta.Namespace).Get(context.TODO(), meta.Name+"-0", metav1.GetOptions{})
 	if err != nil {
 		return nil, "", nil, err
 	}
@@ -359,14 +360,14 @@ func (f *Framework) getPodPassPort(meta metav1.ObjectMeta) (*v1.Pod, string, *in
 
 func (f *Framework) WaitUntilPrimaryContainerReady(meta metav1.ObjectMeta) error {
 	// primary container may a while to serve responses after pulling the image
-	sts, err := f.kubeClient.AppsV1().StatefulSets(f.namespace).Get(meta.Name, metav1.GetOptions{})
+	sts, err := f.kubeClient.AppsV1().StatefulSets(f.namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
 	err = wait.PollImmediate(time.Second, kutil.ReadinessTimeout, func() (bool, error) {
 		for i := 0; i < int(types.Int32(sts.Spec.Replicas)); i++ {
-			pod, err := f.kubeClient.CoreV1().Pods(meta.Namespace).Get(meta.Name+"-"+strconv.Itoa(i), metav1.GetOptions{})
+			pod, err := f.kubeClient.CoreV1().Pods(meta.Namespace).Get(context.TODO(), meta.Name+"-"+strconv.Itoa(i), metav1.GetOptions{})
 			if err != nil {
 				if kerr.IsNotFound(err) {
 					return false, nil

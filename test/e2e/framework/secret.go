@@ -17,6 +17,7 @@ limitations under the License.
 package framework
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -31,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	core_util "kmodules.xyz/client-go/core/v1"
+	meta_util "kmodules.xyz/client-go/meta"
 )
 
 const (
@@ -39,7 +41,7 @@ const (
 )
 
 func (f *Framework) CreateSecret(obj *core.Secret) error {
-	_, err := f.kubeClient.CoreV1().Secrets(obj.Namespace).Create(obj)
+	_, err := f.kubeClient.CoreV1().Secrets(obj.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 	return err
 }
 
@@ -62,7 +64,7 @@ func (f *Framework) GetUserListSecret() *core.Secret {
 }
 
 func (f *Framework) AddUserToUserListSecret(meta metav1.ObjectMeta, username, password string) error {
-	sec, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(meta.Name, metav1.GetOptions{})
+	sec, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -72,21 +74,21 @@ func (f *Framework) AddUserToUserListSecret(meta metav1.ObjectMeta, username, pa
 "%s" "%s"`, username, password)
 		sec.StringData[key] = newData
 	}
-	_, _, err = core_util.CreateOrPatchSecret(f.kubeClient, sec.ObjectMeta, func(in *core.Secret) *core.Secret {
+	_, _, err = core_util.CreateOrPatchSecret(context.TODO(), f.kubeClient, sec.ObjectMeta, func(in *core.Secret) *core.Secret {
 		return in
-	}, false)
+	}, metav1.PatchOptions{}, false)
 	return err
 }
 
 func (f *Framework) UpdateSecret(meta metav1.ObjectMeta, transformer func(core.Secret) core.Secret) error {
 	attempt := 0
 	for ; attempt < maxAttempts; attempt = attempt + 1 {
-		cur, err := f.kubeClient.CoreV1().Secrets(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+		cur, err := f.kubeClient.CoreV1().Secrets(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 		if kerr.IsNotFound(err) {
 			return nil
 		} else if err == nil {
 			modified := transformer(*cur)
-			_, err = f.kubeClient.CoreV1().Secrets(cur.Namespace).Update(&modified)
+			_, err = f.kubeClient.CoreV1().Secrets(cur.Namespace).Update(context.TODO(), &modified, metav1.UpdateOptions{})
 			if err == nil {
 				return nil
 			}
@@ -98,7 +100,7 @@ func (f *Framework) UpdateSecret(meta metav1.ObjectMeta, transformer func(core.S
 }
 
 func (f *Framework) DeleteSecret(meta metav1.ObjectMeta) error {
-	err := f.kubeClient.CoreV1().Secrets(meta.Namespace).Delete(meta.Name, deleteInForeground())
+	err := f.kubeClient.CoreV1().Secrets(meta.Namespace).Delete(context.TODO(), meta.Name, meta_util.DeleteInForeground())
 	if !kerr.IsNotFound(err) {
 		return err
 	}
@@ -114,6 +116,7 @@ func (f *Framework) EventuallyDBSecretCount(meta metav1.ObjectMeta) GomegaAsyncA
 	return Eventually(
 		func() int {
 			secretList, err := f.kubeClient.CoreV1().Secrets(meta.Namespace).List(
+				context.TODO(),
 				metav1.ListOptions{
 					LabelSelector: labelSelector.String(),
 				},
@@ -127,21 +130,21 @@ func (f *Framework) EventuallyDBSecretCount(meta metav1.ObjectMeta) GomegaAsyncA
 }
 
 func (f *Framework) CheckSecret() error {
-	_, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(PostgresName+"-auth", metav1.GetOptions{})
+	_, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(context.TODO(), PostgresName+"-auth", metav1.GetOptions{})
 	return err
 }
 
 func (f *Framework) CheckUserListSecret(meta metav1.ObjectMeta) error {
-	_, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(meta.Name, metav1.GetOptions{})
+	_, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 	return err
 }
 
 func (f *Framework) DeleteUserListSecret(meta metav1.ObjectMeta) error {
-	return f.kubeClient.CoreV1().Secrets(f.namespace).Delete(meta.Name, &metav1.DeleteOptions{})
+	return f.kubeClient.CoreV1().Secrets(f.namespace).Delete(context.TODO(), meta.Name, metav1.DeleteOptions{})
 }
 
 func (f *Framework) GetPostgresCredentials() (string, string, error) {
-	scrt, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(PostgresName+"-auth", metav1.GetOptions{})
+	scrt, err := f.kubeClient.CoreV1().Secrets(f.namespace).Get(context.TODO(), PostgresName+"-auth", metav1.GetOptions{})
 	if err != nil {
 		return "", "", err
 	}
