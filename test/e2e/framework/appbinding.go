@@ -17,6 +17,7 @@ limitations under the License.
 package framework
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/gomega"
@@ -27,7 +28,7 @@ import (
 func (f *Framework) EventuallyAppBinding(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	return Eventually(
 		func() bool {
-			_, err := f.appCatalogClient.AppBindings(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+			_, err := f.appCatalogClient.AppBindings(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 			if err != nil {
 				if kerr.IsNotFound(err) {
 					return false
@@ -45,7 +46,7 @@ func (f *Framework) CheckPostgresAppBindingSpec(meta metav1.ObjectMeta) error {
 	postgres, err := f.GetPostgres(meta)
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = f.appCatalogClient.AppBindings(postgres.Namespace).Get(postgres.Name, metav1.GetOptions{})
+	_, err = f.appCatalogClient.AppBindings(postgres.Namespace).Get(context.TODO(), postgres.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -57,7 +58,7 @@ func (f *Framework) CheckPgBouncerAppBindingSpec(meta metav1.ObjectMeta) error {
 	pgbouncer, err := f.GetPgBouncer(meta)
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = f.appCatalogClient.AppBindings(pgbouncer.Namespace).Get(pgbouncer.Name, metav1.GetOptions{})
+	_, err = f.appCatalogClient.AppBindings(pgbouncer.Namespace).Get(context.TODO(), pgbouncer.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}

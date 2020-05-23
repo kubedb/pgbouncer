@@ -17,6 +17,7 @@ limitations under the License.
 package framework
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"time"
@@ -71,31 +72,31 @@ func (i *Invocation) Postgres() *api.Postgres {
 }
 
 func (f *Framework) CreatePostgres(obj *api.Postgres) error {
-	_, err := f.dbClient.KubedbV1alpha1().Postgreses(obj.Namespace).Create(obj)
+	_, err := f.dbClient.KubedbV1alpha1().Postgreses(obj.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 	return err
 }
 
 func (f *Framework) GetPostgres(meta metav1.ObjectMeta) (*api.Postgres, error) {
-	return f.dbClient.KubedbV1alpha1().Postgreses(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+	return f.dbClient.KubedbV1alpha1().Postgreses(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 }
 
 func (f *Framework) PatchPostgres(meta metav1.ObjectMeta, transform func(postgres *api.Postgres) *api.Postgres) (*api.Postgres, error) {
-	postgres, err := f.dbClient.KubedbV1alpha1().Postgreses(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+	postgres, err := f.dbClient.KubedbV1alpha1().Postgreses(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
-	postgres, _, err = util.PatchPostgres(f.dbClient.KubedbV1alpha1(), postgres, transform)
+	postgres, _, err = util.PatchPostgres(context.TODO(), f.dbClient.KubedbV1alpha1(), postgres, transform, metav1.PatchOptions{})
 	return postgres, err
 }
 
 func (f *Framework) DeletePostgres(meta metav1.ObjectMeta) error {
-	return f.dbClient.KubedbV1alpha1().Postgreses(meta.Namespace).Delete(meta.Name, deleteInForeground())
+	return f.dbClient.KubedbV1alpha1().Postgreses(meta.Namespace).Delete(context.TODO(), meta.Name, meta_util.DeleteInForeground())
 }
 
 func (f *Framework) EventuallyPostgres(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	return Eventually(
 		func() bool {
-			_, err := f.dbClient.KubedbV1alpha1().Postgreses(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+			_, err := f.dbClient.KubedbV1alpha1().Postgreses(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 			if err != nil {
 				if kerr.IsNotFound(err) {
 					return false
@@ -112,7 +113,7 @@ func (f *Framework) EventuallyPostgres(meta metav1.ObjectMeta) GomegaAsyncAssert
 func (f *Framework) EventuallyPostgresPhase(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	return Eventually(
 		func() api.DatabasePhase {
-			db, err := f.dbClient.KubedbV1alpha1().Postgreses(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+			db, err := f.dbClient.KubedbV1alpha1().Postgreses(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			return db.Status.Phase
 		},
@@ -124,7 +125,7 @@ func (f *Framework) EventuallyPostgresPhase(meta metav1.ObjectMeta) GomegaAsyncA
 func (f *Framework) EventuallyPostgresPodCount(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	return Eventually(
 		func() int32 {
-			st, err := f.kubeClient.AppsV1beta1().StatefulSets(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+			st, err := f.kubeClient.AppsV1beta1().StatefulSets(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 			if err != nil {
 				if kerr.IsNotFound(err) {
 					return -1
@@ -142,7 +143,7 @@ func (f *Framework) EventuallyPostgresPodCount(meta metav1.ObjectMeta) GomegaAsy
 func (f *Framework) EventuallyPostgresRunning(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	return Eventually(
 		func() bool {
-			postgres, err := f.dbClient.KubedbV1alpha1().Postgreses(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+			postgres, err := f.dbClient.KubedbV1alpha1().Postgreses(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			return postgres.Status.Phase == api.DatabasePhaseRunning
 		},
@@ -152,20 +153,20 @@ func (f *Framework) EventuallyPostgresRunning(meta metav1.ObjectMeta) GomegaAsyn
 }
 
 func (f *Framework) CleanPostgres() {
-	postgresList, err := f.dbClient.KubedbV1alpha1().Postgreses(f.namespace).List(metav1.ListOptions{})
+	postgresList, err := f.dbClient.KubedbV1alpha1().Postgreses(f.namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return
 	}
 	for _, e := range postgresList.Items {
-		if _, _, err := util.PatchPostgres(f.dbClient.KubedbV1alpha1(), &e, func(in *api.Postgres) *api.Postgres {
+		if _, _, err := util.PatchPostgres(context.TODO(), f.dbClient.KubedbV1alpha1(), &e, func(in *api.Postgres) *api.Postgres {
 			in.ObjectMeta.Finalizers = nil
 			in.Spec.TerminationPolicy = api.TerminationPolicyWipeOut
 			return in
-		}); err != nil {
+		}, metav1.PatchOptions{}); err != nil {
 			fmt.Printf("error Patching Postgres. error: %v", err)
 		}
 	}
-	if err := f.dbClient.KubedbV1alpha1().Postgreses(f.namespace).DeleteCollection(deleteInForeground(), metav1.ListOptions{}); err != nil {
+	if err := f.dbClient.KubedbV1alpha1().Postgreses(f.namespace).DeleteCollection(context.TODO(), meta_util.DeleteInForeground(), metav1.ListOptions{}); err != nil {
 		fmt.Printf("error in deletion of Postgres. Error: %v", err)
 	}
 }
@@ -178,14 +179,14 @@ func (f *Framework) EvictPodsFromStatefulSet(meta metav1.ObjectMeta) error {
 		api.LabelDatabaseName:       meta.GetName(),
 	}
 	// get sts in the namespace
-	stsList, err := f.kubeClient.AppsV1().StatefulSets(meta.Namespace).List(metav1.ListOptions{LabelSelector: labelSelector.String()})
+	stsList, err := f.kubeClient.AppsV1().StatefulSets(meta.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector.String()})
 	if err != nil {
 		return err
 	}
 	for _, sts := range stsList.Items {
 		// if PDB is not found, send error
 		var pdb *policy.PodDisruptionBudget
-		pdb, err = f.kubeClient.PolicyV1beta1().PodDisruptionBudgets(sts.Namespace).Get(sts.Name, metav1.GetOptions{})
+		pdb, err = f.kubeClient.PolicyV1beta1().PodDisruptionBudgets(sts.Namespace).Get(context.TODO(), sts.Name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -210,7 +211,7 @@ func (f *Framework) EvictPodsFromStatefulSet(meta metav1.ObjectMeta) error {
 		for i := 0; i < maxUnavailable; i++ {
 			eviction.Name = sts.Name + "-" + strconv.Itoa(i)
 
-			err := f.kubeClient.PolicyV1beta1().Evictions(eviction.Namespace).Evict(eviction)
+			err := f.kubeClient.PolicyV1beta1().Evictions(eviction.Namespace).Evict(context.TODO(), eviction)
 			if err != nil {
 				return err
 			}
@@ -218,7 +219,7 @@ func (f *Framework) EvictPodsFromStatefulSet(meta metav1.ObjectMeta) error {
 
 		// try to evict one extra pod. TooManyRequests err should occur
 		eviction.Name = sts.Name + "-" + strconv.Itoa(maxUnavailable)
-		err = f.kubeClient.PolicyV1beta1().Evictions(eviction.Namespace).Evict(eviction)
+		err = f.kubeClient.PolicyV1beta1().Evictions(eviction.Namespace).Evict(context.TODO(), eviction)
 		if kerr.IsTooManyRequests(err) {
 			err = nil
 		} else if err != nil {
@@ -231,7 +232,7 @@ func (f *Framework) EvictPodsFromStatefulSet(meta metav1.ObjectMeta) error {
 }
 
 func (f *Framework) EvictPgBouncerPods(meta metav1.ObjectMeta) error {
-	sts, err := f.kubeClient.AppsV1().StatefulSets(f.namespace).Get(meta.Name, metav1.GetOptions{})
+	sts, err := f.kubeClient.AppsV1().StatefulSets(f.namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -248,7 +249,7 @@ func (f *Framework) EvictPgBouncerPods(meta metav1.ObjectMeta) error {
 		},
 		DeleteOptions: &metav1.DeleteOptions{},
 	}
-	pdb, err := f.kubeClient.PolicyV1beta1().PodDisruptionBudgets(sts.Namespace).Get(sts.Name, metav1.GetOptions{})
+	pdb, err := f.kubeClient.PolicyV1beta1().PodDisruptionBudgets(sts.Namespace).Get(context.TODO(), sts.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -258,7 +259,7 @@ func (f *Framework) EvictPgBouncerPods(meta metav1.ObjectMeta) error {
 	// pdb may take a few seconds to update current number of healthy pods
 	if pdb.Status.ExpectedPods != pdb.Status.CurrentHealthy {
 		_ = wait.PollImmediate(time.Second, time.Minute*3, func() (bool, error) {
-			pdb, err := f.kubeClient.PolicyV1beta1().PodDisruptionBudgets(sts.Namespace).Get(sts.Name, metav1.GetOptions{})
+			pdb, err := f.kubeClient.PolicyV1beta1().PodDisruptionBudgets(sts.Namespace).Get(context.TODO(), sts.Name, metav1.GetOptions{})
 			if err != nil {
 				return false, err
 			}
@@ -272,7 +273,7 @@ func (f *Framework) EvictPgBouncerPods(meta metav1.ObjectMeta) error {
 	for i := 0; i < pdb.Spec.MaxUnavailable.IntValue(); i++ {
 		eviction.Name = sts.Name + "-" + strconv.Itoa(i)
 
-		err := f.kubeClient.PolicyV1beta1().Evictions(eviction.Namespace).Evict(eviction)
+		err := f.kubeClient.PolicyV1beta1().Evictions(eviction.Namespace).Evict(context.TODO(), eviction)
 		if err != nil {
 			return fmt.Errorf("eviction of pod %s/%s was expected for pdb %s (status: %+v), err = %s", sts.Namespace, eviction.Name, pdb.Name, pdb.Status, err)
 		}
@@ -280,7 +281,7 @@ func (f *Framework) EvictPgBouncerPods(meta metav1.ObjectMeta) error {
 
 	// try to evict one extra pod. TooManyRequests err should occur
 	eviction.Name = sts.Name + "-" + strconv.Itoa(int(pdb.Status.ExpectedPods)-1)
-	err = f.kubeClient.PolicyV1beta1().Evictions(eviction.Namespace).Evict(eviction)
+	err = f.kubeClient.PolicyV1beta1().Evictions(eviction.Namespace).Evict(context.TODO(), eviction)
 	if kerr.IsTooManyRequests(err) {
 		err = nil
 	} else {

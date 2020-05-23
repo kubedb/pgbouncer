@@ -67,13 +67,18 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
 
-    - name: Create Kubernetes cluster
+    - name: Create Kubernetes ${{ matrix.cluster }} cluster
       id: kind
-      uses: engineerd/setup-kind@v0.1.0
-      with:
-        version: v0.8.1
-        config: hack/kubernetes/kind.yaml
-        image: kindest/node:${{ matrix.cluster }}
+      run: |
+        kind create cluster --image=kindest/node:${{ matrix.cluster }} --config=hack/kubernetes/kind.yaml
+
+    # - name: Create Kubernetes ${{ matrix.cluster }} cluster
+    #   id: kind
+    #   uses: engineerd/setup-kind@v0.3.0
+    #   with:
+    #     version: v0.8.1
+    #     config: hack/kubernetes/kind.yaml
+    #     image: kindest/node:${{ matrix.cluster }}
 
     - name: Prepare cluster for testing
       id: local-path
