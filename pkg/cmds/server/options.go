@@ -27,8 +27,7 @@ import (
 	prom "github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
 	"github.com/spf13/pflag"
 	core "k8s.io/api/core/v1"
-	ext_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	kext_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
+	crd_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	externalInformers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
@@ -119,7 +118,7 @@ func (s *ExtraOptions) ApplyTo(cfg *controller.OperatorConfig) error {
 	if cfg.KubeClient, err = kubernetes.NewForConfig(cfg.ClientConfig); err != nil {
 		return err
 	}
-	if cfg.APIExtKubeClient, err = kext_cs.NewForConfig(cfg.ClientConfig); err != nil {
+	if cfg.CRDClient, err = crd_cs.NewForConfig(cfg.ClientConfig); err != nil {
 		return err
 	}
 	if cfg.DBClient, err = cs.NewForConfig(cfg.ClientConfig); err != nil {
@@ -134,14 +133,11 @@ func (s *ExtraOptions) ApplyTo(cfg *controller.OperatorConfig) error {
 	if cfg.AppCatalogClient, err = appcat_cs.NewForConfig(cfg.ClientConfig); err != nil {
 		return err
 	}
-	if cfg.ExternalClient, err = ext_cs.NewForConfig(cfg.ClientConfig); err != nil {
-		return err
-	}
 
 	cfg.KubeInformerFactory = informers.NewSharedInformerFactory(cfg.KubeClient, cfg.ResyncPeriod)
 	cfg.KubedbInformerFactory = kubedbinformers.NewSharedInformerFactory(cfg.DBClient, cfg.ResyncPeriod)
 	cfg.AppCatInformerFactory = appcat_in.NewSharedInformerFactory(cfg.AppCatalogClient, cfg.ResyncPeriod)
-	cfg.ExternalInformerFactory = externalInformers.NewSharedInformerFactory(cfg.ExternalClient, cfg.ResyncPeriod)
+	cfg.ExternalInformerFactory = externalInformers.NewSharedInformerFactory(cfg.CRDClient, cfg.ResyncPeriod)
 
 	cfg.SecretInformer = cfg.KubeInformerFactory.InformerFor(&core.Secret{}, func(client kubernetes.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
 		return coreinformers.NewSecretInformer(
