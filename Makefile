@@ -340,13 +340,14 @@ else
 endif
 
 POSTGRES_REGISTRY ?= kubedb
-POSTGRES_TAG      ?= v0.14.0-alpha.0
+POSTGRES_TAG      ?= v0.14.0-alpha.1
+KUBE_NAMESPACE    ?= kube-system
 
 .PHONY: install-postgres
 install-postgres:
 	@cd ../installer; \
 	helm install kubedb-postgres charts/kubedb --wait \
-		--namespace=kube-system \
+		--namespace=$(KUBE_NAMESPACE) \
 		--set operator.registry=$(POSTGRES_REGISTRY) \
 		--set operator.repository=pg-operator \
 		--set operator.tag=$(POSTGRES_TAG) \
@@ -357,7 +358,7 @@ install-postgres:
 	until kubectl get crds postgresversions.catalog.kubedb.com -o=jsonpath='{.items[0].metadata.name}' &> /dev/null; do sleep 1; done; \
 	kubectl wait --for=condition=Established crds -l app.kubernetes.io/name=kubedb --timeout=5m; \
 	helm install kubedb-postgres-catalog charts/kubedb-catalog \
-		--namespace=kube-system \
+		--namespace=$(KUBE_NAMESPACE) \
 		--set catalog.elasticsearch=false \
 		--set catalog.etcd=false \
 		--set catalog.memcached=false \
@@ -369,25 +370,23 @@ install-postgres:
 		--set catalog.proxysql=false \
 		--set catalog.redis=false
 
-ENTERPRISE_TAG ?= v0.1.0-alpha.0
+ENTERPRISE_TAG ?= v0.1.0-alpha.3
 
 .PHONY: install
 install:
 	@cd ../installer; \
 	helm install kubedb charts/kubedb --wait \
-		--namespace=kube-system \
+		--namespace=$(KUBE_NAMESPACE) \
 		--set operator.registry=$(REGISTRY) \
 		--set operator.repository=pgbouncer-operator \
 		--set operator.tag=$(TAG) \
-		--set enterprise.enabled=true \
-		--set enterprise.tag=$(ENTERPRISE_TAG) \
 		--set imagePullPolicy=Always \
 		$(IMAGE_PULL_SECRETS); \
 	kubectl wait --for=condition=Available apiservice -l 'app.kubernetes.io/name=kubedb,app.kubernetes.io/instance=kubedb' --timeout=5m; \
 	until kubectl get crds pgbouncers.kubedb.com -o=jsonpath='{.items[0].metadata.name}' &> /dev/null; do sleep 1; done; \
 	kubectl wait --for=condition=Established crds -l app.kubernetes.io/name=kubedb --timeout=5m; \
 	helm install kubedb-catalog charts/kubedb-catalog \
-		--namespace=kube-system \
+		--namespace=$(KUBE_NAMESPACE) \
 		--set catalog.elasticsearch=false \
 		--set catalog.etcd=false \
 		--set catalog.memcached=false \
@@ -397,13 +396,18 @@ install:
 		--set catalog.pgbouncer=true \
 		--set catalog.postgres=false \
 		--set catalog.proxysql=false \
-		--set catalog.redis=false
+		--set catalog.redis=false; \
+	helm install kubedb-enterprise charts/kubedb-enterprise --wait \
+		--namespace=$(KUBE_NAMESPACE) \
+		--set operator.tag=$(ENTERPRISE_TAG) \
+		--set imagePullPolicy=Always \
+		$(IMAGE_PULL_SECRETS)
 
 .PHONY: uninstall
 uninstall:
 	@cd ../installer; \
-	helm uninstall kubedb-catalog --namespace=kube-system || true; \
-	helm uninstall kubedb --namespace=kube-system || true
+	helm uninstall kubedb-catalog --namespace=$(KUBE_NAMESPACE) || true; \
+	helm uninstall kubedb --namespace=$(KUBE_NAMESPACE) || true
 
 .PHONY: purge
 purge: uninstall
