@@ -340,7 +340,7 @@ else
 endif
 
 POSTGRES_REGISTRY ?= kubedb
-POSTGRES_TAG      ?= v0.14.0-alpha.1
+POSTGRES_TAG      ?= v0.14.0-alpha.0
 KUBE_NAMESPACE    ?= kube-system
 
 .PHONY: install-postgres
