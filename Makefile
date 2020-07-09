@@ -93,6 +93,8 @@ DOCKER_REPO_ROOT := /go/src/$(GO_PKG)/$(REPO)
 # If you want to build AND push all containers, see the 'all-push' rule.
 all: fmt build
 
+include Makefile.env
+
 # For the following OS/ARCH expansions, we transform OS/ARCH into OS_ARCH
 # because make pattern rules don't match with embedded '/' characters.
 
@@ -338,9 +340,9 @@ else
 	IMAGE_PULL_SECRETS = --set imagePullSecrets[0].name=$(REGISTRY_SECRET)
 endif
 
-POSTGRES_REGISTRY ?= kubedb
-POSTGRES_TAG      ?= v0.14.0-alpha.0
-KUBE_NAMESPACE    ?= kube-system
+POSTGRES_REGISTRY ?=
+POSTGRES_TAG      ?=
+KUBE_NAMESPACE    ?=
 
 .PHONY: install-postgres
 install-postgres:
@@ -369,7 +371,7 @@ install-postgres:
 		--set catalog.proxysql=false \
 		--set catalog.redis=false
 
-ENTERPRISE_TAG ?= v0.1.0-alpha.3
+ENTERPRISE_TAG ?=
 
 .PHONY: install
 install:
