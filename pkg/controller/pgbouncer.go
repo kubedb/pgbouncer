@@ -106,7 +106,7 @@ func (c *Controller) manageCreateOrPatchEvent(pgbouncer *api.PgBouncer) error {
 			return err
 		}
 		if !ok {
-			log.Infoln("wait for all certificate secrets for pgbouncer %s/%s", pgbouncer.Namespace, pgbouncer.Name)
+			log.Infof("wait for all certificate secrets for pgbouncer %s/%s", pgbouncer.Namespace, pgbouncer.Name)
 			return nil
 		}
 	}
