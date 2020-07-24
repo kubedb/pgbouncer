@@ -21,7 +21,7 @@ import (
 	"kubedb.dev/pgbouncer/test/e2e/framework"
 
 	"github.com/appscode/go/types"
-	cm_api "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
+	cm_api "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
