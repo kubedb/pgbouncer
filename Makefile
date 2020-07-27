@@ -371,8 +371,6 @@ install-postgres:
 		--set catalog.proxysql=false \
 		--set catalog.redis=false
 
-ENTERPRISE_TAG ?=
-
 .PHONY: install
 install:
 	@cd ../installer; \
@@ -397,12 +395,7 @@ install:
 		--set catalog.pgbouncer=true \
 		--set catalog.postgres=false \
 		--set catalog.proxysql=false \
-		--set catalog.redis=false; \
-	helm install kubedb-enterprise charts/kubedb-enterprise --wait \
-		--namespace=$(KUBE_NAMESPACE) \
-		--set operator.tag=$(ENTERPRISE_TAG) \
-		--set imagePullPolicy=Always \
-		$(IMAGE_PULL_SECRETS)
+		--set catalog.redis=false
 
 .PHONY: uninstall
 uninstall:
