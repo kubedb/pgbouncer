@@ -24,7 +24,6 @@ import (
 	"kubedb.dev/apimachinery/crds"
 
 	"github.com/appscode/go/types"
-	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	kmapi "kmodules.xyz/client-go/api/v1"
 	"kmodules.xyz/client-go/apiextensions"
@@ -121,7 +120,11 @@ func (m mysqlStatsService) ServiceName() string {
 }
 
 func (m mysqlStatsService) ServiceMonitorName() string {
-	return fmt.Sprintf("kubedb-%s-%s", m.Namespace, m.Name)
+	return m.ServiceName()
+}
+
+func (m mysqlStatsService) ServiceMonitorAdditionalLabels() map[string]string {
+	return m.OffshootLabels()
 }
 
 func (m mysqlStatsService) Path() string {
@@ -156,9 +159,6 @@ func (m *MySQL) SetDefaults() {
 	if m.Spec.StorageType == "" {
 		m.Spec.StorageType = StorageTypeDurable
 	}
-	if m.Spec.UpdateStrategy.Type == "" {
-		m.Spec.UpdateStrategy.Type = apps.RollingUpdateStatefulSetStrategyType
-	}
 	if m.Spec.TerminationPolicy == "" {
 		m.Spec.TerminationPolicy = TerminationPolicyDelete
 	} else if m.Spec.TerminationPolicy == TerminationPolicyPause {
@@ -190,7 +190,7 @@ func (m *MySQL) setDefaultTLSConfig() {
 		return
 	}
 	m.Spec.TLS.Certificates = kmapi.SetMissingSecretNameForCertificate(m.Spec.TLS.Certificates, string(MySQLServerCert), m.CertificateName(MySQLServerCert))
-	m.Spec.TLS.Certificates = kmapi.SetMissingSecretNameForCertificate(m.Spec.TLS.Certificates, string(MySQLArchiverCert), m.CertificateName(MySQLArchiverCert))
+	m.Spec.TLS.Certificates = kmapi.SetMissingSecretNameForCertificate(m.Spec.TLS.Certificates, string(MySQLClientCert), m.CertificateName(MySQLClientCert))
 	m.Spec.TLS.Certificates = kmapi.SetMissingSecretNameForCertificate(m.Spec.TLS.Certificates, string(MySQLMetricsExporterCert), m.CertificateName(MySQLMetricsExporterCert))
 }
 

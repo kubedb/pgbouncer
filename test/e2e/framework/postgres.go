@@ -27,7 +27,6 @@ import (
 
 	"github.com/appscode/go/types"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
@@ -62,10 +61,7 @@ func (i *Invocation) Postgres() *api.Postgres {
 				},
 				StorageClassName: types.StringP(i.StorageClass),
 			},
-			StorageType: api.StorageTypeDurable,
-			UpdateStrategy: v1.StatefulSetUpdateStrategy{
-				Type: v1.RollingUpdateStatefulSetStrategyType,
-			},
+			StorageType:       api.StorageTypeDurable,
 			TerminationPolicy: api.TerminationPolicyWipeOut,
 		},
 	}

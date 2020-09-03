@@ -99,7 +99,7 @@ func (c *Controller) manageCreateOrPatchEvent(pgbouncer *api.PgBouncer) error {
 			core.SchemeGroupVersion.WithResource("secrets"),
 			pgbouncer.Namespace,
 			pgbouncer.MustCertSecretName(api.PgBouncerServerCert),
-			pgbouncer.MustCertSecretName(api.PgBouncerArchiverCert),
+			pgbouncer.MustCertSecretName(api.PgBouncerClientCert),
 			pgbouncer.MustCertSecretName(api.PgBouncerMetricsExporterCert),
 		)
 		if err != nil {

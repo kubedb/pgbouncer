@@ -77,7 +77,7 @@ func (c *Controller) getVolumeAndVolumeMountForServingServerCertificate(pgbounce
 
 func (c *Controller) getVolumeAndVolumeMountForServingClientCertificate(pgbouncer *api.PgBouncer) (*core.Volume, *core.VolumeMount, error) {
 	//TODO: this is for issuer only, I'm not sure about clusterIssuer yet
-	clientSecret, err := c.Client.CoreV1().Secrets(pgbouncer.Namespace).Get(context.TODO(), pgbouncer.MustCertSecretName(api.PgBouncerArchiverCert), metav1.GetOptions{})
+	clientSecret, err := c.Client.CoreV1().Secrets(pgbouncer.Namespace).Get(context.TODO(), pgbouncer.MustCertSecretName(api.PgBouncerClientCert), metav1.GetOptions{})
 	if err != nil {
 		return nil, nil, err
 	}

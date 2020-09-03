@@ -55,19 +55,16 @@ const (
 	ElasticsearchMetricsPort     = 9600
 	ElasticsearchMetricsPortName = "metrics"
 
-	MongoDBShardPort              = 27017
-	MongoDBConfigdbPort           = 27017
-	MongoDBMongosPort             = 27017
-	MongoDBKeyFileSecretSuffix    = "key"
-	MongoDBPEMSecretSuffix        = "pem"
-	MongoDBClientCertOrganization = DatabaseNamePrefix + ":client"
-	MongoDBCertificateCN          = "root"
+	MongoDBShardPort           = 27017
+	MongoDBConfigdbPort        = 27017
+	MongoDBMongosPort          = 27017
+	MongoDBKeyFileSecretSuffix = "key"
+	MongoDBRootUsername        = "root"
 
-	MySQLUserKey         = "username"
-	MySQLPasswordKey     = "password"
-	MySQLNodePort        = 3306
-	MySQLGroupComPort    = 33060
-	MySQLMaxGroupMembers = 9
+	MySQLMetricsExporterConfigSecretSuffix = "metrics-exporter-config"
+	MySQLNodePort                          = 3306
+	MySQLGroupComPort                      = 33060
+	MySQLMaxGroupMembers                   = 9
 	// The recommended MySQL server version for group replication (GR)
 	MySQLGRRecommendedVersion       = "5.7.25"
 	MySQLDefaultGroupSize           = 3
@@ -103,10 +100,9 @@ const (
 	RedisNodePort   = 6379
 	RedisGossipPort = 16379
 
-	RedisKeyFileSecretSuffix    = "key"
-	RedisPEMSecretSuffix        = "pem"
-	RedisClientCertOrganization = DatabaseNamePrefix + ":client"
-	RedisCertificateCN          = "root"
+	RedisKeyFileSecretSuffix = "key"
+	RedisPEMSecretSuffix     = "pem"
+	RedisRootUsername        = "root"
 
 	PgBouncerUpstreamServerCA = "upstream-server-ca.crt"
 

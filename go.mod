@@ -24,13 +24,19 @@ require (
 	k8s.io/apiserver v0.18.5
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/kube-aggregator v0.18.5
-	kmodules.xyz/client-go v0.0.0-20200818171030-24b2ce405feb
+	kmodules.xyz/client-go v0.0.0-20200903033732-dab39b86c81b
 	kmodules.xyz/custom-resources v0.0.0-20200604135349-9e9f5c4fdba9
-	kmodules.xyz/monitoring-agent-api v0.0.0-20200525002655-2aa50cb10ce9
+	kmodules.xyz/monitoring-agent-api v0.0.0-20200828051750-42aa8e7852f3
 	kmodules.xyz/offshoot-api v0.0.0-20200521035628-e135bf07b226
 	kmodules.xyz/webhook-runtime v0.0.0-20200522123600-ca70a7e28ed0
-	kubedb.dev/apimachinery v0.14.0-beta.1.0.20200806173322-29809a44a958
+	kubedb.dev/apimachinery v0.14.0-beta.1.0.20200903071357-152cef57748c
 )
+
+replace google.golang.org/api => google.golang.org/api v0.14.0
+
+replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20191115194625-c23dd37a84c9
+
+replace cloud.google.com/go => cloud.google.com/go v0.49.0
 
 replace bitbucket.org/ww/goautoneg => gomodules.xyz/goautoneg v0.0.0-20120707110453-a547fc61f48d
 
@@ -59,6 +65,10 @@ replace github.com/Azure/go-autorest/autorest/validation => github.com/Azure/go-
 replace github.com/Azure/go-autorest/logger => github.com/Azure/go-autorest/logger v0.1.0
 
 replace github.com/Azure/go-autorest/tracing => github.com/Azure/go-autorest/tracing v0.5.0
+
+replace github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.1
+
+replace github.com/golang/protobuf => github.com/golang/protobuf v1.3.2
 
 replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.5
 

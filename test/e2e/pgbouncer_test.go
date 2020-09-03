@@ -26,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
+	kmapi "kmodules.xyz/client-go/api/v1"
 )
 
 var _ = Describe("PgBouncer", func() {
@@ -170,7 +171,7 @@ var _ = Describe("PgBouncer", func() {
 				issuer := f.IssuerForPgBouncer(pgbouncer.ObjectMeta, clientCASecret.ObjectMeta)
 				err = f.CreateIssuer(issuer)
 				Expect(err).NotTo(HaveOccurred())
-				pgbouncer.Spec.TLS = &api.TLSConfig{
+				pgbouncer.Spec.TLS = &kmapi.TLSConfig{
 					IssuerRef: &core.TypedLocalObjectReference{
 						Name:     issuer.Name,
 						Kind:     issuer.Kind,
