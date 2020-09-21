@@ -17,6 +17,8 @@ require (
 	github.com/spf13/afero v1.2.2
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5
+	go.bytebuilders.dev/license-verifier v0.3.0
+	go.bytebuilders.dev/license-verifier/kubernetes v0.3.0
 	gomodules.xyz/cert v1.0.3
 	k8s.io/api v0.18.5
 	k8s.io/apiextensions-apiserver v0.18.5
