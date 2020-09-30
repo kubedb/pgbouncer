@@ -20,6 +20,7 @@ require (
 	go.bytebuilders.dev/license-verifier v0.3.0
 	go.bytebuilders.dev/license-verifier/kubernetes v0.3.0
 	gomodules.xyz/cert v1.0.3
+	gomodules.xyz/password-generator v0.2.3
 	k8s.io/api v0.18.9
 	k8s.io/apiextensions-apiserver v0.18.9
 	k8s.io/apimachinery v0.18.9

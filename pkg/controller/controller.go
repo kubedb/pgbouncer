@@ -198,7 +198,6 @@ func (c *Controller) pushFailureEvent(pgbouncer *api.PgBouncer, reason string) {
 		pgbouncer.ObjectMeta,
 		func(in *api.PgBouncerStatus) *api.PgBouncerStatus {
 			in.Phase = api.DatabasePhaseFailed
-			in.Reason = reason
 			in.ObservedGeneration = pgbouncer.Generation
 			return in
 		},
