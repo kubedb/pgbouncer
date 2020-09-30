@@ -30,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kutil "kmodules.xyz/client-go"
 	dynamic_util "kmodules.xyz/client-go/dynamic"
-	meta_util "kmodules.xyz/client-go/meta"
 )
 
 const (
@@ -188,21 +187,6 @@ func (c *Controller) manageFinalPhase(pgbouncer *api.PgBouncer) error {
 		return nil
 	}
 
-	if _, err := meta_util.GetString(pgbouncer.Annotations, api.AnnotationInitialized); err == kutil.ErrNotFound {
-		if pgbouncer.Status.Phase == api.DatabasePhaseInitializing {
-			return nil
-		}
-		// add to phase that PgBouncer is being initialized
-		pg, err := util.UpdatePgBouncerStatus(context.TODO(), c.ExtClient.KubedbV1alpha1(), pgbouncer.ObjectMeta, func(in *api.PgBouncerStatus) *api.PgBouncerStatus {
-			in.Phase = api.DatabasePhaseInitializing
-			return in
-		}, metav1.UpdateOptions{})
-		if err != nil {
-			log.Infoln(err)
-			return err
-		}
-		pgbouncer.Status = pg.Status
-	}
 	pg, err := util.UpdatePgBouncerStatus(context.TODO(), c.ExtClient.KubedbV1alpha1(), pgbouncer.ObjectMeta, func(in *api.PgBouncerStatus) *api.PgBouncerStatus {
 		in.Phase = api.DatabasePhaseRunning
 		in.ObservedGeneration = pgbouncer.Generation
