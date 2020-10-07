@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha2"
 	"kubedb.dev/pgbouncer/pkg/controller"
 
 	"github.com/appscode/go/types"
@@ -340,7 +340,7 @@ func (f *Framework) waitUntilPatchedConfigMapReady(meta metav1.ObjectMeta) error
 
 // getPodPassPort returns the pgbouncer pod, pgbouncer admin pass, and pgbouncer listen port
 func (f *Framework) getPodPassPort(meta metav1.ObjectMeta) (*v1.Pod, string, *int32, error) {
-	pb, err := f.dbClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
+	pb, err := f.dbClient.KubedbV1alpha2().PgBouncers(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", nil, err
 	}

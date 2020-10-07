@@ -22,7 +22,7 @@ package admission
 //	"testing"
 //
 //	"github.com/appscode/go/types"
-//	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+//	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha2"
 //	"kubedb.dev/apimachinery/client/clientset/versioned/scheme"
 //	admission "k8s.io/api/admission/v1beta1"
 //	apps "k8s.io/api/apps/v1"

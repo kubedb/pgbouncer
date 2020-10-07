@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha2"
 
 	shell "github.com/codeskyblue/go-sh"
 	core "k8s.io/api/core/v1"

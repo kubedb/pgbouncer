@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha2"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -49,9 +49,9 @@ func (f *Framework) SetupPostgresResources(kubeconfigPath string) {
 
 func (f *Framework) WaitUntilPostgresReady(name string) error {
 	return wait.PollImmediate(operatorGetRetryInterval, kutil.ReadinessTimeout, func() (bool, error) {
-		pg, err := f.dbClient.KubedbV1alpha1().Postgreses(f.Namespace()).Get(context.TODO(), name, metav1.GetOptions{})
+		pg, err := f.dbClient.KubedbV1alpha2().Postgreses(f.Namespace()).Get(context.TODO(), name, metav1.GetOptions{})
 		if err == nil {
-			if pg.Status.Phase == api.DatabasePhaseRunning {
+			if pg.Status.Phase == api.DatabasePhaseReady {
 				return true, nil
 			}
 		}
