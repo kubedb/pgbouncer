@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"time"
 
-	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
-	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha1/util"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha2"
+	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha2/util"
 
 	"github.com/appscode/go/crypto/rand"
 	"github.com/appscode/go/types"
@@ -88,31 +88,31 @@ func (i *Invocation) PgBouncer(secret *core.Secret) *api.PgBouncer {
 }
 
 func (f *Framework) CreatePgBouncer(obj *api.PgBouncer) error {
-	_, err := f.dbClient.KubedbV1alpha1().PgBouncers(obj.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
+	_, err := f.dbClient.KubedbV1alpha2().PgBouncers(obj.Namespace).Create(context.TODO(), obj, metav1.CreateOptions{})
 	return err
 }
 
 func (f *Framework) GetPgBouncer(meta metav1.ObjectMeta) (*api.PgBouncer, error) {
-	return f.dbClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
+	return f.dbClient.KubedbV1alpha2().PgBouncers(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 }
 
 func (f *Framework) PatchPgBouncer(meta metav1.ObjectMeta, transform func(pgbouncer *api.PgBouncer) *api.PgBouncer) (*api.PgBouncer, error) {
-	pgbouncer, err := f.dbClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
+	pgbouncer, err := f.dbClient.KubedbV1alpha2().PgBouncers(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
-	pgbouncer, _, err = util.PatchPgBouncer(context.TODO(), f.dbClient.KubedbV1alpha1(), pgbouncer, transform, metav1.PatchOptions{})
+	pgbouncer, _, err = util.PatchPgBouncer(context.TODO(), f.dbClient.KubedbV1alpha2(), pgbouncer, transform, metav1.PatchOptions{})
 	return pgbouncer, err
 }
 
 func (f *Framework) DeletePgBouncer(meta metav1.ObjectMeta) error {
-	return f.dbClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Delete(context.TODO(), meta.Name, meta_util.DeleteInForeground())
+	return f.dbClient.KubedbV1alpha2().PgBouncers(meta.Namespace).Delete(context.TODO(), meta.Name, meta_util.DeleteInForeground())
 }
 
 func (f *Framework) EventuallyPgBouncer(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	return Eventually(
 		func() bool {
-			_, err := f.dbClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
+			_, err := f.dbClient.KubedbV1alpha2().PgBouncers(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 			if err != nil {
 				if kerr.IsNotFound(err) {
 					return false
@@ -129,7 +129,7 @@ func (f *Framework) EventuallyPgBouncer(meta metav1.ObjectMeta) GomegaAsyncAsser
 func (f *Framework) EventuallyPgBouncerPhase(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	return Eventually(
 		func() api.DatabasePhase {
-			db, err := f.dbClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
+			db, err := f.dbClient.KubedbV1alpha2().PgBouncers(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			return db.Status.Phase
 		},
@@ -159,9 +159,9 @@ func (f *Framework) EventuallyPgBouncerPodCount(meta metav1.ObjectMeta) GomegaAs
 func (f *Framework) EventuallyPgBouncerRunning(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	return Eventually(
 		func() bool {
-			pgbouncer, err := f.dbClient.KubedbV1alpha1().PgBouncers(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
+			pgbouncer, err := f.dbClient.KubedbV1alpha2().PgBouncers(meta.Namespace).Get(context.TODO(), meta.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
-			return pgbouncer.Status.Phase == api.DatabasePhaseRunning
+			return pgbouncer.Status.Phase == api.DatabasePhaseReady
 		},
 		time.Minute*5,
 		time.Second*5,
@@ -223,12 +223,12 @@ func WaitUntilPodRunningBySelector(kubeClient kubernetes.Interface, namespace st
 }
 
 func (f *Framework) CleanPgBouncer() {
-	pgbouncerList, err := f.dbClient.KubedbV1alpha1().PgBouncers(f.namespace).List(context.TODO(), metav1.ListOptions{})
+	pgbouncerList, err := f.dbClient.KubedbV1alpha2().PgBouncers(f.namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return
 	}
 	for _, e := range pgbouncerList.Items {
-		if _, _, err := util.PatchPgBouncer(context.TODO(), f.dbClient.KubedbV1alpha1(), &e, func(in *api.PgBouncer) *api.PgBouncer {
+		if _, _, err := util.PatchPgBouncer(context.TODO(), f.dbClient.KubedbV1alpha2(), &e, func(in *api.PgBouncer) *api.PgBouncer {
 			in.ObjectMeta.Finalizers = nil
 			//in.Spec.TerminationPolicy = api.TerminationPolicyWipeOut
 			return in
@@ -236,7 +236,7 @@ func (f *Framework) CleanPgBouncer() {
 			fmt.Printf("error Patching PgBouncer. error: %v", err)
 		}
 	}
-	if err := f.dbClient.KubedbV1alpha1().PgBouncers(f.namespace).DeleteCollection(context.TODO(), meta_util.DeleteInForeground(), metav1.ListOptions{}); err != nil {
+	if err := f.dbClient.KubedbV1alpha2().PgBouncers(f.namespace).DeleteCollection(context.TODO(), meta_util.DeleteInForeground(), metav1.ListOptions{}); err != nil {
 		fmt.Printf("error in deletion of PgBouncer. Error: %v", err)
 	}
 }

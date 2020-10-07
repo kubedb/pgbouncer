@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"time"
 
-	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha1"
+	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha2"
 
 	"github.com/appscode/go/sets"
 	"github.com/aws/aws-sdk-go/aws"

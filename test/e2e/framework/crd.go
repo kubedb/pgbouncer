@@ -30,7 +30,7 @@ func (f *Framework) EventuallyCRD() GomegaAsyncAssertion {
 	return Eventually(
 		func() error {
 			// Check PgBouncer TPR
-			if _, err := f.dbClient.KubedbV1alpha1().PgBouncers(core.NamespaceAll).List(context.TODO(), metav1.ListOptions{}); err != nil {
+			if _, err := f.dbClient.KubedbV1alpha2().PgBouncers(core.NamespaceAll).List(context.TODO(), metav1.ListOptions{}); err != nil {
 				return errors.New("CRD PgBouncer is not ready")
 			}
 
