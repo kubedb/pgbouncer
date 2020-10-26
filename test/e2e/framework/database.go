@@ -49,7 +49,7 @@ const (
 )
 
 func (f *Framework) ForwardPort(meta metav1.ObjectMeta, port *int) (*portforward.Tunnel, error) {
-	var defaultPort = controller.DefaultHostPort
+	var defaultPort = api.PgBouncerDatabasePort
 	if port != nil {
 		defaultPort = *port
 	}
@@ -138,8 +138,10 @@ func (f *Framework) PingPgBouncerServerOverTLS(meta metav1.ObjectMeta) (bool, er
 
 	outText, err := exec.ExecIntoPod(f.restConfig, pod, exec.Command("psql",
 		fmt.Sprintf("host=localhost port=%d user=kubedb password=%s dbname=%s sslcert=%s sslkey=%s sslrootcert=%s sslmode=verify-full",
-			port, password, pgbouncer, filepath.Join(controller.ServingClientCertMountPath, "tls.crt"), filepath.Join(controller.ServingClientCertMountPath, "tls.key"),
-			filepath.Join(controller.ServingClientCertMountPath, "ca.crt")),
+			port, password, pgbouncer,
+			filepath.Join(controller.ServingCertMountPath, string(api.PgBouncerClientCert), "tls.crt"),
+			filepath.Join(controller.ServingCertMountPath, string(api.PgBouncerClientCert), "tls.key"),
+			filepath.Join(controller.ServingCertMountPath, string(api.PgBouncerClientCert), "ca.crt")),
 		"--command=RELOAD"))
 	if err != nil {
 		return false, nil
