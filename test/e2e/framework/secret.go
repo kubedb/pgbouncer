@@ -148,7 +148,7 @@ func (f *Framework) GetPostgresCredentials() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	username := string(scrt.Data[controller.PostgresUser])
-	password := string(scrt.Data[controller.PostgresPassword])
+	username := string(scrt.Data[core.BasicAuthUsernameKey])
+	password := string(scrt.Data[core.BasicAuthPasswordKey])
 	return username, password, nil
 }

@@ -24,10 +24,10 @@ import (
 
 func TestConfigGeneration(t *testing.T) {
 	tests := []struct {
-		name      string
-		pgbouncer *api.PgBouncer
+		name string
+		db   *api.PgBouncer
 	}{
-		{name: "", pgbouncer: nil},
+		{name: "", db: nil},
 		// TODO: test cases
 	}
 	for _, test := range tests {
