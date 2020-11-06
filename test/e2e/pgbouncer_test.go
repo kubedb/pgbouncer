@@ -20,10 +20,10 @@ import (
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha2"
 	"kubedb.dev/pgbouncer/test/e2e/framework"
 
-	"github.com/appscode/go/types"
 	cm_api "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1beta1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"gomodules.xyz/pointer"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	kmapi "kmodules.xyz/client-go/api/v1"
@@ -121,7 +121,7 @@ var _ = Describe("PgBouncer", func() {
 		Context("PDB", func() {
 			It("should run evictions successfully", func() {
 				// Create PgBouncer
-				pgbouncer.Spec.Replicas = types.Int32P(3)
+				pgbouncer.Spec.Replicas = pointer.Int32P(3)
 				createAndRunPgBouncer()
 				//Evict a PgBouncer pod
 				By("Evict pods")
@@ -175,7 +175,7 @@ var _ = Describe("PgBouncer", func() {
 					IssuerRef: &core.TypedLocalObjectReference{
 						Name:     issuer.Name,
 						Kind:     issuer.Kind,
-						APIGroup: types.StringP(cm_api.SchemeGroupVersion.Group), //cert-manger.io
+						APIGroup: pointer.StringP(cm_api.SchemeGroupVersion.Group), //cert-manger.io
 					},
 				}
 				createAndRunPgBouncer()

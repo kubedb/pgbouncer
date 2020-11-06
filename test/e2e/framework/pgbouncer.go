@@ -24,9 +24,9 @@ import (
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha2"
 	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha2/util"
 
-	"github.com/appscode/go/crypto/rand"
-	"github.com/appscode/go/types"
 	. "github.com/onsi/gomega"
+	"gomodules.xyz/pointer"
+	"gomodules.xyz/x/crypto/rand"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
@@ -60,7 +60,7 @@ func (i *Invocation) PgBouncer(secret *core.Secret) *api.PgBouncer {
 		},
 		Spec: api.PgBouncerSpec{
 			Version:  pbVersion,
-			Replicas: types.Int32P(1),
+			Replicas: pointer.Int32P(1),
 			Databases: []api.Databases{
 				{
 					Alias:        api.ResourceSingularPostgres,
@@ -73,8 +73,8 @@ func (i *Invocation) PgBouncer(secret *core.Secret) *api.PgBouncer {
 			},
 
 			ConnectionPool: &api.ConnectionPoolConfig{
-				ReservePoolSize:      types.Int64P(ReservePoolSize),
-				MaxClientConnections: types.Int64P(MaxClientConnections),
+				ReservePoolSize:      pointer.Int64P(ReservePoolSize),
+				MaxClientConnections: pointer.Int64P(MaxClientConnections),
 				AdminUsers: []string{
 					"admin1",
 				},
@@ -186,7 +186,7 @@ func (f *Framework) CheckStatefulSetPodStatus(statefulSet *apps.StatefulSet) err
 		f.kubeClient,
 		statefulSet.Namespace,
 		statefulSet.Spec.Selector,
-		int(types.Int32(statefulSet.Spec.Replicas)),
+		int(pointer.Int32(statefulSet.Spec.Replicas)),
 	)
 	if err != nil {
 		return err

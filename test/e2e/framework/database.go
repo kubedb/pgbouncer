@@ -28,10 +28,10 @@ import (
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha2"
 	"kubedb.dev/pgbouncer/pkg/controller"
 
-	"github.com/appscode/go/types"
 	"github.com/go-xorm/xorm"
 	_ "github.com/lib/pq"
 	. "github.com/onsi/gomega"
+	"gomodules.xyz/pointer"
 	v1 "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -368,7 +368,7 @@ func (f *Framework) WaitUntilPrimaryContainerReady(meta metav1.ObjectMeta) error
 	}
 
 	err = wait.PollImmediate(time.Second, kutil.ReadinessTimeout, func() (bool, error) {
-		for i := 0; i < int(types.Int32(sts.Spec.Replicas)); i++ {
+		for i := 0; i < int(pointer.Int32(sts.Spec.Replicas)); i++ {
 			pod, err := f.kubeClient.CoreV1().Pods(meta.Namespace).Get(context.TODO(), meta.Name+"-"+strconv.Itoa(i), metav1.GetOptions{})
 			if err != nil {
 				if kerr.IsNotFound(err) {
