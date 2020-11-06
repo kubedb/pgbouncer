@@ -24,11 +24,11 @@ import (
 
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha2"
 
-	"github.com/appscode/go/sets"
 	"github.com/aws/aws-sdk-go/aws"
 	promClient "github.com/prometheus/client_model/go"
 	"github.com/prometheus/prom2json"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	kutil "kmodules.xyz/client-go"
 	v1 "kmodules.xyz/monitoring-agent-api/api/v1"

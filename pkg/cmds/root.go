@@ -22,11 +22,11 @@ import (
 
 	"kubedb.dev/apimachinery/client/clientset/versioned/scheme"
 
-	"github.com/appscode/go/flags"
-	"github.com/appscode/go/log/golog"
-	v "github.com/appscode/go/version"
 	cmscheme "github.com/jetstack/cert-manager/pkg/client/clientset/versioned/scheme"
 	"github.com/spf13/cobra"
+	"gomodules.xyz/x/flags"
+	"gomodules.xyz/x/log/golog"
+	v "gomodules.xyz/x/version"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"

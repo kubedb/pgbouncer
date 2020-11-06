@@ -21,7 +21,7 @@ package admission
 //	"net/http"
 //	"testing"
 //
-//	"github.com/appscode/go/types"
+//	"gomodules.xyz/pointer"
 //	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha2"
 //	"kubedb.dev/apimachinery/client/clientset/versioned/scheme"
 //	admission "k8s.io/api/admission/v1beta1"
@@ -227,7 +227,7 @@ package admission
 //		},
 //		Spec: api.PgBouncerSpec{
 //			Version:  "9.6",
-//			Replicas: types.Int32P(1),
+//			Replicas: pointer.Int32P(1),
 //			UpdateStrategy: apps.StatefulSetUpdateStrategy{
 //				Type: apps.RollingUpdateStatefulSetStrategyType,
 //			},

@@ -26,8 +26,8 @@ import (
 	api "kubedb.dev/apimachinery/apis/kubedb/v1alpha2"
 	"kubedb.dev/apimachinery/client/clientset/versioned/typed/kubedb/v1alpha2/util"
 
-	"github.com/appscode/go/types"
 	. "github.com/onsi/gomega"
+	"gomodules.xyz/pointer"
 	core "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
@@ -53,14 +53,14 @@ func (i *Invocation) Postgres() *api.Postgres {
 		},
 		Spec: api.PostgresSpec{
 			Version:  DBCatalogName,
-			Replicas: types.Int32P(1),
+			Replicas: pointer.Int32P(1),
 			Storage: &core.PersistentVolumeClaimSpec{
 				Resources: core.ResourceRequirements{
 					Requests: core.ResourceList{
 						core.ResourceStorage: resource.MustParse(DBPvcStorageSize),
 					},
 				},
-				StorageClassName: types.StringP(i.StorageClass),
+				StorageClassName: pointer.StringP(i.StorageClass),
 			},
 			StorageType:       api.StorageTypeDurable,
 			TerminationPolicy: api.TerminationPolicyWipeOut,
