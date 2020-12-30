@@ -39,8 +39,8 @@ const (
 func (f *Framework) IssuerForPgBouncer(pbMeta, caSecretMeta metav1.ObjectMeta) *cm_api.Issuer {
 	thisIssuerName := rand.WithUniqSuffix(IssuerName)
 	labelMap := map[string]string{
-		api.LabelDatabaseName: pbMeta.Name,
-		api.LabelDatabaseKind: api.ResourceKindPgBouncer,
+		meta_util.NameLabelKey:     api.PgBouncer{}.ResourceFQN(),
+		meta_util.InstanceLabelKey: pbMeta.Name,
 	}
 	return &cm_api.Issuer{
 		TypeMeta: metav1.TypeMeta{
@@ -91,8 +91,8 @@ func (f *Framework) DeleteIssuer(meta metav1.ObjectMeta) error {
 
 func (f *Framework) SelfSignedCASecret(meta metav1.ObjectMeta) *v1.Secret {
 	labelMap := map[string]string{
-		api.LabelDatabaseName: meta.Name,
-		api.LabelDatabaseKind: api.ResourceKindPgBouncer,
+		meta_util.NameLabelKey:     api.PgBouncer{}.ResourceFQN(),
+		meta_util.InstanceLabelKey: meta.Name,
 	}
 	return &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
