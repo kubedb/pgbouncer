@@ -245,8 +245,8 @@ func (f *Framework) EventuallyWipedOut(meta metav1.ObjectMeta) GomegaAsyncAssert
 	return Eventually(
 		func() error {
 			labelMap := map[string]string{
-				api.LabelDatabaseName: meta.Name,
-				api.LabelDatabaseKind: api.ResourceKindPgBouncer,
+				meta_util.NameLabelKey:     api.PgBouncer{}.ResourceFQN(),
+				meta_util.InstanceLabelKey: meta.Name,
 			}
 			labelSelector := labels.SelectorFromSet(labelMap)
 

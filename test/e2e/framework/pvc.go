@@ -32,8 +32,8 @@ import (
 
 func (f *Framework) EventuallyPVCCount(meta metav1.ObjectMeta) GomegaAsyncAssertion {
 	labelMap := map[string]string{
-		api.LabelDatabaseKind: api.ResourceKindPgBouncer,
-		api.LabelDatabaseName: meta.Name,
+		meta_util.NameLabelKey:     api.PgBouncer{}.ResourceFQN(),
+		meta_util.InstanceLabelKey: meta.Name,
 	}
 	labelSelector := labels.SelectorFromSet(labelMap)
 	return Eventually(

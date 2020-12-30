@@ -172,8 +172,8 @@ func (f *Framework) EvictPodsFromStatefulSet(meta metav1.ObjectMeta) error {
 	var err error
 	labelSelector := labels.Set{
 		meta_util.ManagedByLabelKey: kubedb.GroupName,
-		api.LabelDatabaseKind:       api.ResourceKindPostgres,
-		api.LabelDatabaseName:       meta.GetName(),
+		meta_util.NameLabelKey:      api.PgBouncer{}.ResourceFQN(),
+		meta_util.InstanceLabelKey:  meta.GetName(),
 	}
 	// get sts in the namespace
 	stsList, err := f.kubeClient.AppsV1().StatefulSets(meta.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelSelector.String()})
