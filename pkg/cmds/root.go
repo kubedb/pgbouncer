@@ -17,15 +17,12 @@ limitations under the License.
 package cmds
 
 import (
-	"flag"
 	"os"
 
 	"kubedb.dev/apimachinery/client/clientset/versioned/scheme"
 
 	cmscheme "github.com/jetstack/cert-manager/pkg/client/clientset/versioned/scheme"
 	"github.com/spf13/cobra"
-	"gomodules.xyz/kglog"
-	"gomodules.xyz/x/flags"
 	v "gomodules.xyz/x/version"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	genericapiserver "k8s.io/apiserver/pkg/server"
@@ -39,18 +36,13 @@ func NewRootCmd(version string) *cobra.Command {
 		Use:               "pgbouncer-operator",
 		DisableAutoGenTag: true,
 		PersistentPreRun: func(c *cobra.Command, args []string) {
-			flags.DumpAll(c.Flags())
 			cli.SendAnalytics(c, version)
 
 			runtime.Must(scheme.AddToScheme(clientsetscheme.Scheme))
 			runtime.Must(appcatscheme.AddToScheme(clientsetscheme.Scheme))
 			runtime.Must(cmscheme.AddToScheme(clientsetscheme.Scheme))
-			cli.LoggerOptions = kglog.GetOptions(c.Flags())
 		},
 	}
-	rootCmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
-	// ref: https://github.com/kubernetes/kubernetes/issues/17162#issuecomment-225596212
-	kglog.ParseFlags()
 	rootCmd.PersistentFlags().BoolVar(&cli.EnableAnalytics, "enable-analytics", cli.EnableAnalytics, "Send analytical events to Google Analytics")
 
 	rootCmd.AddCommand(v.NewCmdVersion())
